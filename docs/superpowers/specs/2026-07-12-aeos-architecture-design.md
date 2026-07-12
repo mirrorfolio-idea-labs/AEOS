@@ -294,6 +294,24 @@ interface HarnessAdapter {
   (Conductor pattern) with BYO-binary fallback. Auth is per-agent: API key
   from the daemon's secret store, or explicit opt-in passthrough of the
   user's CLI login.
+- **Credential profiles and BYOK switching.** Every agent references a
+  `credentialProfile` in `agent.yaml`; profiles live in the daemon secret
+  store and come in three kinds:
+  - `subscription` — explicit opt-in passthrough of the user's harness login;
+  - `api-key` — BYOK vendor key (e.g. `ANTHROPIC_API_KEY`, which overrides
+    subscription auth in Claude Code headless mode) at full native
+    performance;
+  - `gateway` — `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` (or provider
+    equivalent) pointed at OpenRouter/any compatible proxy, so **any model**
+    runs through Claude Code unchanged, with optional `ANTHROPIC_MODEL`
+    override.
+  Switching is a first-class API/UI toggle ("on-the-go"): the scheduler
+  checkpoints the active task, the next session spawns with the new profile,
+  and the plan resumes — no state lost, because sessions are disposable by
+  design. A policy-gated **auto-failover** rule lets the daemon switch
+  profile automatically on `usage_limit`/rate-limit events so objectives keep
+  running beyond subscription session/usage limits. Realized costs are
+  metered per profile so budgets (§11) hold across switches.
 - **Execution modes:** default headless (JSON streaming). PTY attach is an
   optional runner capability for human takeover — the runner allocates a PTY
   and bridges it to the UI terminal tab (xterm.js) while continuing to parse
