@@ -24,7 +24,7 @@ event taxonomy, exported also as JSON Schema. No package may import another's
 internals; dependency-cruiser enforces it in CI.
 - [x] **T1** pnpm monorepo scaffold (Node 22, ESM, strict TS, Vitest, base tsconfig). *Accept: `pnpm test` runs a passing trivial test in CI-identical command.*
 - [x] **T2** Event envelope schema `{v,id,ts,source,agentId?,sessionId?,taskId?,type,payload}` with ULID ids. *Accept: round-trip parse/serialize tests pass; invalid envelopes rejected.*
-- [ ] **T3** Domain schemas: Workspace, Agent(+harness feature toggles, credentialProfile ref), CredentialProfile(subscription|api-key|gateway), Session(+state machine), Objective, PlanTask, Checkpoint. *Accept: fixture YAML/JSON for each parses; illegal state transitions rejected by `assertSessionTransition`.*
+- [x] **T3** Domain schemas: Workspace, Agent(+harness feature toggles, credentialProfile ref), CredentialProfile(subscription|api-key|gateway), Session(+state machine), Objective, PlanTask, Checkpoint. *Accept: fixture YAML/JSON for each parses; illegal state transitions rejected by `assertSessionTransition`.*
 - [ ] **T4** Canonical event taxonomy (`session.*`, `turn.*`, `item.*`, `cost.usage`, `approval.request`) as discriminated union. *Accept: golden fixture file of every event type parses exhaustively (compile-time exhaustiveness check).*
 - [ ] **T5** JSON Schema export (`schemas/*.json` generated + committed) with a drift test. *Accept: `pnpm -F @aeos/contracts gen:schemas` output matches committed files in CI.*
 - [ ] **T6** Boundary enforcement: dependency-cruiser config + GitHub Actions CI (install→build→test→depcruise). *Accept: CI green; a deliberate cross-internal import fails depcruise locally.*
