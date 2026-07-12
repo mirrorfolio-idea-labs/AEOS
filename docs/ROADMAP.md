@@ -7,6 +7,7 @@
 > only be executed after its predecessor's **exit gate** passes.
 >
 > Spec: `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`
+> Board, sprints, task cards: `docs/pm/` (operating manual: `docs/pm/README.md`)
 > Status legend: `[ ]` pending · `[~]` in progress · `[x]` done · `[!]` blocked
 
 ## Phase P1 — Spine (v0.1)
@@ -16,7 +17,7 @@ objective → agent works via hermetic Claude Code → `kill -9` the daemon →
 restart → agent resumes at last checkpoint and completes → all state
 inspectable as files.
 
-### M1 — Monorepo scaffold + contracts package  `[ ]`
+### M1 — Monorepo scaffold + contracts package  `[~]`
 Plan: `docs/superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md`
 **Context brief:** Everything depends on `packages/contracts` (spec §5–§6). It
 holds Zod schemas for the event envelope, domain objects, and the canonical
