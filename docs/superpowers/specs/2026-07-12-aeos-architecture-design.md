@@ -22,7 +22,7 @@ Three principles govern every component:
    vector indexes are derived and rebuildable. The model's context window is a
    cache over file state — never the source of truth.
 2. **Contracts over code.** Every module boundary is a versioned, schema-defined
-   wire contract (JSON Schema, NDJSON events, OpenAPI). Any module can be
+   wire contract (JSON Schema, TOON Schema, NDJSON events, OpenAPI). Any module can be
    replaced, extracted to a separate service, or rewritten in another language
    without touching its consumers. The implementation language (TypeScript
    today) is a detail, not a commitment.
@@ -53,7 +53,7 @@ Three principles govern every component:
 | **OpenCode** (`anomalyco/opencode`) | Server-owns-sessions / clients-are-thin; OpenAPI spec → generated SDK pipeline; SSE event bus; config-dir layering with explicit disable flags | Sessions as opaque provider-internal JSON (conflicts with files-as-truth); Effect framework (adopt patterns, not the framework) |
 | **Codex CLI** | `thread/turn/item` event taxonomy for lifecycle modeling; sandbox-mode-as-flag; `resume --last` two-stage pipelines | Rollout files as canonical transcript (provider-internal only) |
 | **Claude Code** | `stream-json` NDJSON events; `total_cost_usd` per invocation; `CLAUDE_CONFIG_DIR` + `--bare` + granular `CLAUDE_CODE_DISABLE_*` for hermetic profiles | — |
-| **OpenRouter** | `/models` pricing/context metadata as a local routing index; OpenAI-compatible fallback routing | — |
+| **OpenRouter/OpenCode** | `/models` pricing/context metadata as a local routing index; OpenAI-compatible fallback routing | — |
 | **vibe-kanban / gpt-pilot / Aider / SWE-agent / AutoGPT** | Durable object = the task, not the chat; checkpoint-after-every-step; architect/editor two-model cost split; ACI design matters more than model choice; free-running loops need externally imposed structure (budgets, gates) | — |
 
 **Differentiators no existing tool has:** (a) headless JSON-streaming as the
@@ -294,29 +294,11 @@ interface HarnessAdapter {
   (Conductor pattern) with BYO-binary fallback. Auth is per-agent: API key
   from the daemon's secret store, or explicit opt-in passthrough of the
   user's CLI login.
-- **Credential profiles and BYOK switching.** Every agent references a
-  `credentialProfile` in `agent.yaml`; profiles live in the daemon secret
-  store and come in three kinds:
-  - `subscription` — explicit opt-in passthrough of the user's harness login;
-  - `api-key` — BYOK vendor key (e.g. `ANTHROPIC_API_KEY`, which overrides
-    subscription auth in Claude Code headless mode) at full native
-    performance;
-  - `gateway` — `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` (or provider
-    equivalent) pointed at OpenRouter/any compatible proxy, so **any model**
-    runs through Claude Code unchanged, with optional `ANTHROPIC_MODEL`
-    override.
-  Switching is a first-class API/UI toggle ("on-the-go"): the scheduler
-  checkpoints the active task, the next session spawns with the new profile,
-  and the plan resumes — no state lost, because sessions are disposable by
-  design. A policy-gated **auto-failover** rule lets the daemon switch
-  profile automatically on `usage_limit`/rate-limit events so objectives keep
-  running beyond subscription session/usage limits. Realized costs are
-  metered per profile so budgets (§11) hold across switches.
 - **Execution modes:** default headless (JSON streaming). PTY attach is an
   optional runner capability for human takeover — the runner allocates a PTY
   and bridges it to the UI terminal tab (xterm.js) while continuing to parse
   the event stream.
-- **Direct-API providers** (OpenRouter, Ollama, Anthropic/OpenAI SDKs) are a
+- **Direct-API providers** (OpenRouter, OpenCode (go,zen etc), Ollama, Anthropic/OpenAI SDKs) are a
   second adapter family implementing the same interface with a minimal native
   loop — explicitly post-v1, enabled by the contract, not built now.
 
@@ -392,7 +374,7 @@ interface HarnessAdapter {
 
 ## 13. Cost-aware model routing
 
-- `router` maintains a pricing/capability index (OpenRouter `/models` +
+- `router` maintains a pricing/capability index (OpenRouter/Opencode  `/models` +
   static tables for subscription harnesses) refreshed daily.
 - Every task carries a **task class** (`plan, architect, implement, refactor,
   review, security_review, summarize, docs, rename`) set by the planner.
