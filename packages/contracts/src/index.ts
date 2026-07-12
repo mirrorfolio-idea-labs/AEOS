@@ -12,3 +12,4 @@ export {
   ObjectiveSchema, PlanTaskSchema, PlanTaskStatusSchema, CheckpointSchema,
   type Objective, type PlanTask, type Checkpoint,
 } from './domain/objective.js';
+export { AeosEventSchema, AEOS_EVENT_TYPES, type AeosEvent } from './events/taxonomy.js';
