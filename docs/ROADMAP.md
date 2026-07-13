@@ -31,8 +31,8 @@ internals; dependency-cruiser enforces it in CI.
 - [x] **T6** Boundary enforcement: dependency-cruiser config + GitHub Actions CI (install→build→test→depcruise). *Accept: CI green; a deliberate cross-internal import fails depcruise locally.*
 **Exit gate:** all T-accepts green in CI on `main`.
 
-### M2 — Kernel: state store, registry, event bus  `[ ]`
-Plan: to be written at M1 exit (same file naming pattern).
+### M2 — Kernel: state store, registry, event bus  `[~]`
+Plan: `docs/superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md`
 **Context brief:** Spec §6–§7. `AEOS_HOME` file layout is truth; SQLite
 (`index.db`, WAL) holds only derived indexes; `aeos reindex` rebuilds it from
 files. Registry = CRUD over workspaces/agents backed by files. In-process event

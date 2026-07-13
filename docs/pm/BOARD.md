@@ -1,6 +1,7 @@
 # Board — AEOS
 
-> **Generated view** — as of merge `8506974`, 2026-07-13, branch `main` (M1 exit).
+> **Generated view** — as of 2026-07-13, branch `main`, S01 closed / S02 opened
+> (parent state `87eecbe`, M1 exit).
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,8 +11,8 @@
 
 | | |
 |---|---|
-| **Now** | [PM-S01-4](sprints/S01.md#pm-s01-4--author-m2-plan) — author M2 kernel plan (M1 exit gate passed) |
-| **Next** | Sprint 02: execute P1.M2 (kernel: state store, registry, event bus) |
+| **Now** | [S02](sprints/S02.md): execute P1.M2.T1–T5 (kernel: state store, registry, event bus) on `feat/aeos-p1-m2-kernel` |
+| **Next** | M3 plan (PM-S02-2, gated on M2 exit) → Sprint 03: session runner |
 | **Later** | P1.M3–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -23,7 +24,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | Milestone | Status | Tasks | Plan | Notes |
 |---|---|---|---|---|
 | M1 contracts | `[x]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | merged to `main` (`8506974`); CI-identical chain verified green on `main` (19/19 tests) — remote CI run pending first push |
-| M2 kernel | `[ ]` | 0/5 | to write (PM-S01-4) | gated on M1 exit |
+| M2 kernel | `[~]` | 0/5 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md) | in execution (S02) |
 | M3 session runner | `[ ]` | 0/4 | — | |
 | M4 Claude provider | `[ ]` | 0/5 | — | |
 | M5 memory v0 | `[ ]` | 0/4 | — | |
@@ -80,7 +81,8 @@ accept criterion in the ROADMAP; 6 are done (M1 complete), 98 remain to v1.
 
 ## Active sprint
 
-[S01 — Close M1, open M2](sprints/S01.md) · goal: M1 exit gate + M2 plan.
+[S02 — Execute M2 (kernel)](sprints/S02.md) · goal: M2 exit gate + M3 plan.
+(S01 closed 2026-07-13 — retrospective in the sprint file.)
 
 ## Blockers
 
