@@ -38,7 +38,7 @@ Plan: `docs/superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md`
 files. Registry = CRUD over workspaces/agents backed by files. In-process event
 bus typed by the M1 envelope; every published event appended to the owning
 session's `transcript.ndjson`.
-- [ ] **T1** `AEOS_HOME` layout module + atomic file writes (tmp+rename) + YAML codecs for `agent.yaml`/`session.yaml`. *Accept: crash-simulating test (kill between tmp write and rename) never leaves corrupt state.*
+- [x] **T1** `AEOS_HOME` layout module + atomic file writes (tmp+rename) + YAML codecs for `agent.yaml`/`session.yaml`. *Accept: crash-simulating test (kill between tmp write and rename) never leaves corrupt state.*
 - [ ] **T2** SQLite derived index + `reindex()` full rebuild from files. *Accept: delete `index.db` → `reindex()` → identical query results test.*
 - [ ] **T3** Registry (workspace/agent CRUD; agent dir initialized as git repo). *Accept: create/read/update round-trips; git history shows agent.yaml commits.*
 - [ ] **T4** Event bus (typed pub/sub) + transcript appender. *Accept: events published during a fake session appear in order in `transcript.ndjson`.*
