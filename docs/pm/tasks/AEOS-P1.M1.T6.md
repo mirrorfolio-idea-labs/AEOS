@@ -7,7 +7,7 @@
 |---|---|
 | Epic / Milestone | P1 — Spine / [M1 — Monorepo scaffold + contracts](../../ROADMAP.md#m1--monorepo-scaffold--contracts-package--) |
 | Sprint | [S01](../sprints/S01.md) |
-| Status (snapshot 2026-07-13 — verify at source) | `[ ]` last open M1 task |
+| Status (snapshot 2026-07-13 — verify at source) | `[~]` in progress — plan step 1 done (`13035e9`), steps 2–5 remain |
 | Priority | P0 — gates the M1 exit |
 | Owner | any agent |
 | Depends on | T1–T5 (all done: verified 17/17 tests green @ `6c8858e`) |
@@ -33,6 +33,13 @@ Follow the plan exactly:
 (steps 1–5: config → prove the rule bites with a throwaway violation → CI
 workflow → run CI chain locally → commit and flip ROADMAP markers).
 
+**Mid-task state (2026-07-13, verified by direct run):** commit `13035e9`
+landed step 1 (`.dependency-cruiser.cjs` + devDep + script), but
+`pnpm depcruise` currently **fails** — the script globs `packages apps` and
+`apps/` doesn't exist yet (drift D6). Resume at step 2 after fixing the glob
+(scope to `packages`, or make it tolerate the missing dir). Steps 2–5 (RED/
+GREEN proof, CI workflow, local chain, commit + flip T6 `[x]`) are all open.
+
 Deviations to be aware of:
 - Plan step 5 says to mark M1 `[x]` in the same commit. Note the exit gate
   wording is "CI green on **main**" — flipping task T6 `[x]` in this commit is
@@ -40,6 +47,8 @@ Deviations to be aware of:
   after the merge (PM-S01-1). Flip T6 only.
 - `pnpm typecheck` must exist as a root script for the CI chain; if it doesn't,
   add it (workspace-recursive `tsc --noEmit` or equivalent) as part of step 3.
+- While adding the CI workflow, swap the README's hardcoded "17/17 tests green"
+  badge for a real CI status badge (drift D7).
 
 ## Acceptance criteria
 
