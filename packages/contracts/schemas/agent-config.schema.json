@@ -1,0 +1,94 @@
+{
+  "$ref": "#/definitions/agent-config",
+  "definitions": {
+    "agent-config": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+        },
+        "workspaceId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "harness": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": [
+                "claude-code",
+                "codex",
+                "opencode"
+              ]
+            },
+            "version": {
+              "type": "string"
+            },
+            "featureToggles": {
+              "type": "object",
+              "properties": {
+                "plugins": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "skills": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "mcpServers": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "userClaudeMd": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoMemory": {
+                  "type": "boolean",
+                  "default": false
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            }
+          },
+          "required": [
+            "provider"
+          ],
+          "additionalProperties": false
+        },
+        "credentialProfileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelPreferences": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "workspaceId",
+        "name",
+        "harness",
+        "credentialProfileId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
