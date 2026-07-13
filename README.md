@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="./docs/ROADMAP.md"><img src="https://img.shields.io/badge/Phase-P1%20Spine%20(v0.1)-blueviolet?style=for-the-badge" alt="Phase P1"></a>
-  <a href="./packages/contracts"><img src="https://img.shields.io/badge/Contracts-17%2F17%20tests%20green-brightgreen?style=for-the-badge" alt="Contracts tests"></a>
+  <a href="https://github.com/mirrorfolio-idea-labs/AEOS/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/mirrorfolio-idea-labs/AEOS/ci.yml?style=for-the-badge&label=CI" alt="CI status"></a>
   <a href="./docs/pm/BOARD.md"><img src="https://img.shields.io/badge/Status-pre--alpha-orange?style=for-the-badge" alt="Status"></a>
   <a href="https://www.npmjs.com/package/pnpm"><img src="https://img.shields.io/badge/pnpm-9-f69220?style=for-the-badge&logo=pnpm&logoColor=white" alt="pnpm 9"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node-22-017ace?style=for-the-badge&logo=node.js&logoColor=white" alt="Node 22"></a>

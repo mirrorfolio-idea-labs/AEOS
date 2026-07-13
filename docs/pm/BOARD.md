@@ -1,6 +1,6 @@
 # Board — AEOS
 
-> **Generated view** — as of `b384252`, 2026-07-13, branch `feat/aeos-p1-m1-contracts`.
+> **Generated view** — as of T6 completion commit, 2026-07-13, branch `feat/aeos-p1-m1-contracts`.
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,8 +10,8 @@
 
 | | |
 |---|---|
-| **Now** | [AEOS-P1.M1.T6](tasks/AEOS-P1.M1.T6.md) `[~]` — depcruise config landed (`13035e9`), **currently red** (see D6); CI workflow + RED/GREEN proof remain · [PM-S01-3](sprints/S01.md#pm-s01-3--deferred-review-minors-tests) — deferred test minors (parallelizable) |
-| **Next** | PM-S01-1 merge to `main` → PM-S01-2 M1 exit doc pass → PM-S01-4 author M2 plan |
+| **Now** | [PM-S01-3](sprints/S01.md#pm-s01-3--deferred-review-minors-tests) — deferred test minors · PM-S01-1 — merge `feat/aeos-p1-m1-contracts` → `main` (T6 done, branch complete) |
+| **Next** | PM-S01-2 M1 exit doc pass → PM-S01-4 author M2 plan |
 | **Later** | P1.M2–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -22,7 +22,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
 | Milestone | Status | Tasks | Plan | Notes |
 |---|---|---|---|---|
-| M1 contracts | `[~]` | 5/6 (T6 `[~]`) | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | T1–T5 done (17/17 tests verified green); T6 WIP |
+| M1 contracts | `[~]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | all tasks done on branch; milestone flips `[x]` at exit gate (CI on `main`, PM-S01-1/2) |
 | M2 kernel | `[ ]` | 0/5 | to write (PM-S01-4) | gated on M1 exit |
 | M3 session runner | `[ ]` | 0/4 | — | |
 | M4 Claude provider | `[ ]` | 0/5 | — | |
@@ -95,5 +95,5 @@ None. (T6 is unstarted, not blocked.)
 | D3 | 2026-07-13 | No project `CLAUDE.md` (required entry point for delegated agents) | **Fixed** same day: root `CLAUDE.md` added |
 | D4 | 2026-07-13 | `.superpowers/sdd/progress.md` tracks review debts outside the task system | **Fixed** same day: imported as PM-S01-2/PM-S01-3 |
 | D5 | 2026-07-13 | Old ROADMAP P4 blurb listed "multi-user auth" inside v1 scope, contradicting spec §14 ("multi-user RBAC is post-v1") | **Fixed** same day: resolved in favor of the spec — moved to post-v1 backlog **B2**; P4.M3.T3 keeps the single-user token layer |
-| D6 | 2026-07-13 | T6 WIP commit `13035e9` leaves `pnpm depcruise` failing: script globs `apps/`, which doesn't exist yet (verified by direct run) | Open — owned by the T6 executor; fix noted in the [task card](tasks/AEOS-P1.M1.T6.md) (scope the glob or create the dir) |
-| D7 | 2026-07-13 | README badge hardcodes "17/17 tests green" — a static claim that will silently go stale | Open (minor) — replace with a CI status badge once T6's workflow exists; noted in T6 card |
+| D6 | 2026-07-13 | T6 WIP commit `13035e9` leaves `pnpm depcruise` failing: script globs `apps/`, which doesn't exist yet (verified by direct run) | **Fixed** same day in T6 completion: `apps/.gitkeep` created (dir is real — workspace already declares `apps/*`) |
+| D7 | 2026-07-13 | README badge hardcodes "17/17 tests green" — a static claim that will silently go stale | **Fixed** same day in T6 completion: swapped for the live CI workflow badge |
