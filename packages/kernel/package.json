@@ -17,9 +17,11 @@
   },
   "dependencies": {
     "@aeos/contracts": "workspace:*",
+    "better-sqlite3": "^11",
     "yaml": "^2.6.1"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22"
   }
 }

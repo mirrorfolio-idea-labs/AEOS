@@ -24,3 +24,16 @@ export {
   writeAgentYaml,
   writeSessionYaml,
 } from './home/codecs.js';
+export { openIndexDb, type IndexDb } from './index-db/db.js';
+export { applySchema, SCHEMA_VERSION } from './index-db/schema.js';
+export {
+  indexAgent,
+  indexSession,
+  queryAgents,
+  querySessions,
+  reindex,
+  type AgentRow,
+  type CorruptEntry,
+  type ReindexReport,
+  type SessionRow,
+} from './index-db/reindex.js';
