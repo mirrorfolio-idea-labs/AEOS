@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.aeos/
+ruvector.db
+
+# local agent/tooling state — never part of the build
+.claude/
+
+# accidental empty scaffold picked up by the workspace
+packages/scratch/
