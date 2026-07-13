@@ -1,7 +1,7 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-07-13, branch `main`, S01 closed / S02 opened
-> (parent state `87eecbe`, M1 exit).
+> **Generated view** — as of 2026-07-13, branch `feat/aeos-p1-m2-kernel`
+> (T1 done @ `7119e90`).
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **Now** | [S02](sprints/S02.md): execute P1.M2.T1–T5 (kernel: state store, registry, event bus) on `feat/aeos-p1-m2-kernel` |
+| **Now** | [S02](sprints/S02.md): P1.M2 on `feat/aeos-p1-m2-kernel` — T1 done (44/44 tests), T2 (SQLite derived index + reindex) in execution |
 | **Next** | M3 plan (PM-S02-2, gated on M2 exit) → Sprint 03: session runner |
 | **Later** | P1.M3–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
 
@@ -24,7 +24,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | Milestone | Status | Tasks | Plan | Notes |
 |---|---|---|---|---|
 | M1 contracts | `[x]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | merged to `main` (`8506974`); CI-identical chain verified green on `main` (19/19 tests) — remote CI run pending first push |
-| M2 kernel | `[~]` | 0/5 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md) | in execution (S02) |
+| M2 kernel | `[~]` | 1/5 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md) | in execution (S02); T1 crash-safety suite green |
 | M3 session runner | `[ ]` | 0/4 | — | |
 | M4 Claude provider | `[ ]` | 0/5 | — | |
 | M5 memory v0 | `[ ]` | 0/4 | — | |
@@ -77,7 +77,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
 **Total defined work: 104 tasks** (40 P1 + 25 P2 + 11 P3 + 10 P4 + 18 P5)
 across 31 milestones, plus 4 tracked post-v1 backlog items. Every task has an
-accept criterion in the ROADMAP; 6 are done (M1 complete), 98 remain to v1.
+accept criterion in the ROADMAP; 7 are done (M1 complete + M2.T1), 97 remain to v1.
 
 ## Active sprint
 
@@ -86,7 +86,7 @@ accept criterion in the ROADMAP; 6 are done (M1 complete), 98 remain to v1.
 
 ## Blockers
 
-None. (T6 is unstarted, not blocked.)
+None.
 
 ## Drift register
 
