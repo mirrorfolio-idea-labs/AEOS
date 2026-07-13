@@ -27,6 +27,13 @@ describe('EnvelopeBaseSchema', () => {
     expect(() => EnvelopeBaseSchema.parse({ ...valid, v: 999 })).toThrow();
   });
 
+  it('rejects empty strings on min(1) fields', () => {
+    expect(() => EnvelopeBaseSchema.parse({ ...valid, source: '' })).toThrow();
+    expect(() => EnvelopeBaseSchema.parse({ ...valid, agentId: '' })).toThrow();
+    expect(() => EnvelopeBaseSchema.parse({ ...valid, sessionId: '' })).toThrow();
+    expect(() => EnvelopeBaseSchema.parse({ ...valid, taskId: '' })).toThrow();
+  });
+
   it('newEventId produces valid, monotonically sortable ids', () => {
     const a = newEventId();
     const b = newEventId();

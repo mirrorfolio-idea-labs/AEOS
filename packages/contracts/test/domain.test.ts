@@ -33,6 +33,19 @@ describe('domain schemas', () => {
     expect(() =>
       CredentialProfileSchema.parse({ id: 'bad', kind: 'api-key', apiKey: 'sk-ant-xxx' }),
     ).toThrow();
+    // stray-key rejection in isolation: secretRef present and valid, so the
+    // ONLY reason to fail is the extra key — proves .strict() carries the invariant
+    expect(() =>
+      CredentialProfileSchema.parse({
+        id: 'bad2', kind: 'api-key', secretRef: 'anthropic/main', apiKey: 'sk-ant-xxx',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects empty strings on min(1) fields', () => {
+    expect(() => WorkspaceSchema.parse({ id: '', name: 'Mirrorfolio' })).toThrow();
+    expect(() => CredentialProfileSchema.parse({ id: 'byok', kind: 'api-key', secretRef: '' })).toThrow();
+    expect(() => PlanTaskSchema.parse({ id: '', title: 'Write schema', status: 'pending' })).toThrow();
   });
 
   it('parses an agent.yaml shape with hermetic defaults', () => {
