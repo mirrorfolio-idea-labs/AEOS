@@ -1,6 +1,6 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of `6c8858e`, 2026-07-13. Regenerate per
+> **Generated view** — as of `dd107d9` + end-to-end roadmap extension, 2026-07-13. Regenerate per
 > [README R3](README.md). Spec = `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
