@@ -1,6 +1,6 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of `dd107d9` + end-to-end roadmap extension, 2026-07-13. Regenerate per
+> **Generated view** — as of merge `8506974` (M1 exit), 2026-07-13. Regenerate per
 > [README R3](README.md). Spec = `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
@@ -40,10 +40,12 @@ their source of truth; the spec deliberately doesn't cover them.
 | AEOS-P1.M1.T3 domain schemas | `src/domain/{workspace,agent,credential,session,objective}.ts` | `test/domain.test.ts` | `82157f3` |
 | AEOS-P1.M1.T4 event taxonomy | `src/events/taxonomy.ts` | `test/events.test.ts` + `test/fixtures/events.golden.ndjson` | `09e506e` |
 | AEOS-P1.M1.T5 JSON Schema export | `scripts/gen-schemas.ts`, `schemas/*.json` | `test/schema-drift.test.ts` | `6c8858e` |
-| AEOS-P1.M1.T6 boundaries + CI | *(open)* `.dependency-cruiser.cjs`, `.github/workflows/ci.yml` | depcruise RED/GREEN check | — |
+| AEOS-P1.M1.T6 boundaries + CI | `.dependency-cruiser.cjs`, `.github/workflows/ci.yml`, `apps/.gitkeep` | depcruise RED/GREEN proof (scratch violation) + CI chain | `84b6e74` |
+| PM-S01-3 test hardening | `packages/contracts/tsconfig.test.json` | min(1) rejections, `.strict()` isolation | `e3ffde9` |
 
-Verified 2026-07-13 by direct run (code-as-truth): `pnpm test` → 5 files, 17
-tests, all green.
+Verified 2026-07-13 by direct run on `main` @ `8506974` (code-as-truth):
+install → build → typecheck (src+test+scripts) → test (19/19) → depcruise →
+schema-drift, all green.
 
 ## Deployment
 

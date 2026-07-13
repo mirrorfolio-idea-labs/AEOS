@@ -1,6 +1,6 @@
 # Board — AEOS
 
-> **Generated view** — as of T6 completion commit, 2026-07-13, branch `feat/aeos-p1-m1-contracts`.
+> **Generated view** — as of merge `8506974`, 2026-07-13, branch `main` (M1 exit).
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,9 +10,9 @@
 
 | | |
 |---|---|
-| **Now** | [PM-S01-3](sprints/S01.md#pm-s01-3--deferred-review-minors-tests) — deferred test minors · PM-S01-1 — merge `feat/aeos-p1-m1-contracts` → `main` (T6 done, branch complete) |
-| **Next** | PM-S01-2 M1 exit doc pass → PM-S01-4 author M2 plan |
-| **Later** | P1.M2–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
+| **Now** | [PM-S01-4](sprints/S01.md#pm-s01-4--author-m2-plan) — author M2 kernel plan (M1 exit gate passed) |
+| **Next** | Sprint 02: execute P1.M2 (kernel: state store, registry, event bus) |
+| **Later** | P1.M3–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
 
 ## Milestones
 
@@ -22,7 +22,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
 | Milestone | Status | Tasks | Plan | Notes |
 |---|---|---|---|---|
-| M1 contracts | `[~]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | all tasks done on branch; milestone flips `[x]` at exit gate (CI on `main`, PM-S01-1/2) |
+| M1 contracts | `[x]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | merged to `main` (`8506974`); CI-identical chain verified green on `main` (19/19 tests) — remote CI run pending first push |
 | M2 kernel | `[ ]` | 0/5 | to write (PM-S01-4) | gated on M1 exit |
 | M3 session runner | `[ ]` | 0/4 | — | |
 | M4 Claude provider | `[ ]` | 0/5 | — | |
@@ -76,7 +76,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
 **Total defined work: 104 tasks** (40 P1 + 25 P2 + 11 P3 + 10 P4 + 18 P5)
 across 31 milestones, plus 4 tracked post-v1 backlog items. Every task has an
-accept criterion in the ROADMAP; 5 are done, 99 remain to v1.
+accept criterion in the ROADMAP; 6 are done (M1 complete), 98 remain to v1.
 
 ## Active sprint
 
@@ -91,7 +91,7 @@ None. (T6 is unstarted, not blocked.)
 | ID | Found | Finding | Resolution |
 |---|---|---|---|
 | D1 | 2026-07-13 | ROADMAP M1 marked `[ ]` while T1–T5 were `[x]` | **Fixed** same day: M1 → `[~]` |
-| D2 | 2026-07-13 | ROADMAP M1.T4 accept says "compile-time exhaustiveness check"; implementation is a runtime golden-fixture test (plan-approved) | Open — owned by [PM-S01-2](sprints/S01.md), reword at M1 exit |
+| D2 | 2026-07-13 | ROADMAP M1.T4 accept says "compile-time exhaustiveness check"; implementation is a runtime golden-fixture test (plan-approved) | **Fixed** same day at M1 exit (PM-S01-2): accept text reworded to match the implementation |
 | D3 | 2026-07-13 | No project `CLAUDE.md` (required entry point for delegated agents) | **Fixed** same day: root `CLAUDE.md` added |
 | D4 | 2026-07-13 | `.superpowers/sdd/progress.md` tracks review debts outside the task system | **Fixed** same day: imported as PM-S01-2/PM-S01-3 |
 | D5 | 2026-07-13 | Old ROADMAP P4 blurb listed "multi-user auth" inside v1 scope, contradicting spec §14 ("multi-user RBAC is post-v1") | **Fixed** same day: resolved in favor of the spec — moved to post-v1 backlog **B2**; P4.M3.T3 keeps the single-user token layer |
