@@ -46,6 +46,7 @@ session's `transcript.ndjson`.
 **Exit gate:** kill-daemon-mid-write test leaves recoverable state; reindex test green.
 
 ### M3 — Session runner + supervisor  `[ ]`
+Plan: `docs/superpowers/plans/2026-07-14-aeos-p1-m3-runner.md`
 **Context brief:** Spec §4, §10. One supervised OS process per live session,
 framed length-prefixed protocol (4-byte BE) over Unix socket, versioned
 handshake (min/max supported), heartbeats, per-session ring buffer, runner

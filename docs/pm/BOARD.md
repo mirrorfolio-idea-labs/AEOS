@@ -10,8 +10,8 @@
 
 | | |
 |---|---|
-| **Now** | PM-S02-2 — author M3 plan (M2 exit gate passed, merged to `main`) |
-| **Next** | Sprint 03: execute P1.M3 (session runner + supervisor) |
+| **Now** | [S03](sprints/S03.md): M3 plan authored — awaiting Kabeer's approval, then execute P1.M3.T1–T4 (session runner + supervisor) |
+| **Next** | M3 exit → M4 plan (Claude Code provider) |
 | **Later** | P1.M3–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -24,7 +24,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 |---|---|---|---|---|
 | M1 contracts | `[x]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | merged to `main` (`8506974`); CI-identical chain verified green on `main` (19/19 tests) — remote CI run pending first push |
 | M2 kernel | `[x]` | 5/5 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md) | merged to `main`; exit-gate tests (crash-sim ×100, reindex equivalence) green; 69/69 tests |
-| M3 session runner | `[ ]` | 0/4 | — | |
+| M3 session runner | `[ ]` | 0/4 | [plan](../superpowers/plans/2026-07-14-aeos-p1-m3-runner.md) | plan awaiting approval (S03) |
 | M4 Claude provider | `[ ]` | 0/5 | — | |
 | M5 memory v0 | `[ ]` | 0/4 | — | |
 | M6 scheduler v0 | `[ ]` | 0/4 | — | heart of the phase (M6.T4) |
@@ -80,8 +80,9 @@ accept criterion in the ROADMAP; 11 are done (M1 + M2 complete), 93 remain to v1
 
 ## Active sprint
 
-[S02 — Execute M2 (kernel)](sprints/S02.md) · M2 done; remaining scope: M3
-plan (PM-S02-2), then close and open S03.
+[S03 — Execute M3 (session runner + supervisor)](sprints/S03.md) · goal: the
+kill-daemon/re-adopt integration test green + M4 plan. (S02 closed 2026-07-14
+— retrospective in the sprint file.)
 
 ## Blockers
 
