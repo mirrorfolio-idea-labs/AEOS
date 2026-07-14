@@ -20,6 +20,14 @@ export {
 } from './home/atomic.js';
 export { listSubdirs } from './home/dirs.js';
 export {
+  createEventBus,
+  type EventBus,
+  type EventBusOptions,
+  type EventFilter,
+  type EventHandler,
+} from './bus/bus.js';
+export { attachTranscriptWriter, TranscriptRoutingError } from './bus/transcript.js';
+export {
   CodecError,
   readAgentYaml,
   readSessionYaml,
