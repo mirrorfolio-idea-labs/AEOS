@@ -42,7 +42,7 @@ session's `transcript.ndjson`.
 - [x] **T2** SQLite derived index + `reindex()` full rebuild from files. *Accept: delete `index.db` → `reindex()` → identical query results test.*
 - [x] **T3** Registry (workspace/agent CRUD; agent dir initialized as git repo). *Accept: create/read/update round-trips; git history shows agent.yaml commits.*
 - [x] **T4** Event bus (typed pub/sub) + transcript appender. *Accept: events published during a fake session appear in order in `transcript.ndjson`.*
-- [ ] **T5** Module lifecycle harness (`init→start/stop/health`) + composition root skeleton in `apps/aeosd`. *Accept: daemon boots, health endpoint-less self-check passes, clean shutdown test.*
+- [x] **T5** Module lifecycle harness (`init→start/stop/health`) + composition root skeleton in `apps/aeosd`. *Accept: daemon boots, health endpoint-less self-check passes, clean shutdown test.*
 **Exit gate:** kill-daemon-mid-write test leaves recoverable state; reindex test green.
 
 ### M3 — Session runner + supervisor  `[ ]`

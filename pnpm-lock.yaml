@@ -18,6 +18,22 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  apps/aeosd:
+    dependencies:
+      '@aeos/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@aeos/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      yaml:
+        specifier: ^2.6.1
+        version: 2.9.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+
   packages/contracts:
     dependencies:
       ulid:

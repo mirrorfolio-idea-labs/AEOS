@@ -20,6 +20,13 @@ export {
 } from './home/atomic.js';
 export { listSubdirs } from './home/dirs.js';
 export {
+  createKernel,
+  type Health,
+  type Kernel,
+  type KernelHealth,
+  type Module,
+} from './lifecycle.js';
+export {
   createEventBus,
   type EventBus,
   type EventBusOptions,
