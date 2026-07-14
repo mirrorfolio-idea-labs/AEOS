@@ -1,6 +1,6 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of merge `8506974` (M1 exit), 2026-07-13. Regenerate per
+> **Generated view** — as of M2 merge to `main`, 2026-07-14. Regenerate per
 > [README R3](README.md). Spec = `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
@@ -42,10 +42,16 @@ their source of truth; the spec deliberately doesn't cover them.
 | AEOS-P1.M1.T5 JSON Schema export | `scripts/gen-schemas.ts`, `schemas/*.json` | `test/schema-drift.test.ts` | `6c8858e` |
 | AEOS-P1.M1.T6 boundaries + CI | `.dependency-cruiser.cjs`, `.github/workflows/ci.yml`, `apps/.gitkeep` | depcruise RED/GREEN proof (scratch violation) + CI chain | `84b6e74` |
 | PM-S01-3 test hardening | `packages/contracts/tsconfig.test.json` | min(1) rejections, `.strict()` isolation | `e3ffde9` |
+| AEOS-P1.M2.T1 layout/atomic/codecs | `packages/kernel/src/home/{paths,atomic,codecs}.ts` | `test/{paths,atomic,codecs}.test.ts` (crash-sim ×100) | `7119e90` |
+| AEOS-P1.M2.T2 derived index | `packages/kernel/src/index-db/{db,schema,reindex}.ts` | `test/reindex.test.ts` (rebuild equivalence) | `1479c71` |
+| AEOS-P1.M2.T3 registry | `packages/kernel/src/registry/{registry,git}.ts` | `test/registry.test.ts` (git history per mutation) | `725c5d9` |
+| AEOS-P1.M2.T4 event bus + transcripts | `packages/kernel/src/bus/{bus,transcript}.ts` | `test/bus.test.ts` (order + isolation) | `128a4e7` |
+| AEOS-P1.M2.T5 lifecycle + aeosd | `packages/kernel/src/lifecycle.ts`, `apps/aeosd/src/*` | `test/lifecycle.test.ts`, `apps/aeosd/test/daemon.test.ts` | `cae14b6` |
 
-Verified 2026-07-13 by direct run on `main` @ `8506974` (code-as-truth):
-install → build → typecheck (src+test+scripts) → test (19/19) → depcruise →
-schema-drift, all green.
+Verified 2026-07-14 by direct run on `main` after the M2 merge (code-as-truth):
+install → build → typecheck → test (69/69 across contracts/kernel/aeosd) →
+depcruise (103 modules) → schema-drift, all green; `aeosd reindex` binary
+smoke-tested against a scratch `AEOS_HOME`.
 
 ## Deployment
 

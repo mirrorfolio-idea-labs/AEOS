@@ -6,7 +6,7 @@ exit gates stay in the ROADMAP — follow the links.
 
 | Epic | Objective (why it exists) | Version | Priority | Owner | Status | Milestones |
 |---|---|---|---|---|---|---|
-| **P1 — Spine** | Prove the core loop: durable agents that survive daemon death and resume from checkpoints, all state as files. [Scope](../ROADMAP.md#phase-p1--spine-v01) | v0.1 | P0 | Kabeer | `[~]` (M1 done, M2 next) | M1–M9 |
+| **P1 — Spine** | Prove the core loop: durable agents that survive daemon death and resume from checkpoints, all state as files. [Scope](../ROADMAP.md#phase-p1--spine-v01) | v0.1 | P0 | Kabeer | `[~]` (M1–M2 done, M3 next) | M1–M9 |
 | **P2 — Safety + polish** | Make it safe to leave running: policy tiers, approvals, budgets, audit, secrets, curator, PTY takeover, 3 harnesses, managed binaries, desktop app. [Scope](../ROADMAP.md#phase-p2--safety--polish-v02--) | v0.2 | P1 | Kabeer | `[ ]` | M1–M8 |
 | **P3 — Autonomy** | Make it smart: planner task classes, cost-aware routing, verification gates, self-learning retrospectives, wakeups, delegation. [Scope](../ROADMAP.md#phase-p3--autonomy-v03--) | v0.3 | P2 | Kabeer | `[ ]` | M1–M5 |
 | **P4 — Scale + community** | Make it portable and extensible: Docker sandbox tier, public plugin API, deploy targets, TCP transport + K8s. [Scope](../ROADMAP.md#phase-p4--scale--community-v04--) | v0.4 | P3 | Kabeer | `[ ]` | M1–M4 |

@@ -190,6 +190,7 @@ On-disk layout (all under `AEOS_HOME`, default `~/.aeos/`):
 ├── index.db                      # derived (rebuildable)
 ├── audit/audit-YYYY-MM-DD.ndjson # append-only audit log
 └── workspaces/<workspace>/
+    ├── workspace.yaml            # workspace identity (id, name) — added at M2
     └── agents/<agent>/
         ├── agent.yaml            # identity, harness, policy refs, model prefs
         ├── memory/               # §8
