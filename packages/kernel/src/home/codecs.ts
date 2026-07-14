@@ -1,8 +1,15 @@
 import fs from 'node:fs';
-import { AgentConfigSchema, SessionRecordSchema, type AgentConfig, type SessionRecord } from '@aeos/contracts';
+import {
+  AgentConfigSchema,
+  SessionRecordSchema,
+  WorkspaceSchema,
+  type AgentConfig,
+  type SessionRecord,
+  type Workspace,
+} from '@aeos/contracts';
 import { parse, stringify } from 'yaml';
 import { writeFileAtomic, type WriteFileAtomicOptions } from './atomic.js';
-import { agentYaml, sessionYaml } from './paths.js';
+import { agentYaml, sessionYaml, workspaceYaml } from './paths.js';
 
 /**
  * Minimal structural shape of a Zod schema's `safeParse`. Kernel does not
@@ -67,6 +74,19 @@ function writeYaml<T>(
     });
   }
   writeFileAtomic(filePath, stringify(result.data), options);
+}
+
+export function readWorkspaceYaml(home: string, workspaceId: string): Workspace {
+  return readYaml(workspaceYaml(home, workspaceId), WorkspaceSchema);
+}
+
+export function writeWorkspaceYaml(
+  home: string,
+  workspaceId: string,
+  workspace: Workspace,
+  options?: WriteFileAtomicOptions,
+): void {
+  writeYaml(workspaceYaml(home, workspaceId), WorkspaceSchema, workspace, options);
 }
 
 export function readAgentYaml(home: string, workspaceId: string, agentId: string): AgentConfig {

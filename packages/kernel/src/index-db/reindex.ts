@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { AgentConfig, SessionRecord } from '@aeos/contracts';
 import { CodecError, readAgentYaml, readSessionYaml } from '../home/codecs.js';
+import { listSubdirs } from '../home/dirs.js';
 import { agentDir, agentYaml, sessionYaml } from '../home/paths.js';
 import type { IndexDb } from './db.js';
 
@@ -64,16 +65,6 @@ export function querySessions(db: IndexDb): SessionRow[] {
        FROM sessions ORDER BY id`,
     )
     .all() as SessionRow[];
-}
-
-function listSubdirs(dir: string): string[] {
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return []; // missing tree level = nothing to index
-  }
-  return entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
 }
 
 function mtime(filePath: string): number {

@@ -12,6 +12,10 @@ export function workspaceDir(home: string, workspaceId: string): string {
   return path.join(home, 'workspaces', workspaceId);
 }
 
+export function workspaceYaml(home: string, workspaceId: string): string {
+  return path.join(workspaceDir(home, workspaceId), 'workspace.yaml');
+}
+
 export function agentDir(home: string, workspaceId: string, agentId: string): string {
   return path.join(workspaceDir(home, workspaceId), 'agents', agentId);
 }
