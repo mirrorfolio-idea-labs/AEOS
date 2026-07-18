@@ -14,6 +14,7 @@
   "dependencies": {
     "@aeos/contracts": "workspace:*",
     "@aeos/kernel": "workspace:*",
+    "@aeos/runner": "workspace:*",
     "yaml": "^2.6.1"
   },
   "devDependencies": {

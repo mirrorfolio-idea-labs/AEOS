@@ -26,6 +26,9 @@ importers:
       '@aeos/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
+      '@aeos/runner':
+        specifier: workspace:*
+        version: link:../../packages/runner
       yaml:
         specifier: ^2.6.1
         version: 2.9.0

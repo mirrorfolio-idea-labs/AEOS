@@ -25,7 +25,7 @@ describe('aeosd daemon', () => {
     await daemon.start();
     const health = await daemon.health();
     expect(health.ok).toBe(true);
-    expect(Object.keys(health.modules)).toEqual(['home', 'index-db', 'event-bus']);
+    expect(Object.keys(health.modules)).toEqual(['home', 'index-db', 'event-bus', 'supervisor']);
     // first boot materializes config + audit dir
     expect(fs.existsSync(aeosYamlPath(home))).toBe(true);
     expect(fs.existsSync(auditDir(home))).toBe(true);

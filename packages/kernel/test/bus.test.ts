@@ -180,6 +180,15 @@ describe('transcript writer', () => {
     expect(fs.existsSync(path.join(home, 'workspaces'))).toBe(false);
   });
 
+  it('skipSession suppresses daemon-side writes for runner-owned sessions', () => {
+    const bus = createEventBus();
+    attachTranscriptWriter(bus, home, db, { skipSession: (sessionId) => sessionId === S1 });
+    bus.publish(ev('session.created', S1));
+    bus.publish(ev('session.created', S2));
+    expect(fs.existsSync(transcriptPath(home, 'ws1', 'ada', S1))).toBe(false);
+    expect(fs.existsSync(transcriptPath(home, 'ws1', 'ada', S2))).toBe(true);
+  });
+
   it('unresolvable session is reported, not thrown', () => {
     const errors: unknown[] = [];
     const bus = createEventBus({ onHandlerError: (error) => errors.push(error) });
