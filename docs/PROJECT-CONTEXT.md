@@ -1,6 +1,6 @@
 # AEOS / ADE — Project Context (agent onboarding document)
 
-> **Generated view** — as of commit `5a78ee5`, branch `main`, 2026-07-18.
+> **Generated view** — as of branch `feat/aeos-p1-m3-runner` (M3 complete), 2026-07-18.
 > This document is the single-file cold-start context for any AI coding agent
 > (Claude Code, Cursor, OpenCode, Codex, …) joining the project. It summarizes
 > and **links**; it never owns facts. Owned sources (trust them over this file):
@@ -160,12 +160,13 @@ first; index upserts are derived. Any new feature must keep
 |---|---|---|
 | P1.M1 contracts (T1–T6) | **done** | merged `8506974`; 19/19 tests; CI chain green locally |
 | P1.M2 kernel (T1–T5) | **done** | merged `ec64562`; 69/69 tests; crash-sim ×100 + reindex-equivalence exit gate green |
-| P1.M3 session runner (T1–T4) | **next** | plan authored ([M3 plan](superpowers/plans/2026-07-14-aeos-p1-m3-runner.md)); **sprint S03 gate: awaiting Kabeer's approval before execution** |
-| P1.M4–M9, P2–P5 | pending | 104 total tasks defined; 11 done, 93 remain to v1.0 |
+| P1.M3 session runner (T1–T4) | **done** | complete on `feat/aeos-p1-m3-runner`; flagship re-adoption test green; 100/100 workspace tests |
+| P1.M4 Claude provider (T1–T5) | **next** | plan authored ([M4 plan](superpowers/plans/2026-07-18-aeos-p1-m4-claude-provider.md)); **sprint S04 gate: awaiting Kabeer's approval before execution** |
+| P1.M5–M9, P2–P5 | pending | 104 total tasks defined; 15 done, 89 remain to v1.0 |
 
-Active sprint: [S03](pm/sprints/S03.md) — goal: M3.T3 re-adoption integration
-test green + M4 plan authored. Branch for M3 work: `feat/aeos-p1-m3-runner`
-(from `main`). Blockers: none. All drift-register items D1–D7 are fixed.
+Active sprint: [S04](pm/sprints/S04.md) — goal: M4 conformance + golden
+translation green. Pending Kabeer: M3 branch merge to `main` + first push.
+Blockers: none. All drift-register items D1–D7 are fixed.
 
 **Operational facts an agent must know:**
 
@@ -185,8 +186,8 @@ until N's exit gate passes**; milestone plans are written just-in-time at the
 predecessor's exit. The chain through v0.1:
 
 ```
-M3 runner (4 tasks, plan ready, awaiting approval)
- → M4 Claude provider (5 tasks; hermetic profile, NDJSON→canonical, resume, BYOK failover)
+M3 runner — DONE (runner-as-server, ring-buffer replay, re-adoption, state machine)
+ → M4 Claude provider (5 tasks, plan ready; hermetic profile, NDJSON→canonical, resume, BYOK failover)
  → M5 memory v0 (4 tasks; budgeted files, frozen snapshot, memory.propose, FTS)
  → M6 scheduler v0 (4 tasks; plan parser, checkpoints, sequential loop, resume-on-boot — heart of P1)
  → M7 API+SSE+SDK (4) → M8 ADE web UI (4) → M9 E2E + hardening (4) = v0.1 tag

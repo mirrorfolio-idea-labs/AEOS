@@ -1,6 +1,6 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-07-14, branch `main` (M2 merged + exit).
+> **Generated view** — as of 2026-07-18, branch `feat/aeos-p1-m3-runner` (M3 complete + exit).
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,9 +10,9 @@
 
 | | |
 |---|---|
-| **Now** | [S03](sprints/S03.md): M3 plan authored — awaiting Kabeer's approval, then execute P1.M3.T1–T4 (session runner + supervisor) |
-| **Next** | M3 exit → M4 plan (Claude Code provider) |
-| **Later** | P1.M3–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
+| **Now** | [S04](sprints/S04.md): M4 plan authored — awaiting Kabeer's approval, then execute P1.M4.T1–T5 (Claude Code provider). Merge of `feat/aeos-p1-m3-runner` + first push to origin also pending Kabeer. |
+| **Next** | M4 exit → M5 plan (memory v0) |
+| **Later** | P1.M5–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
 
 ## Milestones
 
@@ -24,8 +24,8 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 |---|---|---|---|---|
 | M1 contracts | `[x]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | merged to `main` (`8506974`); CI-identical chain verified green on `main` (19/19 tests) — remote CI run pending first push |
 | M2 kernel | `[x]` | 5/5 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md) | merged to `main`; exit-gate tests (crash-sim ×100, reindex equivalence) green; 69/69 tests |
-| M3 session runner | `[ ]` | 0/4 | [plan](../superpowers/plans/2026-07-14-aeos-p1-m3-runner.md) | plan awaiting approval (S03) |
-| M4 Claude provider | `[ ]` | 0/5 | — | |
+| M3 session runner | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-14-aeos-p1-m3-runner.md) | complete on `feat/aeos-p1-m3-runner`; flagship re-adoption test green; 100/100 workspace tests; remote CI run pending first push |
+| M4 Claude provider | `[ ]` | 0/5 | [plan](../superpowers/plans/2026-07-18-aeos-p1-m4-claude-provider.md) | plan awaiting approval (S04) |
 | M5 memory v0 | `[ ]` | 0/4 | — | |
 | M6 scheduler v0 | `[ ]` | 0/4 | — | heart of the phase (M6.T4) |
 | M7 API+SSE+SDK | `[ ]` | 0/4 | — | |
@@ -76,13 +76,13 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
 **Total defined work: 104 tasks** (40 P1 + 25 P2 + 11 P3 + 10 P4 + 18 P5)
 across 31 milestones, plus 4 tracked post-v1 backlog items. Every task has an
-accept criterion in the ROADMAP; 11 are done (M1 + M2 complete), 93 remain to v1.
+accept criterion in the ROADMAP; 15 are done (M1 + M2 + M3 complete), 89 remain to v1.
 
 ## Active sprint
 
-[S03 — Execute M3 (session runner + supervisor)](sprints/S03.md) · goal: the
-kill-daemon/re-adopt integration test green + M4 plan. (S02 closed 2026-07-14
-— retrospective in the sprint file.)
+[S04 — Execute M4 (Claude Code provider)](sprints/S04.md) · goal: conformance
++ golden-translation suites green on provider-fake and recorded fixtures.
+(S03 closed 2026-07-18 — retrospective in the sprint file.)
 
 ## Blockers
 

@@ -1,7 +1,8 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of M2 merge to `main`, 2026-07-14. Regenerate per
-> [README R3](README.md). Spec = `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
+> **Generated view** — as of M3 completion on `feat/aeos-p1-m3-runner`,
+> 2026-07-18. Regenerate per [README R3](README.md). Spec =
+> `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
 
@@ -47,11 +48,19 @@ their source of truth; the spec deliberately doesn't cover them.
 | AEOS-P1.M2.T3 registry | `packages/kernel/src/registry/{registry,git}.ts` | `test/registry.test.ts` (git history per mutation) | `725c5d9` |
 | AEOS-P1.M2.T4 event bus + transcripts | `packages/kernel/src/bus/{bus,transcript}.ts` | `test/bus.test.ts` (order + isolation) | `128a4e7` |
 | AEOS-P1.M2.T5 lifecycle + aeosd | `packages/kernel/src/lifecycle.ts`, `apps/aeosd/src/*` | `test/lifecycle.test.ts`, `apps/aeosd/test/daemon.test.ts` | `cae14b6` |
+| AEOS-P1.M3.T1 framed protocol + handshake | `packages/runner/src/protocol/{frames,messages}.ts` | `test/{frames,handshake}.test.ts` (1000-iter seeded fuzz) | `29c7711` |
+| AEOS-P1.M3.T2 runner process | `packages/runner/src/runner/{ring-buffer,runner,main}.ts`, `src/protocol/client.ts` | `test/{ring-buffer,runner}.test.ts` (disconnect survival) | `ab43e2b` |
+| AEOS-P1.M3.T3 supervisor + re-adoption | `packages/runner/src/supervisor/supervisor.ts`, kernel `skipSession`, aeosd `supervisor` module | `test/supervisor.test.ts` (flagship re-adoption), kernel `bus.test.ts` | `d2d6368` |
+| AEOS-P1.M3.T4 session state machine | `packages/runner/src/supervisor/session-state.ts` | `test/session-state.test.ts` | `e09337d` |
 
 Verified 2026-07-14 by direct run on `main` after the M2 merge (code-as-truth):
 install → build → typecheck → test (69/69 across contracts/kernel/aeosd) →
 depcruise (103 modules) → schema-drift, all green; `aeosd reindex` binary
 smoke-tested against a scratch `AEOS_HOME`.
+
+Verified 2026-07-18 on `feat/aeos-p1-m3-runner` at M3 exit: CI-identical
+chain green — 100/100 tests across 20 files (contracts/kernel/runner/aeosd),
+depcruise clean (138 modules). Remote CI still pending first push.
 
 ## Deployment
 
