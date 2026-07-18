@@ -325,14 +325,14 @@ public docs; release artifacts built and signed entirely by CI; announcement
 published. **Spine exception (deliberate):** P5.M1–M2 are docs/legal/tooling
 only and MAY proceed in parallel from P2 onward; P5.M4–M5 require P4 exit.
 
-### M1 — OSS readiness  `[~]`
+### M1 — OSS readiness  `[x]`
 **Context brief:** Make the repo safe and welcoming to open. License choice
 recorded as an ADR; community health files per GitHub standards; supply-chain
 and history hygiene before anything is public.
 - [x] **T1** License ADR + `LICENSE` file + `license` field in every package.json. *Accept: ADR merged; `pnpm licenses list` shows no conflict with the chosen license.*
 - [x] **T2** Community health files: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md` (vuln reporting), issue/PR templates, `CODEOWNERS`. *Accept: GitHub community-profile checklist 100%.*
-- [ ] **T3** Dependency + license audit (transitive), `NOTICE` if required. *Accept: audit report committed; zero copyleft contamination.*
-- [ ] **T4** History/secret hygiene: gitleaks scan over full history; strip private artifacts; branch protection + required CI on `main`. *Accept: gitleaks clean; protection rules active.*
+- [x] **T3** Dependency + license audit (transitive), `NOTICE` if required. *Accept: audit report committed; zero copyleft contamination.*
+- [x] **T4** History/secret hygiene: gitleaks scan over full history; strip private artifacts; branch protection + required CI on `main`. *Accept: gitleaks clean; protection rules active.*
 **Exit gate:** repo could be flipped public today with zero legal/security exposure.
 
 ### M2 — Docs site + onboarding  `[ ]`

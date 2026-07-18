@@ -64,11 +64,11 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 deploy targets | 0/3 | service install, compose, remote posture |
 | M4 TCP + Kubernetes | 0/2 | authed TCP transport, Helm/kind CI |
 
-### P5 — v1.0 public release `[~]` — 2/18 tasks
+### P5 — v1.0 public release `[~]` — 4/18 tasks
 
 | Milestone | Tasks | Focus | Gate |
 |---|---|---|---|
-| M1 OSS readiness `[~]` | 2/4 | LICENSE ADR ✓, health files ✓, license audit, history hygiene | parallel from P2 |
+| M1 OSS readiness `[x]` | 4/4 | LICENSE ADR ✓, health files ✓, license audit ✓, history hygiene ✓ | done 2026-07-18 (early, per spine exception) |
 | M2 docs site + onboarding | 0/4 | site from `docs/`, quickstarts, demo assets | parallel from P2 |
 | M3 release engineering | 0/3 | changesets, signed CI-only artifacts + SBOM, compat policy | after M1–M2 |
 | M4 public beta | 0/3 | repo flip, triage workflow, feedback grooming | requires P4 exit |
@@ -76,8 +76,8 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
 **Total defined work: 104 tasks** (40 P1 + 25 P2 + 11 P3 + 10 P4 + 18 P5)
 across 31 milestones, plus 4 tracked post-v1 backlog items. Every task has an
-accept criterion in the ROADMAP; 17 are done (P1.M1–M3 complete, P5.M1.T1–T2),
-87 remain to v1 — each open task now has a matching GitHub issue
+accept criterion in the ROADMAP; 19 are done (P1.M1–M3 + P5.M1 complete),
+85 remain to v1 — each open task now has a matching GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
 ## Active sprint
