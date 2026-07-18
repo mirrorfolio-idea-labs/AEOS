@@ -45,7 +45,7 @@ session's `transcript.ndjson`.
 - [x] **T5** Module lifecycle harness (`init→start/stop/health`) + composition root skeleton in `apps/aeosd`. *Accept: daemon boots, health endpoint-less self-check passes, clean shutdown test.*
 **Exit gate:** kill-daemon-mid-write test leaves recoverable state; reindex test green.
 
-### M3 — Session runner + supervisor  `[ ]`
+### M3 — Session runner + supervisor  `[x]`
 Plan: `docs/superpowers/plans/2026-07-14-aeos-p1-m3-runner.md`
 **Context brief:** Spec §4, §10. One supervised OS process per live session,
 framed length-prefixed protocol (4-byte BE) over Unix socket, versioned
@@ -53,10 +53,10 @@ handshake (min/max supported), heartbeats, per-session ring buffer, runner
 writes transcript locally. Daemon re-adopts running runners by AEOS session ID
 after restart. Never run node-pty under Bun (n/a — we're on Node, recorded for
 contributors).
-- [ ] **T1** Framed protocol codec + versioned handshake. *Accept: fuzz test (split/merged frames) decodes correctly; version mismatch → typed error.*
-- [ ] **T2** Runner process: spawn arbitrary child, stream child stdout/stderr as events, heartbeat, hard timeout, STOP-file check. *Accept: runner survives daemon socket disconnect and keeps child alive.*
-- [ ] **T3** Supervisor in daemon: spawn/track/re-adopt runners via `session.yaml` (pid + socket path), orphan detection on boot. *Accept: integration test — start session, SIGKILL daemon, restart daemon, session re-adopted with no event loss (ring buffer replay).*
-- [ ] **T4** Session state machine enforcement in daemon (`created→…→orphaned`) emitting `session.*` events. *Accept: illegal transitions rejected; state persisted in `session.yaml` on every change.*
+- [x] **T1** Framed protocol codec + versioned handshake. *Accept: fuzz test (split/merged frames) decodes correctly; version mismatch → typed error.*
+- [x] **T2** Runner process: spawn arbitrary child, stream child stdout/stderr as events, heartbeat, hard timeout, STOP-file check. *Accept: runner survives daemon socket disconnect and keeps child alive.*
+- [x] **T3** Supervisor in daemon: spawn/track/re-adopt runners via `session.yaml` (pid + socket path), orphan detection on boot. *Accept: integration test — start session, SIGKILL daemon, restart daemon, session re-adopted with no event loss (ring buffer replay).*
+- [x] **T4** Session state machine enforcement in daemon (`created→…→orphaned`) emitting `session.*` events. *Accept: illegal transitions rejected; state persisted in `session.yaml` on every change.*
 **Exit gate:** the M3.T3 re-adoption integration test is green in CI.
 
 ### M4 — Claude Code provider (hermetic + BYOK)  `[ ]`

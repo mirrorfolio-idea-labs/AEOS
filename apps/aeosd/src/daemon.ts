@@ -13,6 +13,7 @@ import {
   type KernelHealth,
   type ReindexReport,
 } from '@aeos/kernel';
+import { createSupervisor, type Supervisor } from '@aeos/runner';
 
 export interface DaemonConfig {
   home: string;
@@ -23,6 +24,7 @@ export interface DaemonDeps {
   home: string;
   db: IndexDb;
   bus: EventBus;
+  supervisor: Supervisor;
 }
 
 export interface Daemon {
@@ -44,6 +46,7 @@ export function createDaemon(config: DaemonConfig): Daemon {
   const { home } = config;
   let db: IndexDb | undefined;
   let bus: EventBus | undefined;
+  let supervisor: Supervisor | undefined;
   let detachTranscript: (() => void) | undefined;
 
   const deps: DaemonDeps = {
@@ -55,6 +58,10 @@ export function createDaemon(config: DaemonConfig): Daemon {
     get bus(): EventBus {
       if (bus === undefined) throw new Error('daemon not started');
       return bus;
+    },
+    get supervisor(): Supervisor {
+      if (supervisor === undefined) throw new Error('daemon not started');
+      return supervisor;
     },
   };
 
@@ -96,7 +103,11 @@ export function createDaemon(config: DaemonConfig): Daemon {
       name: 'event-bus',
       start: async () => {
         bus = createEventBus();
-        detachTranscript = attachTranscriptWriter(bus, home, deps.db);
+        // runner-owned sessions write their own transcript (spec §10) — the
+        // daemon must not double-append while a live runner exists
+        detachTranscript = attachTranscriptWriter(bus, home, deps.db, {
+          skipSession: (sessionId) => supervisor?.hasLiveRunner(sessionId) ?? false,
+        });
       },
       stop: async () => {
         detachTranscript?.();
@@ -104,6 +115,20 @@ export function createDaemon(config: DaemonConfig): Daemon {
         bus = undefined;
       },
       health: async () => (bus !== undefined ? { ok: true } : { ok: false, detail: 'bus not created' }),
+    },
+    {
+      name: 'supervisor',
+      start: async () => {
+        supervisor = createSupervisor({ home, db: deps.db, bus: deps.bus });
+        await supervisor.adoptOrphans(); // boot-time re-adoption (spec §10)
+      },
+      stop: async () => {
+        // drops connections only — runners are separate processes and live on
+        supervisor?.close();
+        supervisor = undefined;
+      },
+      health: async () =>
+        supervisor !== undefined ? { ok: true } : { ok: false, detail: 'supervisor not created' },
     },
   ]);
 

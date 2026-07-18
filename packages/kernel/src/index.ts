@@ -33,7 +33,11 @@ export {
   type EventFilter,
   type EventHandler,
 } from './bus/bus.js';
-export { attachTranscriptWriter, TranscriptRoutingError } from './bus/transcript.js';
+export {
+  attachTranscriptWriter,
+  TranscriptRoutingError,
+  type TranscriptWriterOptions,
+} from './bus/transcript.js';
 export {
   CodecError,
   readAgentYaml,
