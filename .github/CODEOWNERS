@@ -1,0 +1,7 @@
+# Default owners for everything in the repo.
+* @ahdkabeerhadi
+
+# Contracts are the ABI of the whole system — schema changes need owner review.
+/packages/contracts/ @ahdkabeerhadi
+/docs/ROADMAP.md @ahdkabeerhadi
+/docs/adr/ @ahdkabeerhadi
