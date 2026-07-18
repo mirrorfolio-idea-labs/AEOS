@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in AEOS doesn't behave as documented or expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Docs describe intent — code is the fact; a
+        mismatch between them is a valid bug either way.
+  - type: input
+    id: component
+    attributes:
+      label: Component
+      description: daemon (aeosd), runner, kernel, contracts, provider, UI, docs…
+      placeholder: e.g. runner
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. pnpm install && pnpm build
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version (`node -v`), pnpm version, commit SHA
+      placeholder: |
+        Ubuntu 24.04 · Node 22.x · pnpm 9.15.0 · commit abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / transcript excerpts
+      description: Redact any secrets. Session transcripts live under AEOS_HOME.
+      render: text

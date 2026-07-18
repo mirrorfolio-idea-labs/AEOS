@@ -1,6 +1,6 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-07-18, branch `feat/aeos-p1-m3-runner` (M3 complete + exit).
+> **Generated view** — as of 2026-07-18, post-M3 merge (PR #2) + CI fix + P5.M1 start.
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **Now** | [S04](sprints/S04.md): M4 plan authored — awaiting Kabeer's approval, then execute P1.M4.T1–T5 (Claude Code provider). Merge of `feat/aeos-p1-m3-runner` + first push to origin also pending Kabeer. |
+| **Now** | [S04](sprints/S04.md): M4 plan authored — awaiting Kabeer's approval, then execute P1.M4.T1–T5 (Claude Code provider). M3 merged via PR #2; CI green on `main` after pnpm-version fix. Full roadmap mirrored to GitHub issues (one issue per open task, 5 phase milestones); P5.M1 OSS readiness started early per the spine exception (T1 license + T2 health files done). |
 | **Next** | M4 exit → M5 plan (memory v0) |
 | **Later** | P1.M5–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
 
@@ -64,11 +64,11 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 deploy targets | 0/3 | service install, compose, remote posture |
 | M4 TCP + Kubernetes | 0/2 | authed TCP transport, Helm/kind CI |
 
-### P5 — v1.0 public release `[ ]` — 0/18 tasks
+### P5 — v1.0 public release `[~]` — 2/18 tasks
 
 | Milestone | Tasks | Focus | Gate |
 |---|---|---|---|
-| M1 OSS readiness | 0/4 | LICENSE ADR, health files, license audit, history hygiene | parallel from P2 |
+| M1 OSS readiness `[~]` | 2/4 | LICENSE ADR ✓, health files ✓, license audit, history hygiene | parallel from P2 |
 | M2 docs site + onboarding | 0/4 | site from `docs/`, quickstarts, demo assets | parallel from P2 |
 | M3 release engineering | 0/3 | changesets, signed CI-only artifacts + SBOM, compat policy | after M1–M2 |
 | M4 public beta | 0/3 | repo flip, triage workflow, feedback grooming | requires P4 exit |
@@ -76,7 +76,9 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
 **Total defined work: 104 tasks** (40 P1 + 25 P2 + 11 P3 + 10 P4 + 18 P5)
 across 31 milestones, plus 4 tracked post-v1 backlog items. Every task has an
-accept criterion in the ROADMAP; 15 are done (M1 + M2 + M3 complete), 89 remain to v1.
+accept criterion in the ROADMAP; 17 are done (P1.M1–M3 complete, P5.M1.T1–T2),
+87 remain to v1 — each open task now has a matching GitHub issue
+(`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
 ## Active sprint
 

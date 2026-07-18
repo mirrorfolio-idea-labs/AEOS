@@ -20,7 +20,7 @@
   <a href="./docs/pm/BOARD.md"><img src="https://img.shields.io/badge/Status-pre--alpha-orange?style=for-the-badge" alt="Status"></a>
   <a href="https://www.npmjs.com/package/pnpm"><img src="https://img.shields.io/badge/pnpm-9-f69220?style=for-the-badge&logo=pnpm&logoColor=white" alt="pnpm 9"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node-22-017ace?style=for-the-badge&logo=node.js&logoColor=white" alt="Node 22"></a>
-  <img src="https://img.shields.io/badge/License-TBD%20(%20P5.M1%20)-lightgrey?style=for-the-badge" alt="License TBD">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License MIT"></a>
 </p>
 
 <p align="center">

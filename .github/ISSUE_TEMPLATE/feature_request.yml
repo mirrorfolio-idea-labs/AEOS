@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose new functionality or a change to planned behavior
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [`docs/ROADMAP.md`](https://github.com/mirrorfolio-idea-labs/AEOS/blob/main/docs/ROADMAP.md)
+        first — many features are already planned as tasks with stable IDs.
+        If your idea matches an existing task, comment on that issue instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can't you do today? Why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work? Which part of the architecture does it touch?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Suggested scope
+      options:
+        - v1 (fits an existing phase)
+        - post-v1 backlog
+        - not sure
+    validations:
+      required: true
