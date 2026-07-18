@@ -54,7 +54,7 @@ writes transcript locally. Daemon re-adopts running runners by AEOS session ID
 after restart. Never run node-pty under Bun (n/a — we're on Node, recorded for
 contributors).
 - [x] **T1** Framed protocol codec + versioned handshake. *Accept: fuzz test (split/merged frames) decodes correctly; version mismatch → typed error.*
-- [ ] **T2** Runner process: spawn arbitrary child, stream child stdout/stderr as events, heartbeat, hard timeout, STOP-file check. *Accept: runner survives daemon socket disconnect and keeps child alive.*
+- [x] **T2** Runner process: spawn arbitrary child, stream child stdout/stderr as events, heartbeat, hard timeout, STOP-file check. *Accept: runner survives daemon socket disconnect and keeps child alive.*
 - [ ] **T3** Supervisor in daemon: spawn/track/re-adopt runners via `session.yaml` (pid + socket path), orphan detection on boot. *Accept: integration test — start session, SIGKILL daemon, restart daemon, session re-adopted with no event loss (ring buffer replay).*
 - [ ] **T4** Session state machine enforcement in daemon (`created→…→orphaned`) emitting `session.*` events. *Accept: illegal transitions rejected; state persisted in `session.yaml` on every change.*
 **Exit gate:** the M3.T3 re-adoption integration test is green in CI.
