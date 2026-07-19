@@ -22,6 +22,8 @@ export type PlanTask = z.infer<typeof PlanTaskSchema>;
 export const CheckpointSchema = z.object({
   taskId: z.string().min(1),
   status: PlanTaskStatusSchema,
+  /** 3-strike counter (spec §12) — persisted so backoff survives restarts. */
+  attempts: z.number().int().nonnegative().default(0),
   commit: z.string().optional(),
   providerResumeToken: z.string().optional(),
   summary: z.string().min(1),
