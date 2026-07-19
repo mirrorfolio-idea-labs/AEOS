@@ -79,17 +79,18 @@ optional `ANTHROPIC_MODEL`) — switch takes effect next spawn; emit
 - [x] **T6** Multi-account subscription credentials (scope change 2026-07-19): `subscription` profiles carry a named account `slot`; each slot maps to a persistent per-account login home (subscription spawn points `CLAUDE_CONFIG_DIR` at the slot dir) so N agents run concurrently on N different Claude Pro/Max accounts — e.g. one per client. api-key/gateway kinds unchanged; user picks the kind per agent. *Accept: two subscription profiles with different slots yield isolated login homes; old slot-less profiles still parse (default slot); `schemas/*.json` regenerated.*
 **Exit gate:** conformance + golden translation + live smoke (manual, budget-capped) pass.
 
-### M5 — Memory v0 (files as truth)  `[ ]`
+### M5 — Memory v0 (files as truth)  `[x]`
+Plan: `docs/superpowers/plans/2026-07-19-aeos-p1-m5-memory.md`
 **Context brief:** Spec §8. Directory layout + `MEMORY.md` index with per-dir
 char budgets in frontmatter; over-budget writes return errors (no silent
 truncation); frozen snapshot composer (index + relevance-selected files →
 injection payload for the adapter); `memory.propose` applier (daemon-side,
 policy-gated); `.archive/` moves, never deletes. FTS index in `index.db`,
 rebuildable.
-- [ ] **T1** Memory store: layout init, budgeted write/consolidate/archive ops. *Accept: over-budget write returns typed error; archive preserves file content.*
-- [ ] **T2** Snapshot composer (deterministic ordering for cache stability). *Accept: same inputs → byte-identical snapshot; snapshot ≤ configured token budget.*
-- [ ] **T3** `memory.propose` queue + applier + MEMORY.md index maintenance. *Accept: proposals applied atomically; index line always matches file set.*
-- [ ] **T4** FTS derived index + `memory.search` API. *Accept: reindex-from-scratch equals incremental index results.*
+- [x] **T1** Memory store: layout init, budgeted write/consolidate/archive ops. *Accept: over-budget write returns typed error; archive preserves file content.*
+- [x] **T2** Snapshot composer (deterministic ordering for cache stability). *Accept: same inputs → byte-identical snapshot; snapshot ≤ configured token budget.*
+- [x] **T3** `memory.propose` queue + applier + MEMORY.md index maintenance. *Accept: proposals applied atomically; index line always matches file set.*
+- [x] **T4** FTS derived index + `memory.search` API. *Accept: reindex-from-scratch equals incremental index results.*
 **Exit gate:** memory survives reindex + snapshot determinism tests green.
 
 ### M6 — Objective/plan/checkpoint loop (scheduler v0)  `[ ]`
