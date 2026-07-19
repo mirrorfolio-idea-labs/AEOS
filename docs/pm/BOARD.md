@@ -1,6 +1,6 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-07-18, post-M3 merge (PR #2) + CI fix + P5.M1 start.
+> **Generated view** — as of 2026-07-19, post-M4 implementation merge (PR #98) + P5.M1 complete.
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **Now** | [S04](sprints/S04.md): M4 plan authored — awaiting Kabeer's approval, then execute P1.M4.T1–T5 (Claude Code provider). M3 merged via PR #2; CI green on `main` after pnpm-version fix. Full roadmap mirrored to GitHub issues (one issue per open task, 5 phase milestones); P5.M1 OSS readiness started early per the spine exception (T1 license + T2 health files done). |
+| **Now** | [S04](sprints/S04.md): M4 T1–T5 implemented and merged (PR #98; issues #3–#7 closed). **M4 exit gate open:** manual budget-capped live smoke + fixture re-record (Kabeer), then PM-S04-1 close-out and the M5 plan (PM-S04-2). Roadmap fully mirrored to GitHub issues; P5.M1 OSS readiness complete (MIT, health files, audits, branch protection). |
 | **Next** | M4 exit → M5 plan (memory v0) |
 | **Later** | P1.M5–M9 → P2 (v0.2) → P3 (v0.3) → P4 (v0.4) → P5 (v1.0 launch). P5.M1–M2 (OSS readiness, docs site) may run in parallel from P2 onward. |
 
@@ -25,7 +25,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M1 contracts | `[x]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | merged to `main` (`8506974`); CI-identical chain verified green on `main` (19/19 tests) — remote CI run pending first push |
 | M2 kernel | `[x]` | 5/5 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md) | merged to `main`; exit-gate tests (crash-sim ×100, reindex equivalence) green; 69/69 tests |
 | M3 session runner | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-14-aeos-p1-m3-runner.md) | complete on `feat/aeos-p1-m3-runner`; flagship re-adoption test green; 100/100 workspace tests; remote CI run pending first push |
-| M4 Claude provider | `[ ]` | 0/5 | [plan](../superpowers/plans/2026-07-18-aeos-p1-m4-claude-provider.md) | plan awaiting approval (S04) |
+| M4 Claude provider | `[~]` | 5/5 | [plan](../superpowers/plans/2026-07-18-aeos-p1-m4-claude-provider.md) | T1–T5 merged (PR #98); exit gate = manual live smoke + fixture re-record |
 | M5 memory v0 | `[ ]` | 0/4 | — | |
 | M6 scheduler v0 | `[ ]` | 0/4 | — | heart of the phase (M6.T4) |
 | M7 API+SSE+SDK | `[ ]` | 0/4 | — | |
@@ -76,8 +76,8 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
 **Total defined work: 104 tasks** (40 P1 + 25 P2 + 11 P3 + 10 P4 + 18 P5)
 across 31 milestones, plus 4 tracked post-v1 backlog items. Every task has an
-accept criterion in the ROADMAP; 19 are done (P1.M1–M3 + P5.M1 complete),
-85 remain to v1 — each open task now has a matching GitHub issue
+accept criterion in the ROADMAP; 24 are done (P1.M1–M3, P1.M4 T1–T5, P5.M1),
+80 remain to v1 — each open task has a matching GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
 ## Active sprint
