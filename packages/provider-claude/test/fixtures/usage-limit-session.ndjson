@@ -1,0 +1,3 @@
+{"type":"system","subtype":"init","cwd":"/work","session_id":"prov-sess-limit","tools":["Bash"],"model":"claude-fable-5","permissionMode":"default","apiKeySource":"none"}
+{"type":"assistant","message":{"id":"msg_01","type":"message","role":"assistant","model":"claude-fable-5","content":[{"type":"text","text":"Continuing the refactor."}]},"session_id":"prov-sess-limit"}
+{"type":"result","subtype":"error_during_execution","is_error":true,"duration_ms":800,"num_turns":1,"result":"Claude AI usage limit reached|1767225600","session_id":"prov-sess-limit","total_cost_usd":0.002,"usage":{"input_tokens":400,"output_tokens":60}}
