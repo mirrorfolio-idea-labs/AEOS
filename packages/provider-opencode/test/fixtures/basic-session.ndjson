@@ -1,0 +1,5 @@
+{"type":"message.part.updated","properties":{"part":{"id":"prt_01","sessionID":"ses_basic01","messageID":"msg_01","type":"text","text":"I'll list the files first."}}}
+{"type":"message.part.updated","properties":{"part":{"id":"prt_02","sessionID":"ses_basic01","messageID":"msg_01","type":"tool","callID":"call_01","tool":"bash","state":{"status":"completed","input":{"command":"ls"},"output":"README.md\nsrc\n","title":"ls"}}}}
+{"type":"message.part.updated","properties":{"part":{"id":"prt_03","sessionID":"ses_basic01","messageID":"msg_02","type":"text","text":"Two entries: README.md and src."}}}
+{"type":"message.updated","properties":{"info":{"id":"msg_02","sessionID":"ses_basic01","role":"assistant","time":{"created":1767225600},"cost":0.0098,"tokens":{"input":1300,"output":210,"reasoning":0,"cache":{"read":700,"write":0}}}}}
+{"type":"session.idle","properties":{"sessionID":"ses_basic01"}}

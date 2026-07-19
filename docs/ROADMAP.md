@@ -143,7 +143,8 @@ CONTRIBUTING, ADRs for D1–D7).
 - [ ] **T4** Docs + ADRs + v0.1 tag. *Accept: quickstart works on a clean machine following only the README.*
 **Exit gate = P1 exit gate** (top of this section).
 
-### M10 — OpenCode adapter (hermetic)  `[ ]`
+### M10 — OpenCode adapter (hermetic)  `[~]`
+Plan: `docs/superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md`
 **Context brief:** Spec §9, pulled forward from P2.M6 by scope decision
 2026-07-19 (Kabeer wants a second harness in v0.1; Codex stays in P2). May
 run any time after M4 — independent of M5–M9, does not gate the P1 golden
@@ -151,9 +152,9 @@ path. Hermetic profile via per-agent `XDG_CONFIG_HOME`/`XDG_DATA_HOME`/
 `XDG_STATE_HOME` + `OPENCODE_DISABLE_PROJECT_CONFIG=1`; translate OpenCode's
 `thread/turn/item` output into the canonical taxonomy; resume support;
 credential profiles reuse the M4 model including multi-account slots.
-- [ ] **T1** Hermetic OpenCode profile builder (XDG isolation, credential env injection, multi-account slots). *Accept: generated profile references no `$HOME` or default XDG paths; different slots yield isolated homes.*
-- [ ] **T2** Spawn/stream/translate + resume: OpenCode output → canonical events. *Accept: recorded-fixture translation byte-identical to expected files; resume fixture continues an objective.*
-- [ ] **T3** Conformance: OpenCode adapter passes the provider-core suite. *Accept: conformance green in CI alongside claude + fake.*
+- [x] **T1** Hermetic OpenCode profile builder (XDG isolation, credential env injection, multi-account slots). *Accept: generated profile references no `$HOME` or default XDG paths; different slots yield isolated homes.*
+- [x] **T2** Spawn/stream/translate + resume: OpenCode output → canonical events. *Accept: recorded-fixture translation byte-identical to expected files; resume fixture continues an objective.*
+- [x] **T3** Conformance: OpenCode adapter passes the provider-core suite. *Accept: conformance green in CI alongside claude + fake.*
 **Exit gate:** the same fixture objective completes on the fake, Claude, and OpenCode adapters.
 
 ## Phase P2 — Safety + polish (v0.2)  `[ ]`
