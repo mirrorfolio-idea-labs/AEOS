@@ -16,6 +16,12 @@ ADE is its web UI. Full design:
 facts. On any inconsistency or doubt, trust the code, fix the doc, and log it
 in the BOARD drift register.
 
+**Operator guides rule:** whenever a step needs Kabeer's manual effort (live
+smokes, credential-dependent runs, machine setup), write a step-by-step guide
+to `guides/<date>-<topic>.md` (gitignored — personal operator docs): plain-
+language context, copy-pasteable numbered steps, cost/time estimates, a
+"hand back" line, troubleshooting.
+
 ## Architecture (one paragraph)
 
 pnpm monorepo. `packages/contracts` is the dependency root: Zod schemas for
