@@ -8,7 +8,11 @@ import { z } from 'zod';
 const base = z.object({ id: z.string().min(1) });
 
 export const CredentialProfileSchema = z.discriminatedUnion('kind', [
-  base.extend({ kind: z.literal('subscription') }).strict(),
+  // `slot` names one concrete subscription account (e.g. "client-acme");
+  // each slot gets its own persistent login home, so several agents can run
+  // concurrently on different Claude Pro/Max accounts. Defaulted so
+  // pre-slot profiles keep parsing.
+  base.extend({ kind: z.literal('subscription'), slot: z.string().min(1).default('default') }).strict(),
   base.extend({ kind: z.literal('api-key'), secretRef: z.string().min(1) }).strict(),
   base
     .extend({

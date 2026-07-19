@@ -1,9 +1,14 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AgentConfigSchema, CredentialProfileSchema, type AgentConfig } from '@aeos/contracts';
-import { buildClaudeProfile, parseGeneratedSettings, type SecretResolver } from '../src/profile.js';
+import {
+  buildClaudeProfile,
+  MissingSubscriptionHomeError,
+  parseGeneratedSettings,
+  type SecretResolver,
+} from '../src/profile.js';
 
 const stubSecrets: SecretResolver = {
   resolve: (secretRef: string) => Promise.resolve(`resolved:${secretRef}`),
@@ -158,11 +163,70 @@ describe('buildClaudeProfile — credential injection', () => {
       agentDir,
       credential,
       secrets: stubSecrets,
+      subscriptionHomeFor: (slot) => path.join(agentDir, 'subs', slot),
     });
     expect(profile.env['AEOS_CREDENTIAL_PASSTHROUGH']).toBe('subscription');
     expect(profile.env['ANTHROPIC_API_KEY']).toBeUndefined();
     expect(profile.env['ANTHROPIC_AUTH_TOKEN']).toBeUndefined();
     expect(JSON.stringify(profile)).not.toContain('resolved:');
+  });
+
+  it('multi-account slots: different subscriptions get isolated persistent login homes', async () => {
+    const subsRoot = path.join(agentDir, 'aeos-home', 'subscriptions');
+    const homeFor = (slot: string) => path.join(subsRoot, slot);
+    const build = (id: string, slot: string) =>
+      buildClaudeProfile({
+        agent: makeAgent(),
+        agentDir,
+        credential: CredentialProfileSchema.parse({ id, kind: 'subscription', slot }),
+        secrets: stubSecrets,
+        subscriptionHomeFor: homeFor,
+      });
+    const acme = await build('cp-acme', 'client-acme');
+    const globex = await build('cp-globex', 'client-globex');
+    expect(acme.env['CLAUDE_CONFIG_DIR']).toBe(path.join(subsRoot, 'client-acme'));
+    expect(globex.env['CLAUDE_CONFIG_DIR']).toBe(path.join(subsRoot, 'client-globex'));
+    expect(acme.env['CLAUDE_CONFIG_DIR']).not.toBe(globex.env['CLAUDE_CONFIG_DIR']);
+    expect(acme.env['AEOS_SUBSCRIPTION_SLOT']).toBe('client-acme');
+    // login homes exist on disk, ready for a one-time `claude login` each
+    expect((await stat(acme.env['CLAUDE_CONFIG_DIR'] as string)).isDirectory()).toBe(true);
+    expect((await stat(globex.env['CLAUDE_CONFIG_DIR'] as string)).isDirectory()).toBe(true);
+    // per-agent settings/profile state still lives in the agent dir, not the shared login home
+    expect(acme.rootDir).toBe(path.join(agentDir, 'harness', 'claude'));
+  });
+
+  it('old slot-less subscription profiles default to the "default" slot', async () => {
+    const credential = CredentialProfileSchema.parse({ id: 'cp-old', kind: 'subscription' });
+    const profile = await buildClaudeProfile({
+      agent: makeAgent(),
+      agentDir,
+      credential,
+      secrets: stubSecrets,
+      subscriptionHomeFor: (slot) => path.join(agentDir, 'subs', slot),
+    });
+    expect(profile.env['CLAUDE_CONFIG_DIR']).toBe(path.join(agentDir, 'subs', 'default'));
+  });
+
+  it('subscription without a slot-home mapper fails with a typed error', async () => {
+    await expect(
+      buildClaudeProfile({
+        agent: makeAgent(),
+        agentDir,
+        credential: CredentialProfileSchema.parse({ id: 'cp-sub', kind: 'subscription' }),
+        secrets: stubSecrets,
+      }),
+    ).rejects.toThrow(MissingSubscriptionHomeError);
+  });
+
+  it('api-key sessions keep the throwaway agent-profile config dir', async () => {
+    const profile = await buildClaudeProfile({
+      agent: makeAgent(),
+      agentDir,
+      credential: apiKeyCredential,
+      secrets: stubSecrets,
+      subscriptionHomeFor: (slot) => path.join(agentDir, 'subs', slot),
+    });
+    expect(profile.env['CLAUDE_CONFIG_DIR']).toBe(profile.rootDir);
   });
 
   it('secret values never land in the on-disk settings.json', async () => {

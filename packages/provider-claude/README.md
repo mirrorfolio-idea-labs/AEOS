@@ -21,8 +21,17 @@ Credential kinds map to env vars (values via a caller-supplied
 `SecretResolver`; the daemon secret store lands in P2.M3):
 `api-key` → `ANTHROPIC_API_KEY` · `gateway` → `ANTHROPIC_BASE_URL` +
 `ANTHROPIC_AUTH_TOKEN` (+ `ANTHROPIC_MODEL`) · `subscription` →
-`AEOS_CREDENTIAL_PASSTHROUGH=subscription` marker only. Secrets never
-touch argv or any file.
+passthrough markers only. Secrets never touch argv or any file. The user
+picks the kind per agent — subscription and API-key agents run side by
+side.
+
+**Multi-account subscriptions:** a `subscription` profile names an account
+`slot` (e.g. `client-acme`). Each slot maps to a persistent login home via
+`subscriptionHomeFor(slot)`; subscription spawns point `CLAUDE_CONFIG_DIR`
+there (one-time `claude login` inside it binds the account), while
+per-agent settings stay in the agent's own profile dir. Four clients, four
+Pro/Max accounts, four agents running concurrently — each billing its own
+subscription, with `cost.usage` tagged per credential profile.
 
 ## Spawn + translation
 

@@ -48,6 +48,8 @@ export interface ClaudeAdapterOptions {
   agentDir: (agent: AgentConfig) => string;
   credential: (agent: AgentConfig) => CredentialProfile;
   secrets: SecretResolver;
+  /** Slot → persistent login home for subscription accounts (see profile.ts). */
+  subscriptionHomeFor?: (slot: string) => string;
   runChild?: RunChild;
 }
 
@@ -127,6 +129,9 @@ export class ClaudeAdapter implements HarnessAdapter {
       agentDir: this.opts.agentDir(agent),
       credential: this.opts.credential(agent),
       secrets: this.opts.secrets,
+      ...(this.opts.subscriptionHomeFor === undefined
+        ? {}
+        : { subscriptionHomeFor: this.opts.subscriptionHomeFor }),
     });
   }
 

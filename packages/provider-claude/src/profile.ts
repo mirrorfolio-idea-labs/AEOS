@@ -20,6 +20,22 @@ export interface BuildClaudeProfileOptions {
   agentDir: string;
   credential: CredentialProfile;
   secrets: SecretResolver;
+  /**
+   * Maps a subscription account slot to its persistent login home (e.g.
+   * `<AEOS_HOME>/subscriptions/<slot>`). One `claude login` inside that dir
+   * binds the slot to one Claude Pro/Max account; different slots run
+   * concurrently on different accounts. Required for `subscription` profiles.
+   */
+  subscriptionHomeFor?: (slot: string) => string;
+}
+
+export class MissingSubscriptionHomeError extends Error {
+  constructor(slot: string) {
+    super(
+      `credential kind "subscription" (slot "${slot}") requires subscriptionHomeFor to map the slot to its persistent login home`,
+    );
+    this.name = 'MissingSubscriptionHomeError';
+  }
 }
 
 const GeneratedSettingsSchema = z.object({
@@ -62,9 +78,13 @@ async function credentialEnv(
         ...(credential.model === undefined ? {} : { ANTHROPIC_MODEL: credential.model }),
       };
     case 'subscription':
-      // Explicit opt-in passthrough of the host login — a marker the runner
-      // honors at spawn time; no secret material is written or injected here.
-      return { AEOS_CREDENTIAL_PASSTHROUGH: 'subscription' };
+      // Explicit opt-in login passthrough — the slot's login home carries
+      // the account's OAuth state; no secret material is written or
+      // injected here.
+      return {
+        AEOS_CREDENTIAL_PASSTHROUGH: 'subscription',
+        AEOS_SUBSCRIPTION_SLOT: credential.slot,
+      };
   }
 }
 
@@ -91,8 +111,18 @@ export async function buildClaudeProfile(
   const settingsPath = path.join(rootDir, 'settings.json');
   await writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
 
+  // api-key/gateway sessions are fully throwaway: config dir = agent profile
+  // dir. Subscription sessions must reuse the slot's persistent login home —
+  // that's where `claude login` stored the account's OAuth state.
+  let configDir = rootDir;
+  if (credential.kind === 'subscription') {
+    if (!opts.subscriptionHomeFor) throw new MissingSubscriptionHomeError(credential.slot);
+    configDir = opts.subscriptionHomeFor(credential.slot);
+    await mkdir(configDir, { recursive: true });
+  }
+
   const env: Record<string, string> = {
-    CLAUDE_CONFIG_DIR: rootDir,
+    CLAUDE_CONFIG_DIR: configDir,
     // Non-secret marker so cost.usage events can be tagged with the profile
     // that paid for them (spec §9 BYOK) — read back by ClaudeAdapter.spawn.
     AEOS_CREDENTIAL_PROFILE_ID: credential.id,

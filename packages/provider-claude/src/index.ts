@@ -1,6 +1,7 @@
 export {
   buildClaudeProfile,
   parseGeneratedSettings,
+  MissingSubscriptionHomeError,
   type BuildClaudeProfileOptions,
   type GeneratedSettings,
   type SecretResolver,
