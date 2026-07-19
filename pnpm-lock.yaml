@@ -110,6 +110,25 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/provider-opencode:
+    dependencies:
+      '@aeos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@aeos/provider-core':
+        specifier: workspace:*
+        version: link:../provider-core
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/runner:
     dependencies:
       '@aeos/contracts':
