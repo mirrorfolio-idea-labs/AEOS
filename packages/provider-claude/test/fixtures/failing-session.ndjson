@@ -1,0 +1,5 @@
+{"type":"system","subtype":"init","cwd":"/work","session_id":"prov-sess-fail","tools":["Bash"],"model":"claude-fable-5","permissionMode":"default","apiKeySource":"ANTHROPIC_API_KEY"}
+{"type":"assistant","message":{"id":"msg_01","type":"message","role":"assistant","model":"claude-fable-5","content":[{"type":"text","text":"Starting."}]},"session_id":"prov-sess-fail"}
+{"type":"unknown_experimental_line","payload":{"whatever":true}}
+this line is not even json
+{"type":"result","subtype":"error_max_turns","is_error":true,"duration_ms":900,"num_turns":10,"result":"Reached max turns without completing.","session_id":"prov-sess-fail","total_cost_usd":0.045,"usage":{"input_tokens":9000,"output_tokens":1200}}

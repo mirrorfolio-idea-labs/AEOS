@@ -1,0 +1,6 @@
+{"type":"system","subtype":"init","cwd":"/work","session_id":"prov-sess-basic","tools":["Bash","Read"],"model":"claude-fable-5","permissionMode":"default","apiKeySource":"ANTHROPIC_API_KEY"}
+{"type":"assistant","message":{"id":"msg_01","type":"message","role":"assistant","model":"claude-fable-5","content":[{"type":"text","text":"I'll list the files first."}]},"session_id":"prov-sess-basic"}
+{"type":"assistant","message":{"id":"msg_02","type":"message","role":"assistant","model":"claude-fable-5","content":[{"type":"tool_use","id":"toolu_01","name":"Bash","input":{"command":"ls"}}]},"session_id":"prov-sess-basic"}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01","content":"README.md\nsrc\n","is_error":false}]},"session_id":"prov-sess-basic"}
+{"type":"assistant","message":{"id":"msg_03","type":"message","role":"assistant","model":"claude-fable-5","content":[{"type":"text","text":"Two entries: README.md and src."}]},"session_id":"prov-sess-basic"}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":4321,"duration_api_ms":3900,"num_turns":2,"result":"Two entries: README.md and src.","session_id":"prov-sess-basic","total_cost_usd":0.0123,"usage":{"input_tokens":1500,"output_tokens":220,"cache_creation_input_tokens":0,"cache_read_input_tokens":800}}

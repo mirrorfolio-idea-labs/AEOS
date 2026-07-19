@@ -59,7 +59,7 @@ contributors).
 - [x] **T4** Session state machine enforcement in daemon (`created→…→orphaned`) emitting `session.*` events. *Accept: illegal transitions rejected; state persisted in `session.yaml` on every change.*
 **Exit gate:** the M3.T3 re-adoption integration test is green in CI.
 
-### M4 — Claude Code provider (hermetic + BYOK)  `[ ]`
+### M4 — Claude Code provider (hermetic + BYOK)  `[~]`
 **Context brief:** Spec §9. `HarnessAdapter` interface in `provider-core` +
 conformance suite; Claude adapter builds hermetic profile
 (`CLAUDE_CONFIG_DIR=<agent>/harness/claude`, `--bare`, `CLAUDE_CODE_DISABLE_*`,
@@ -71,11 +71,11 @@ NDJSON→canonical events, captures `session_id` + `total_cost_usd`, resume via
 optional `ANTHROPIC_MODEL`) — switch takes effect next spawn; emit
 `cost.usage` with profile id. Tests run against recorded NDJSON fixtures
 (provider-fake), plus one optional live smoke test behind an env flag.
-- [ ] **T1** `HarnessAdapter` interface + capability matrix + conformance test suite in `provider-core`. *Accept: provider-fake passes conformance.*
-- [ ] **T2** Hermetic profile builder (dir layout, settings.json generation from toggles, credential env injection from secret store). *Accept: generated profile contains zero references to `~/.claude`; toggles round-trip.*
-- [ ] **T3** Spawn/stream/translate: NDJSON → canonical events, session_id + cost capture. *Accept: golden fixtures (recorded from real runs) translate byte-identically to expected canonical event files.*
-- [ ] **T4** Resume + credential-profile switching (checkpoint → respawn with new profile → resume token honored). *Accept: fixture-driven test proves same objective continues across profile switch.*
-- [ ] **T5** Usage-limit auto-failover hook (emit `approval.request` if policy=confirm, auto-switch if policy=allow). *Accept: simulated usage_limit fixture triggers documented behavior.*
+- [x] **T1** `HarnessAdapter` interface + capability matrix + conformance test suite in `provider-core`. *Accept: provider-fake passes conformance.*
+- [x] **T2** Hermetic profile builder (dir layout, settings.json generation from toggles, credential env injection from secret store). *Accept: generated profile contains zero references to `~/.claude`; toggles round-trip.*
+- [x] **T3** Spawn/stream/translate: NDJSON → canonical events, session_id + cost capture. *Accept: golden fixtures (recorded from real runs) translate byte-identically to expected canonical event files.*
+- [x] **T4** Resume + credential-profile switching (checkpoint → respawn with new profile → resume token honored). *Accept: fixture-driven test proves same objective continues across profile switch.*
+- [x] **T5** Usage-limit auto-failover hook (emit `approval.request` if policy=confirm, auto-switch if policy=allow). *Accept: simulated usage_limit fixture triggers documented behavior.*
 **Exit gate:** conformance + golden translation + live smoke (manual, budget-capped) pass.
 
 ### M5 — Memory v0 (files as truth)  `[ ]`
