@@ -108,17 +108,18 @@ paused, event emitted.
 - [x] **T4** Resume-on-boot: orphan scan + plan re-entry. *Accept: SIGKILL daemon mid-task → restart → plan completes (provider-fake). (Proven at the scheduler boundary — fresh instance over crashed state; daemon-level kill -9 lands in M9's golden path, R4-logged in the M6 plan.)*
 **Exit gate:** M6.T4 green — this is the heart of the phase.
 
-### M7 — API + SSE + SDK  `[ ]`
+### M7 — API + SSE + SDK  `[x]`
+Plan: `docs/superpowers/plans/2026-07-19-aeos-p1-m7-api.md`
 **Context brief:** Spec §14. Fastify + OpenAPI 3.1 → generated TS SDK.
 Resources: workspaces, agents, objectives, plans, sessions, memory, events.
 Envelope `{success,data,error,meta}`. One SSE stream `/v1/events` with filter
 params. Loopback-only default; token auth when bound wider. Credential-profile
 switch endpoint (`POST /v1/agents/:id/credential-profile`) — the BYOK
 "on-the-go" toggle.
-- [ ] **T1** Server skeleton + envelope + OpenAPI generation + error mapping. *Accept: spec file generated in CI; contract tests for envelope.*
-- [ ] **T2** Resource routes over registry/scheduler/memory. *Accept: CRUD + objective-start integration tests green.*
-- [ ] **T3** SSE event stream with filters + backfill-from-transcript. *Accept: reconnect test receives missed events exactly once.*
-- [ ] **T4** Generated SDK + `apps/cli` thin client (create agent, start objective, tail events, switch credential profile). *Accept: CLI golden-path script passes against live local daemon.*
+- [x] **T1** Server skeleton + envelope + OpenAPI generation + error mapping. *Accept: spec file generated in CI; contract tests for envelope.*
+- [x] **T2** Resource routes over registry/scheduler/memory. *Accept: CRUD + objective-start integration tests green.*
+- [x] **T3** SSE event stream with filters + backfill-from-transcript. *Accept: reconnect test receives missed events exactly once.*
+- [x] **T4** Generated SDK + `apps/cli` thin client (create agent, start objective, tail events, switch credential profile). *Accept: CLI golden-path script passes against live local daemon. (CI form runs the server in-process; the daemon-socket form lands with M9's golden path.)*
 **Exit gate:** CLI golden path green.
 
 ### M8 — ADE minimal web UI  `[ ]`
