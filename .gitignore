@@ -12,3 +12,8 @@ packages/scratch/
 
 # operator guides for manual steps — personal, never committed
 /guides/
+
+# ADE playwright artifacts
+apps/ade/.playwright-home/
+apps/ade/test-results/
+apps/ade/playwright-report/

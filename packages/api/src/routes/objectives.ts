@@ -1,4 +1,4 @@
-import { mkdir, readFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -66,7 +66,13 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
           objectiveDir: dir,
           agent,
           adapter: ctx.adapterFor(agent),
-          ...(ctx.bus === undefined ? {} : { onEvent: (event) => ctx.bus?.publish(event) }),
+          onEvent: (event) => {
+            ctx.bus?.publish(event);
+            // files are truth for spend too: every cost.usage lands in costs.ndjson
+            if (event.type === 'cost.usage') {
+              void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
+            }
+          },
         }).finally(() => running.delete(dir));
         running.set(dir, run);
         run.catch(() => undefined); // surfaced via status; never an unhandled rejection

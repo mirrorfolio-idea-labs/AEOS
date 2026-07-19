@@ -9,7 +9,8 @@ import {
   CredentialProfileSchema,
   type AgentConfig,
 } from '@aeos/contracts';
-import { describeAdapterConformance, type HarnessProfile } from '@aeos/provider-core';
+import { type HarnessProfile } from '@aeos/provider-core';
+import { describeAdapterConformance } from '@aeos/provider-core/conformance';
 import { ClaudeAdapter } from '../src/adapter.js';
 import type { SecretResolver } from '../src/profile.js';
 

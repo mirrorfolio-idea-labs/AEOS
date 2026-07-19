@@ -44,7 +44,9 @@ export class AeosClient {
   private readonly fetch: typeof fetch;
 
   constructor(private readonly opts: AeosClientOptions) {
-    this.fetch = opts.fetchImpl ?? fetch;
+    // bind: browsers require fetch to be invoked on globalThis (unbound
+    // references throw "Illegal invocation" when called as this.fetch()).
+    this.fetch = opts.fetchImpl ?? fetch.bind(globalThis);
   }
 
   private async request<T>(method: string, url: string, body?: unknown): Promise<T> {
