@@ -122,16 +122,17 @@ switch endpoint (`POST /v1/agents/:id/credential-profile`) — the BYOK
 - [x] **T4** Generated SDK + `apps/cli` thin client (create agent, start objective, tail events, switch credential profile). *Accept: CLI golden-path script passes against live local daemon. (CI form runs the server in-process; the daemon-socket form lands with M9's golden path.)*
 **Exit gate:** CLI golden path green.
 
-### M8 — ADE minimal web UI  `[ ]`
+### M8 — ADE minimal web UI  `[x]`
+Plan: `docs/superpowers/plans/2026-07-19-aeos-p1-m8-ade-ui.md`
 **Context brief:** Spec §14 + `mockup.png`. React+Vite served by daemon.
 Sidebar: workspaces→agent avatars. Main: agent conversation, session tabs
 (xterm.js read-only event stream v0), "Access Agent Files" browser
 (memory/objectives/worktree), credential-profile switch control, cost meter.
 No Tauri wrapper in P1 (P2).
-- [ ] **T1** UI shell + routing + SDK wiring + sidebar per mockup. *Accept: Playwright: create workspace/agent via UI.*
-- [ ] **T2** Conversation + live session tab streaming SSE into xterm.js. *Accept: Playwright sees streamed provider-fake output.*
-- [ ] **T3** Agent files browser + plan/checkpoint viewer. *Accept: Playwright opens memory file and plan status.*
-- [ ] **T4** BYOK switch + cost meter widgets. *Accept: switching profile mid-objective visible in UI and in `costs.ndjson`.*
+- [x] **T1** UI shell + routing + SDK wiring + sidebar per mockup. *Accept: Playwright: create workspace/agent via UI.*
+- [x] **T2** Conversation + live session tab streaming SSE into xterm.js. *Accept: Playwright sees streamed provider-fake output. (v0 console renders the SSE stream in a terminal-styled pane; xterm.js arrives with PTY attach in P2.M5 — R4-logged in the M8 plan.)*
+- [x] **T3** Agent files browser + plan/checkpoint viewer. *Accept: Playwright opens memory file and plan status.*
+- [x] **T4** BYOK switch + cost meter widgets. *Accept: switching profile mid-objective visible in UI and in `costs.ndjson`.*
 **Exit gate:** Playwright suite green.
 
 ### M9 — Golden-path E2E + hardening  `[ ]`

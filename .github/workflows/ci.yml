@@ -19,3 +19,11 @@ jobs:
         run: |
           pnpm -F @aeos/contracts gen:schemas
           git diff --exit-code packages/contracts/schemas
+      - name: openapi drift check
+        run: |
+          pnpm -F @aeos/api gen:openapi
+          git diff --exit-code packages/api/openapi.json
+      - name: ADE Playwright suite
+        run: |
+          pnpm -F @aeos/ade exec playwright install --with-deps chromium
+          pnpm -F @aeos/ade test
