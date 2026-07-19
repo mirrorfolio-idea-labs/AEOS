@@ -9,3 +9,6 @@ ruvector.db
 
 # accidental empty scaffold picked up by the workspace
 packages/scratch/
+
+# operator guides for manual steps — personal, never committed
+/guides/
