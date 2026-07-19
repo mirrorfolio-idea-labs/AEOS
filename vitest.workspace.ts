@@ -1,3 +1,4 @@
 import { defineWorkspace } from 'vitest/config';
 
-export default defineWorkspace(['packages/*', 'apps/*']);
+// apps/ade is excluded: its suite is Playwright (pnpm -F @aeos/ade test), not vitest.
+export default defineWorkspace(['packages/*', 'apps/aeosd', 'apps/cli']);
