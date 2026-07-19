@@ -18,6 +18,11 @@ describe('domain schemas', () => {
 
   it('parses all three credential profile kinds and rejects inline secrets', () => {
     expect(CredentialProfileSchema.parse({ id: 'sub', kind: 'subscription' }).kind).toBe('subscription');
+    // pre-slot profiles default; named slots pin one concrete account
+    const defaulted = CredentialProfileSchema.parse({ id: 'sub', kind: 'subscription' });
+    expect(defaulted.kind === 'subscription' && defaulted.slot).toBe('default');
+    const acme = CredentialProfileSchema.parse({ id: 'sub-acme', kind: 'subscription', slot: 'client-acme' });
+    expect(acme.kind === 'subscription' && acme.slot).toBe('client-acme');
     expect(
       CredentialProfileSchema.parse({ id: 'byok', kind: 'api-key', secretRef: 'anthropic/main' }).kind,
     ).toBe('api-key');
