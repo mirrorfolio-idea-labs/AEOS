@@ -25,12 +25,13 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M1 contracts | `[x]` | 6/6 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m1-contracts.md) | merged to `main` (`8506974`); CI-identical chain verified green on `main` (19/19 tests) — remote CI run pending first push |
 | M2 kernel | `[x]` | 5/5 | [plan](../superpowers/plans/2026-07-13-aeos-p1-m2-kernel.md) | merged to `main`; exit-gate tests (crash-sim ×100, reindex equivalence) green; 69/69 tests |
 | M3 session runner | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-14-aeos-p1-m3-runner.md) | complete on `feat/aeos-p1-m3-runner`; flagship re-adoption test green; 100/100 workspace tests; remote CI run pending first push |
-| M4 Claude provider | `[~]` | 5/5 | [plan](../superpowers/plans/2026-07-18-aeos-p1-m4-claude-provider.md) | T1–T5 merged (PR #98); exit gate = manual live smoke + fixture re-record |
+| M4 Claude provider | `[~]` | 5/6 | [plan](../superpowers/plans/2026-07-18-aeos-p1-m4-claude-provider.md) | T1–T5 merged (PR #98); T6 multi-account subscriptions added 2026-07-19; exit gate = manual live smoke + fixture re-record |
 | M5 memory v0 | `[ ]` | 0/4 | — | |
 | M6 scheduler v0 | `[ ]` | 0/4 | — | heart of the phase (M6.T4) |
 | M7 API+SSE+SDK | `[ ]` | 0/4 | — | |
 | M8 ADE web UI | `[ ]` | 0/4 | — | `mockup.png` is the design ref |
 | M9 E2E + hardening | `[ ]` | 0/4 | — | exit = P1 exit gate, tags v0.1 |
+| M10 OpenCode adapter | `[ ]` | 0/3 | — | pulled forward from P2.M6 (2026-07-19); parallel-safe after M4 |
 
 ### P2 — Safety + polish (v0.2) `[ ]` — 0/25 tasks
 
@@ -41,7 +42,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 secrets store | 0/3 | keychain/age, injection, redaction canary |
 | M4 memory curator | 0/3 | idle-triggered, dry-run, never-delete |
 | M5 PTY attach + co-edit guard | 0/3 | human takeover, OQ1 ADR |
-| M6 Codex + OpenCode adapters | 0/3 | conformance across 3 harnesses |
+| M6 Codex adapter | 0/2 | conformance parity (OpenCode moved to P1.M10) |
 | M7 managed binaries | 0/2 | pin/verify, version-gated capabilities |
 | M8 Tauri wrapper | 0/3 | desktop shell, notifications, CI artifacts |
 
@@ -74,10 +75,12 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M4 public beta | 0/3 | repo flip, triage workflow, feedback grooming | requires P4 exit |
 | M5 GA launch | 0/4 | blocker burn-down, v1.0.0, comms, post-launch week | = v1 |
 
-**Total defined work: 104 tasks** (40 P1 + 25 P2 + 11 P3 + 10 P4 + 18 P5)
-across 31 milestones, plus 4 tracked post-v1 backlog items. Every task has an
-accept criterion in the ROADMAP; 24 are done (P1.M1–M3, P1.M4 T1–T5, P5.M1),
-80 remain to v1 — each open task has a matching GitHub issue
+**Total defined work: 107 tasks** (44 P1 + 24 P2 + 11 P3 + 10 P4 + 18 P5)
+across 32 milestones, plus 4 tracked post-v1 backlog items (scope change
+2026-07-19: +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
+retired). Every task has an accept criterion in the ROADMAP; 24 are done
+(P1.M1–M3, P1.M4 T1–T5, P5.M1), 83 remain to v1 — each open task has a
+matching GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
 ## Active sprint

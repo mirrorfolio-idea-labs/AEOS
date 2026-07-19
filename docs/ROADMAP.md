@@ -76,6 +76,7 @@ optional `ANTHROPIC_MODEL`) — switch takes effect next spawn; emit
 - [x] **T3** Spawn/stream/translate: NDJSON → canonical events, session_id + cost capture. *Accept: golden fixtures (recorded from real runs) translate byte-identically to expected canonical event files.*
 - [x] **T4** Resume + credential-profile switching (checkpoint → respawn with new profile → resume token honored). *Accept: fixture-driven test proves same objective continues across profile switch.*
 - [x] **T5** Usage-limit auto-failover hook (emit `approval.request` if policy=confirm, auto-switch if policy=allow). *Accept: simulated usage_limit fixture triggers documented behavior.*
+- [ ] **T6** Multi-account subscription credentials (scope change 2026-07-19): `subscription` profiles carry a named account `slot`; each slot maps to a persistent per-account login home (subscription spawn points `CLAUDE_CONFIG_DIR` at the slot dir) so N agents run concurrently on N different Claude Pro/Max accounts — e.g. one per client. api-key/gateway kinds unchanged; user picks the kind per agent. *Accept: two subscription profiles with different slots yield isolated login homes; old slot-less profiles still parse (default slot); `schemas/*.json` regenerated.*
 **Exit gate:** conformance + golden translation + live smoke (manual, budget-capped) pass.
 
 ### M5 — Memory v0 (files as truth)  `[ ]`
@@ -142,6 +143,19 @@ CONTRIBUTING, ADRs for D1–D7).
 - [ ] **T4** Docs + ADRs + v0.1 tag. *Accept: quickstart works on a clean machine following only the README.*
 **Exit gate = P1 exit gate** (top of this section).
 
+### M10 — OpenCode adapter (hermetic)  `[ ]`
+**Context brief:** Spec §9, pulled forward from P2.M6 by scope decision
+2026-07-19 (Kabeer wants a second harness in v0.1; Codex stays in P2). May
+run any time after M4 — independent of M5–M9, does not gate the P1 golden
+path. Hermetic profile via per-agent `XDG_CONFIG_HOME`/`XDG_DATA_HOME`/
+`XDG_STATE_HOME` + `OPENCODE_DISABLE_PROJECT_CONFIG=1`; translate OpenCode's
+`thread/turn/item` output into the canonical taxonomy; resume support;
+credential profiles reuse the M4 model including multi-account slots.
+- [ ] **T1** Hermetic OpenCode profile builder (XDG isolation, credential env injection, multi-account slots). *Accept: generated profile references no `$HOME` or default XDG paths; different slots yield isolated homes.*
+- [ ] **T2** Spawn/stream/translate + resume: OpenCode output → canonical events. *Accept: recorded-fixture translation byte-identical to expected files; resume fixture continues an objective.*
+- [ ] **T3** Conformance: OpenCode adapter passes the provider-core suite. *Accept: conformance green in CI alongside claude + fake.*
+**Exit gate:** the same fixture objective completes on the fake, Claude, and OpenCode adapters.
+
 ## Phase P2 — Safety + polish (v0.2)  `[ ]`
 
 **Exit gate for the phase:** a new agent runs under least-privilege policy with
@@ -200,15 +214,16 @@ only for PTY) + spec §20 OQ1 (human edits agent worktree — resolve by ADR her
 - [ ] **T3** Co-edit detection ADR + guard (dirty-worktree check → pause + notify). *Accept: human edit in agent worktree pauses the task with an `approval.request`.*
 **Exit gate:** mid-session human takeover and clean handback demonstrated.
 
-### M6 — Codex + OpenCode adapters  `[ ]`
-**Context brief:** Spec §9. Hermetic profiles (Codex: `CODEX_HOME` + generated
-`config.toml`; OpenCode: per-agent `XDG_*_HOME` + `OPENCODE_DISABLE_PROJECT_CONFIG=1`);
-translate `thread/turn/item` and SSE into the canonical taxonomy; resume
-support; both pass the M4(P1) conformance suite.
+### M6 — Codex adapter  `[ ]`
+**Context brief:** Spec §9. Hermetic profile (`CODEX_HOME` + generated
+`config.toml`); translate `thread/turn/item` and SSE into the canonical
+taxonomy; resume support; passes the M4(P1) conformance suite.
 - [ ] **T1** Codex adapter (profile, spawn, translate, resume). *Accept: recorded-fixture translation byte-identical; conformance green.*
-- [ ] **T2** OpenCode adapter (profile, spawn/serve, translate, resume). *Accept: same bar as T1.*
+> **T2 moved** (2026-07-19 scope change): the OpenCode adapter was pulled
+> forward to **P1.M10** — Kabeer needs a second harness in v0.1. The task ID
+> `AEOS-P2.M6.T2` is retired, never reused.
 - [ ] **T3** Cross-harness capability matrix + docs. *Accept: matrix asserted by conformance tests, not hand-maintained.*
-**Exit gate:** the same fixture objective completes on all three adapters.
+**Exit gate:** the same fixture objective completes on all adapters (fake, Claude, OpenCode from P1.M10, Codex).
 
 ### M7 — Managed harness binaries  `[ ]`
 **Context brief:** Spec §9 (Conductor pattern). Pin + manage harness versions
