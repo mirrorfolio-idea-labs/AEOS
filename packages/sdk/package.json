@@ -1,0 +1,31 @@
+{
+  "name": "@aeos/sdk",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "gen:types": "openapi-typescript ../api/openapi.json -o src/generated/openapi-types.ts"
+  },
+  "dependencies": {
+    "@aeos/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "openapi-typescript": "^7.4.0",
+    "vitest": "^2.1.8",
+    "@aeos/api": "workspace:*",
+    "@aeos/kernel": "workspace:*",
+    "@aeos/provider-core": "workspace:*"
+  }
+}

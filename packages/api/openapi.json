@@ -1,0 +1,259 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AEOS API",
+    "description": "Local-first API over the AEOS daemon. Envelope: { success, data, error, meta }.",
+    "version": "0.1.0"
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "description": "Liveness + AEOS_HOME identity.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces": {
+      "get": {
+        "tags": [
+          "workspaces"
+        ],
+        "description": "List workspaces.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Create a workspace.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}": {
+      "get": {
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Get one workspace.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/agents": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "description": "List agents in a workspace.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "agents"
+        ],
+        "description": "Create an agent (registry-backed, git-initialized).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "description": "Get one agent.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/credential-profile": {
+      "post": {
+        "tags": [
+          "agents"
+        ],
+        "description": "BYOK on-the-go switch (spec §14): point the agent at another credential profile; takes effect next spawn.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/objectives": {
+      "post": {
+        "tags": [
+          "objectives"
+        ],
+        "description": "Create an objective with its plan.md.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/objectives/{id}/start": {
+      "post": {
+        "tags": [
+          "objectives"
+        ],
+        "description": "Start (or resume) the objective through the sequential scheduler. Idempotent while running.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/objectives/{id}": {
+      "get": {
+        "tags": [
+          "objectives"
+        ],
+        "description": "Objective status derived from plan.md + checkpoints (files are truth).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/memory/index": {
+      "get": {
+        "tags": [
+          "memory"
+        ],
+        "description": "MEMORY.md index + budgets (lazily initialized).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/memory/file": {
+      "get": {
+        "tags": [
+          "memory"
+        ],
+        "description": "Read one memory file by repo-relative path.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/memory/search": {
+      "get": {
+        "tags": [
+          "memory"
+        ],
+        "description": "FTS search over the agent memory (rebuilds lazily).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "tags": [
+          "events"
+        ],
+        "description": "Canonical event stream (SSE) with filters + backfill.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    }
+  }
+}
