@@ -1,0 +1,4 @@
+{"type":"message.part.updated","properties":{"part":{"id":"prt_01","sessionID":"ses_fail01","messageID":"msg_01","type":"text","text":"Starting."}}}
+{"type":"storage.write","properties":{"key":"whatever"}}
+not even json
+{"type":"session.error","properties":{"sessionID":"ses_fail01","error":{"name":"ProviderAuthError","data":{"providerID":"anthropic","message":"Provider authentication failed."}}}}
