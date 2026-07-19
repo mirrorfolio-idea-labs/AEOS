@@ -17,6 +17,11 @@
             "blocked"
           ]
         },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
         "commit": {
           "type": "string"
         },
