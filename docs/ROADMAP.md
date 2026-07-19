@@ -73,7 +73,7 @@ optional `ANTHROPIC_MODEL`) — switch takes effect next spawn; emit
 (provider-fake), plus one optional live smoke test behind an env flag.
 - [x] **T1** `HarnessAdapter` interface + capability matrix + conformance test suite in `provider-core`. *Accept: provider-fake passes conformance.*
 - [x] **T2** Hermetic profile builder (dir layout, settings.json generation from toggles, credential env injection from secret store). *Accept: generated profile contains zero references to `~/.claude`; toggles round-trip.*
-- [ ] **T3** Spawn/stream/translate: NDJSON → canonical events, session_id + cost capture. *Accept: golden fixtures (recorded from real runs) translate byte-identically to expected canonical event files.*
+- [x] **T3** Spawn/stream/translate: NDJSON → canonical events, session_id + cost capture. *Accept: golden fixtures (recorded from real runs) translate byte-identically to expected canonical event files.*
 - [ ] **T4** Resume + credential-profile switching (checkpoint → respawn with new profile → resume token honored). *Accept: fixture-driven test proves same objective continues across profile switch.*
 - [ ] **T5** Usage-limit auto-failover hook (emit `approval.request` if policy=confirm, auto-switch if policy=allow). *Accept: simulated usage_limit fixture triggers documented behavior.*
 **Exit gate:** conformance + golden translation + live smoke (manual, budget-capped) pass.

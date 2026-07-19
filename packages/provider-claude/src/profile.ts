@@ -93,6 +93,9 @@ export async function buildClaudeProfile(
 
   const env: Record<string, string> = {
     CLAUDE_CONFIG_DIR: rootDir,
+    // Non-secret marker so cost.usage events can be tagged with the profile
+    // that paid for them (spec §9 BYOK) — read back by ClaudeAdapter.spawn.
+    AEOS_CREDENTIAL_PROFILE_ID: credential.id,
     ...(await credentialEnv(credential, secrets)),
   };
   const argv: string[] = ['--bare', '--settings', settingsPath];

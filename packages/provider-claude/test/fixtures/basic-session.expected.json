@@ -1,0 +1,87 @@
+[
+  {
+    "v": 1,
+    "id": "00000000000000000000000000",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "source": "provider-claude",
+    "sessionId": "golden-session",
+    "type": "session.created",
+    "payload": {}
+  },
+  {
+    "v": 1,
+    "id": "00000000000000000000000001",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "source": "provider-claude",
+    "sessionId": "golden-session",
+    "type": "item.message",
+    "payload": {
+      "role": "assistant",
+      "text": "I'll list the files first."
+    }
+  },
+  {
+    "v": 1,
+    "id": "00000000000000000000000002",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "source": "provider-claude",
+    "sessionId": "golden-session",
+    "type": "item.tool_call",
+    "payload": {
+      "callId": "toolu_01",
+      "tool": "Bash",
+      "input": {
+        "command": "ls"
+      }
+    }
+  },
+  {
+    "v": 1,
+    "id": "00000000000000000000000003",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "source": "provider-claude",
+    "sessionId": "golden-session",
+    "type": "item.tool_result",
+    "payload": {
+      "callId": "toolu_01",
+      "ok": true,
+      "output": "README.md\nsrc\n"
+    }
+  },
+  {
+    "v": 1,
+    "id": "00000000000000000000000004",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "source": "provider-claude",
+    "sessionId": "golden-session",
+    "type": "item.message",
+    "payload": {
+      "role": "assistant",
+      "text": "Two entries: README.md and src."
+    }
+  },
+  {
+    "v": 1,
+    "id": "00000000000000000000000005",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "source": "provider-claude",
+    "sessionId": "golden-session",
+    "type": "cost.usage",
+    "payload": {
+      "profileId": "cp-golden",
+      "usd": 0.0123,
+      "inputTokens": 1500,
+      "outputTokens": 220,
+      "cacheReadTokens": 800
+    }
+  },
+  {
+    "v": 1,
+    "id": "00000000000000000000000006",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "source": "provider-claude",
+    "sessionId": "golden-session",
+    "type": "session.completed",
+    "payload": {}
+  }
+]
