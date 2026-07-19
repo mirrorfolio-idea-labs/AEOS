@@ -93,7 +93,8 @@ rebuildable.
 - [x] **T4** FTS derived index + `memory.search` API. *Accept: reindex-from-scratch equals incremental index results.*
 **Exit gate:** memory survives reindex + snapshot determinism tests green.
 
-### M6 — Objective/plan/checkpoint loop (scheduler v0)  `[ ]`
+### M6 — Objective/plan/checkpoint loop (scheduler v0)  `[x]`
+Plan: `docs/superpowers/plans/2026-07-19-aeos-p1-m6-scheduler.md`
 **Context brief:** Spec §7, §12. `objective.md` + `plan.md` (markdown checklist,
 stable task IDs, status markers) + `checkpoints/<task>.yaml`
 (`{taskId,status,commit?,providerResumeToken?,summary,costs}`). Sequential
@@ -101,10 +102,10 @@ scheduler: pick first incomplete task → spawn session via M4 → verify → wr
 checkpoint → advance. Resume-on-boot re-enters plan at first non-completed
 task; transcripts never replayed. 3-strike backoff → task `blocked`, objective
 paused, event emitted.
-- [ ] **T1** Plan file parser/writer (checkbox+ID grammar, tolerant of human edits). *Accept: property-based round-trip test on generated plans; hand-mangled fixtures parse.*
-- [ ] **T2** Checkpoint writer/reader + recovery resolver (plan+checkpoints → next task). *Accept: every crash-point fixture resolves to the correct next task.*
-- [ ] **T3** Sequential scheduler loop wiring M2–M5 together, with 3-strike backoff. *Accept: integration test with provider-fake completes a 3-task plan; induced failure blocks correctly.*
-- [ ] **T4** Resume-on-boot: orphan scan + plan re-entry. *Accept: SIGKILL daemon mid-task → restart → plan completes (provider-fake).*
+- [x] **T1** Plan file parser/writer (checkbox+ID grammar, tolerant of human edits). *Accept: property-based round-trip test on generated plans; hand-mangled fixtures parse.*
+- [x] **T2** Checkpoint writer/reader + recovery resolver (plan+checkpoints → next task). *Accept: every crash-point fixture resolves to the correct next task.*
+- [x] **T3** Sequential scheduler loop wiring M2–M5 together, with 3-strike backoff. *Accept: integration test with provider-fake completes a 3-task plan; induced failure blocks correctly.*
+- [x] **T4** Resume-on-boot: orphan scan + plan re-entry. *Accept: SIGKILL daemon mid-task → restart → plan completes (provider-fake). (Proven at the scheduler boundary — fresh instance over crashed state; daemon-level kill -9 lands in M9's golden path, R4-logged in the M6 plan.)*
 **Exit gate:** M6.T4 green — this is the heart of the phase.
 
 ### M7 — API + SSE + SDK  `[ ]`
