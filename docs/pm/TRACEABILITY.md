@@ -1,7 +1,7 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of M3 completion on `feat/aeos-p1-m3-runner`,
-> 2026-07-18. Regenerate per [README R3](README.md). Spec =
+> **Generated view** — as of `v0.1.0` (Phase P1 complete), 2026-07-20.
+> Regenerate per [README R3](README.md). Spec =
 > `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
@@ -52,6 +52,29 @@ their source of truth; the spec deliberately doesn't cover them.
 | AEOS-P1.M3.T2 runner process | `packages/runner/src/runner/{ring-buffer,runner,main}.ts`, `src/protocol/client.ts` | `test/{ring-buffer,runner}.test.ts` (disconnect survival) | `ab43e2b` |
 | AEOS-P1.M3.T3 supervisor + re-adoption | `packages/runner/src/supervisor/supervisor.ts`, kernel `skipSession`, aeosd `supervisor` module | `test/supervisor.test.ts` (flagship re-adoption), kernel `bus.test.ts` | `d2d6368` |
 | AEOS-P1.M3.T4 session state machine | `packages/runner/src/supervisor/session-state.ts` | `test/session-state.test.ts` | `e09337d` |
+| AEOS-P1.M4.T1 HarnessAdapter + conformance + fake | `packages/provider-core/src/{adapter,conformance,provider-fake}.ts` | `test/provider-fake.test.ts` | PR #98 |
+| AEOS-P1.M4.T2 hermetic profile builder | `packages/provider-claude/src/profile.ts` | `test/profile.test.ts` | PR #98 |
+| AEOS-P1.M4.T3 translate + golden fixtures | `packages/provider-claude/src/translate.ts` | `test/translate.test.ts`, `test/fixtures/*` | PR #98 |
+| AEOS-P1.M4.T4 resume + credential switch | `packages/provider-claude/src/resume.ts` | `test/resume.test.ts` | PR #98 |
+| AEOS-P1.M4.T5 usage-limit failover | `packages/provider-claude/src/failover.ts` | `test/failover.test.ts` | PR #98 |
+| AEOS-P1.M4.T6 multi-account subscription slots | `packages/contracts` credential schema, `packages/provider-claude/src/profile.ts` `subscriptionHomeFor` | `test/profile.test.ts` (slot isolation) | PR #104 |
+| AEOS-P1.M5.T1 memory store | `packages/memory/src/{layout,store}.ts` | `test/store.test.ts` (over-budget error, archive) | PR #106 |
+| AEOS-P1.M5.T2 snapshot composer | `packages/memory/src/snapshot.ts` | `test/snapshot.test.ts` (determinism) | PR #106 |
+| AEOS-P1.M5.T3 memory.propose queue | `packages/memory/src/propose.ts` | `test/propose.test.ts` | PR #106 |
+| AEOS-P1.M5.T4 FTS + search | `packages/memory/src/fts.ts` | `test/fts.test.ts` (rebuild ≡ incremental) | PR #106 |
+| AEOS-P1.M6.T1 plan.md parser/writer | `packages/scheduler/src/plan.ts` | `test/plan.test.ts` (property round-trip) | PR #107 |
+| AEOS-P1.M6.T2 checkpoint store + resolver | `packages/scheduler/src/checkpoint.ts` | `test/checkpoint.test.ts` (crash-point matrix) | PR #107 |
+| AEOS-P1.M6.T3+T4 scheduler loop + resume | `packages/scheduler/src/scheduler.ts` | `test/scheduler.test.ts` (3-strike, resume-on-boot) | PR #107 |
+| AEOS-P1.M7.T1 API skeleton | `packages/api/src/{server,envelope}.ts`, `openapi.json` | `test/api.test.ts`, `test/openapi-drift.test.ts` | PR #108 |
+| AEOS-P1.M7.T2 resource routes | `packages/api/src/routes/{workspaces,agents,objectives,memory}.ts` | `test/api.test.ts` | PR #108 |
+| AEOS-P1.M7.T3 SSE + backfill | `packages/api/src/routes/events.ts` | `test/api.test.ts` (exactly-once reconnect) | PR #108 |
+| AEOS-P1.M7.T4 SDK + CLI | `packages/sdk/src/client.ts`, `apps/cli/src/cli.ts` | `test/client.test.ts`, `apps/cli/test/golden-path.test.ts` | PR #108 |
+| AEOS-P1.M8.T1–T4 ADE web UI | `apps/ade/src/*` | `apps/ade/test/ade.spec.ts` (Playwright, 4 specs) | PR #109 |
+| AEOS-P1.M9.T1 daemon wiring + E2E | `apps/aeosd/src/api-module.ts`, daemon.ts `api` module | `apps/aeosd/test/golden-path.e2e.test.ts` (10× SIGKILL+resume) | PR #110 |
+| AEOS-P1.M9.T2 nightly live E2E | `.github/workflows/nightly-live-e2e.yml` | secret-gated; manual trigger verifies | PR #110 |
+| AEOS-P1.M9.T3 STOP kill switch | `packages/scheduler/src/scheduler.ts`, `packages/api/src/routes/objectives.ts`, `apps/cli/src/cli.ts` | `apps/aeosd/test/golden-path.e2e.test.ts` (kill-switch spec) | PR #110 |
+| AEOS-P1.M9.T4 docs + ADRs + tag | `README.md`, `docs/adr/ADR-002..008.md` | clean-clone quickstart verified manually | PR #110, tag `v0.1.0` |
+| AEOS-P1.M10.T1–T3 OpenCode adapter | `packages/provider-opencode/src/*` | `test/{profile,translate,adapter}.test.ts` | PR #105 |
 
 Verified 2026-07-14 by direct run on `main` after the M2 merge (code-as-truth):
 install → build → typecheck → test (69/69 across contracts/kernel/aeosd) →
@@ -60,9 +83,18 @@ smoke-tested against a scratch `AEOS_HOME`.
 
 Verified 2026-07-18 on `feat/aeos-p1-m3-runner` at M3 exit: CI-identical
 chain green — 100/100 tests across 20 files (contracts/kernel/runner/aeosd),
-depcruise clean (138 modules). Remote CI still pending first push.
+depcruise clean (138 modules).
+
+Verified 2026-07-20 on `main` at the `v0.1.0` tag: CI-identical chain green
+twice consecutively (flake check) — 211 tests across 43 files, depcruise
+clean (317 modules), plus the ADE Playwright suite (4 specs) and the
+daemon E2E (golden path 10×, kill switch) run separately in CI. A fresh
+`git clone` → `pnpm install --frozen-lockfile` → `pnpm build` → boot
+`aeosd` → drive the full CLI workflow was verified manually against the
+exact README quickstart commands before tagging.
 
 ## Deployment
 
-None yet by design — P1 ships a local daemon; CI (M1.T6) is the only pipeline
-until P4 deploy targets.
+None yet by design — P1 ships a local daemon; CI (M1.T6) plus the nightly
+secret-gated live-harness workflow (M9.T2) are the only pipelines until
+P4 deploy targets.

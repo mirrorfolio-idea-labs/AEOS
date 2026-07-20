@@ -1,6 +1,6 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-07-20, session parked after the M5–M8 sprint (PRs #106–#109).
+> **Generated view** — as of 2026-07-20, **Phase P1 complete, v0.1.0 tagged.** Session parked.
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,15 +10,15 @@
 
 | | |
 |---|---|
-| **Now** | **Parked (resume guide: `guides/2026-07-20-session-parking-resume.md`).** M5 memory, M6 scheduler, M7 API+SDK+CLI, and M8 ADE UI all merged same-day (PRs #106–#109). Next: **M9 (issues #24–#27) → v0.1 MVP release.** Kabeer owes the M4/M10 live smokes (guides in `guides/`). |
-| **Next** | M9 T1–T4 (golden-path E2E, kill switch, docs, **v0.1 tag = first public MVP release**) |
+| **Now** | **v0.1.0 tagged and released** (PR #110 merged M9; all P1 issues #24–#27 closed). Session parked — resume guide: `guides/2026-07-20-session-parking-resume.md`. Community profile 100%. |
+| **Next** | Kabeer's M4/M10 live-harness smokes (guides in `guides/`) whenever convenient — not blocking. Then: pick a P2 milestone to open S05, or continue toward v0.2. |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
 ## Milestones
 
 Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 
-### P1 — Spine (v0.1) `[~]`
+### P1 — Spine (v0.1) `[x]` — **v0.1.0 tagged 2026-07-20**
 
 | Milestone | Status | Tasks | Plan | Notes |
 |---|---|---|---|---|
@@ -30,7 +30,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M6 scheduler v0 | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m6-scheduler.md) | merged PR #107; crash-resume proven (daemon-level kill lands in M9) |
 | M7 API+SSE+SDK | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m7-api.md) | merged PR #108; CLI golden path green |
 | M8 ADE web UI | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m8-ade-ui.md) | merged PR #109; shadcn UI, Playwright suite in CI |
-| M9 E2E + hardening | `[ ]` | 0/4 | — | **NEXT** — exit = P1 exit gate, tags v0.1 (issues #24–#27) |
+| M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
 ### P2 — Safety + polish (v0.2) `[ ]` — 0/25 tasks
@@ -86,10 +86,9 @@ GitHub issue
 
 ## Active sprint
 
-[S04 — Execute M4 (Claude Code provider)](sprints/S04.md) — scope overrun by
-design: Kabeer's 2026-07-19 ship-directive pulled M5–M8 + M10 + P5.M1 into
-the same push (log in the sprint file). Close S04 at the M4/M10 smokes;
-open S05 for M9 + v0.1 release.
+None. [S04](sprints/S04.md) closed 2026-07-20 at the v0.1.0 tag (retro in
+the sprint file). Next sprint opens when work resumes on P2 or the
+manual smokes land.
 
 ## Blockers
 
