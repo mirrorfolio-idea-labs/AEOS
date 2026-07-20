@@ -17,7 +17,7 @@
 <p align="center">
   <a href="./docs/ROADMAP.md"><img src="https://img.shields.io/badge/Phase-P1%20Spine%20(v0.1)-blueviolet?style=for-the-badge" alt="Phase P1"></a>
   <a href="https://github.com/mirrorfolio-idea-labs/AEOS/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/mirrorfolio-idea-labs/AEOS/ci.yml?style=for-the-badge&label=CI" alt="CI status"></a>
-  <a href="./docs/pm/BOARD.md"><img src="https://img.shields.io/badge/Status-pre--alpha-orange?style=for-the-badge" alt="Status"></a>
+  <a href="./docs/pm/BOARD.md"><img src="https://img.shields.io/badge/Status-alpha-orange?style=for-the-badge" alt="Status"></a>
   <a href="https://www.npmjs.com/package/pnpm"><img src="https://img.shields.io/badge/pnpm-9-f69220?style=for-the-badge&logo=pnpm&logoColor=white" alt="pnpm 9"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node-22-017ace?style=for-the-badge&logo=node.js&logoColor=white" alt="Node 22"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License MIT"></a>
@@ -42,55 +42,52 @@ web UI. We build one to prove a thesis: that an AI engineer can be a
 persistent first-class object — not a chat, not a prompt, not a session token
 in someone else's database.
 
-We are not shipping a wrapper around a chat box. We are shipping the
-substrate that makes an agent *survive*.
-
 <table>
-<tr><td><b>Files are truth</b></td><td>All durable state — memory, transcripts, plans, checkpoints, policy, audit — lives in human-readable files. Databases and vector indexes are <i>derived</i> and rebuildable. The model's context window is a cache over file state, never the source of truth. If <code>rm -rf index.db</code> is not a safe and routine operation, we have failed.</td></tr>
-<tr><td><b>Contracts over code</b></td><td>Every module boundary is a versioned, schema-defined wire contract (JSON Schema, Zod, NDJSON events, OpenAPI). Any module can be replaced, extracted to its own service, or rewritten in another language without its consumers noticing. TypeScript is the implementation detail of v0.1, not a commitment.</td></tr>
+<tr><td><b>Files are truth</b></td><td>All durable state — memory, transcripts, plans, checkpoints, costs — lives in human-readable files. The SQLite index is <i>derived</i> and rebuildable. If <code>rm -rf index.db</code> is not a safe and routine operation, we have failed.</td></tr>
+<tr><td><b>Contracts over code</b></td><td>Every module boundary is a versioned, schema-defined wire contract (JSON Schema, Zod, NDJSON events, OpenAPI). Any module can be replaced or rewritten without its consumers noticing.</td></tr>
 <tr><td><b>The objective is the recovery unit</b></td><td>Autonomy is structured as durable <i>objectives → plans → tasks</i> with a checkpoint after every step. There is no "resume the chat." There is only "re-enter the plan."</td></tr>
-<tr><td><b>Headless by default</b></td><td>JSON streaming is the default execution mode; a PTY attach is the human-takeover escape hatch, not the main loop — opposite of every chat-box wrapper.</td></tr>
-<tr><td><b>Hermetic harnesses</b></td><td>Each harness runs in a clean config home by default — no user plugins, skills, or global config leak in. Prevents corruption of agent self-learning by the host machine's customizations; features re-enabled per-agent via explicit toggles.</td></tr>
-<tr><td><b>Daemon-enforced budgets</b></td><td>Per-agent and per-objective cost caps enforced by the daemon, not the model. A free-running loop never spends unbounded; gates and budgets are externally imposed.</td></tr>
-<tr><td><b>Provider-agnostic by accident</b></td><td>We wrap agent CLIs (Claude Code, Codex CLI, OpenCode) as hermetic subprocess providers. The adapter is the only thing that knows a provider exists — swap models with no downstream change.</td></tr>
+<tr><td><b>Hermetic harnesses</b></td><td>Each harness (Claude Code, OpenCode) runs in a clean config home by default — no user plugins, skills, or global config leak in. Features re-enabled per-agent via explicit toggles.</td></tr>
+<tr><td><b>Multiple accounts, at once</b></td><td>Named subscription slots give every agent its own persistent Claude Pro/Max login — run four client projects on four accounts, concurrently, without touching your personal login.</td></tr>
+<tr><td><b>Kill switch, always</b></td><td>A single <code>STOP</code> file halts every scheduler from spawning new work; in-flight sessions finish cleanly. <code>aeos stop --all</code> / <code>aeos resume-ops</code>.</td></tr>
 </table>
 
 ---
 
-## Locked decisions
+## Quickstart
 
-| # | Decision | Choice | Why |
-|---|----------|--------|-----|
-| D1 | Execution substrate | Wrap agent CLIs as hermetic subprocess providers | Inherit mature tool loops; fastest path to working; adapter keeps us provider-agnostic |
-| D2 | Harness hygiene | Clean config home by default — no user plugins/skills/global config leak in | Prevents corruption of agent self-learning by the host machine's customizations |
-| D3 | Runtime language | TypeScript/Node — architecture optimized for *replaceability*, not the language | Ecosystem fit (CLIs, MCP, UI); contracts make the language swappable later |
-| D4 | UI | Web-first served by the daemon; thin Tauri wrapper for desktop | One UI codebase covers desktop and cloud |
-| D5 | Memory | Files as truth + derived indexes | Inspectable, diffable, portable, crash-proof |
-| D6 | v0.1 slice | One persistent agent, resumable across restarts | Proves the core thesis before multi-agent complexity |
-| D7 | Shape | Modular kernel + durable session runners | Replaceable modules in one daemon; sessions survive daemon/UI restarts |
+Requirements: **Node 22** (`.nvmrc`), **pnpm 9** (via corepack), and the
+[Claude Code CLI](https://docs.claude.com/en/docs/claude-code) if you want
+real (not fake-provider) sessions.
 
----
+```bash
+git clone https://github.com/mirrorfolio-idea-labs/AEOS.git
+cd AEOS
+corepack enable
+pnpm install
+pnpm build
 
-## What we take from whom
+# start the daemon — mounts the API + the built ADE UI on :7777
+AEOS_HOME=~/.aeos ANTHROPIC_API_KEY=sk-ant-... node apps/aeosd/dist/main.js run
+```
 
-We stand on prior art. We name it, we say what we take, and we say what we
-reject. Nothing here is invented in a vacuum.
+Open **http://127.0.0.1:7777** — create a workspace, add an agent, run an
+objective, watch it stream. Or drive it from the CLI:
 
-| Source | Take | Reject |
-|--------|------|--------|
-| **Superset** | Standalone session-runner daemon over a Unix socket; per-session ring buffers; versioned framed protocol; fd-handoff across daemon upgrades; worktree-per-task | Postgres+ElectricSQL sync as truth; macOS-only Electron coupling |
-| **Hermes** | Hard char-budgeted memory files; overflow = explicit error the agent must resolve (no silent truncation); frozen-snapshot memory for prompt-cache stability; background Curator that ages and archives but never deletes; FTS + summarization for cross-session recall | Single-memory-provider limitation; two-file layout |
-| **Conductor** | The "harness" abstraction; managed harness binaries with BYO fallback; gitignored per-workspace scratch; workspace-as-unit-of-review | Auth passthrough as the only mode; closed source; no headless mode |
-| **OpenCode** | Server-owns-sessions / clients-are-thin; OpenAPI → generated SDK; SSE event bus; config-dir layering with explicit disable flags | Sessions as opaque provider JSON; the Effect framework (we take patterns, not the dependency) |
-| **Codex CLI** | `thread/turn/item` event taxonomy; sandbox-mode-as-flag; `resume --last` two-stage pipelines | Rollout files as canonical transcript |
-| **Claude Code** | `stream-json` NDJSON events; `total_cost_usd` per invocation; `CLAUDE_CONFIG_DIR` + `--bare` + granular `CLAUDE_CODE_DISABLE_*` flags for hermetic profiles | — |
-| **OpenRouter** | `/models` pricing/context metadata as a local routing index; OpenAI-compatible fallback routing | — |
-| **vibe-kanban / gpt-pilot / Aider / SWE-agent / AutoGPT** | Durable object = the task not the chat; checkpoint-after-every-step; architect/editor two-model cost split; ACI beats model choice; free-running loops need externally imposed structure (budgets, gates) | — |
+```bash
+export AEOS_API_URL=http://127.0.0.1:7777
+node apps/cli/dist/main.js workspace create acme --name "Acme Corp"
+node apps/cli/dist/main.js agent create dev --workspace acme --name "Dev Agent"
+node apps/cli/dist/main.js objective create obj1 --workspace acme --agent dev \
+  --title "Fix the flaky test" --task "T1: reproduce and fix"
+node apps/cli/dist/main.js objective run obj1 --workspace acme --agent dev
+```
 
-**Three differentiators no existing tool has, all at once:** (a) headless
-JSON-streaming as the *default* execution mode with PTY attach as a
-human-takeover escape hatch; (b) daemon-enforced per-agent / per-objective
-budget caps; (c) hermetic harness profiles by default.
+Kill the daemon mid-objective (`Ctrl-C` or `kill -9`) and start it again —
+the plan resumes exactly where it left off, no data lost. That's the whole
+thesis, demonstrated in one command.
+
+Multiple Claude subscriptions (e.g. one per client)? See
+[`packages/provider-claude/README.md`](packages/provider-claude/README.md#multi-account-subscriptions).
 
 ---
 
@@ -98,124 +95,111 @@ budget caps; (c) hermetic harness profiles by default.
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  ADE (web UI)          Desktop wrapper (Tauri)    CLI      │  clients
+│  ADE (web UI, React+Tailwind)         CLI (aeos)            │  clients
 └──────────────┬─────────────────────────────────────────────┘
-               │ HTTP + SSE (OpenAPI; generated SDK)
+               │ HTTP + SSE (OpenAPI 3.1; generated SDK)
 ┌──────────────▼─────────────────────────────────────────────┐
-│  aeosd — kernel daemon                                     │
-│  ┌──────────┐ ┌─────────┐ ┌─────────┐ ┌────────────────┐   │
-│  │ API       │ │ Policy  │ │ Event   │ │ State store    │   │
-│  │ gateway   │ │ engine  │ │ bus     │ │ (files+SQLite  │   │
-│  └──────────┘ └─────────┘ └─────────┘ │  derived index) │   │
-│  ┌──────────┐ ┌─────────┐ ┌─────────┐ └────────────────┘   │
-│  │ Scheduler │ │ Planner │ │ Memory  │ ┌────────────────┐   │
-│  │           │ │         │ │ system  │ │ Model router   │   │
-│  └──────────┘ └─────────┘ └─────────┘ └────────────────┘   │
+│  aeosd — kernel daemon                                      │
+│  ┌──────────┐ ┌─────────┐ ┌─────────┐ ┌────────────────┐    │
+│  │ API       │ │ Scheduler│ │ Event   │ │ State store    │   │
+│  │ gateway   │ │ (plan/   │ │ bus     │ │ (files+SQLite  │   │
+│  │ (Fastify) │ │ checkpt) │ │         │ │  derived index)│   │
+│  └──────────┘ └─────────┘ └─────────┘ └────────────────┘    │
+│  ┌────────────────────────┐ ┌───────────────────────────┐   │
+│  │ Memory (files + FTS5)  │ │ Provider adapters (Claude, │   │
+│  │                        │ │ OpenCode — hermetic)       │   │
+│  └────────────────────────┘ └───────────────────────────┘   │
 └──────────────┬─────────────────────────────────────────────┘
-               │ Unix socket / TCP (framed, versioned protocol)
+               │ Unix socket, framed versioned protocol
 ┌──────────────▼─────────────────────────────────────────────┐
-│  Session runners (one supervised process per live session) │
-│  ┌───────────────────────────────────────────────────────┐ │
-│  │ runner ── harness subprocess (claude -p / codex exec  │ │
-│  │           / opencode serve) in hermetic profile,      │ │
-│  │           inside sandbox, in agent's git worktree    │ │
-│  └───────────────────────────────────────────────────────┘ │
+│  Session runners — one supervised process per live session, │
+│  survives daemon restarts, re-adopted by session ID          │
 └────────────────────────────────────────────────────────────┘
 ```
 
-**Data flow, one autonomous step:**
-
-```
-Objective (file) → Planner emits/updates Plan (file) → Scheduler picks Task
-→ Policy engine gates permission tier & budget
-→ Model router picks provider + model for the task class
-→ Runner spawns harness in hermetic profile + sandboxed worktree
-→ Harness NDJSON events → normalized AEOS events → event bus
-   → transcript file (append-only NDJSON)   → SSE to clients
-   → cost meter (budget enforcement)        → audit log
-→ Task completes → checkpoint written → memory writes proposed
-→ Scheduler advances plan (or Planner revises) → next task
-```
-
-The kernel daemon is restartable at any moment. Session runners are separate
-OS processes that survive daemon restarts and are re-adopted by durable
-session ID on reconnect. Clients are thin — the web UI, desktop wrapper, and
-CLI all speak the same OpenAPI + SSE surface, and nothing in the UI holds
-state the daemon doesn't.
+**Data flow, one autonomous step:** Objective → plan.md (checklist,
+stable task IDs) → Scheduler picks the first incomplete task → provider
+adapter spawns the harness in a hermetic profile → NDJSON output
+translated into canonical events → event bus → transcript (NDJSON) + SSE
+to clients + `costs.ndjson` → task completes → checkpoint written →
+scheduler advances. A crash at any point resumes at the same task on
+restart — nothing is ever replayed from a transcript.
 
 ---
 
 ## Repository
 
-pnpm monorepo. `packages/contracts` is the dependency root — Zod schemas for
-the event envelope, domain objects, and canonical event taxonomy, exported
-also as JSON Schema. Everything else depends on `contracts` and on each
-other's published entry points only; dependency-cruiser enforces it in CI.
+pnpm monorepo. `packages/contracts` is the dependency root — Zod schemas
+for the event envelope, domain objects, and canonical event taxonomy,
+exported also as JSON Schema. Everything else depends on `contracts` and
+on each other's published entry points only; dependency-cruiser enforces
+it in CI.
 
 ```
 aeos/
 ├── packages/
-│   ├── contracts/        # Zod schemas → JSON Schemas; event envelope; protocol versions
-│   ├── kernel/           # registry, event bus, state store, lifecycle       (planned)
-│   ├── policy/           # permission tiers, budget caps, audit              (planned)
-│   ├── memory/           # file memory + derived indexes + curator            (planned)
-│   ├── scheduler/        # durable queues, wakeups, resume-on-boot           (planned)
-│   ├── planner/          # objective → plan → tasks; plan revision           (planned)
-│   ├── router/           # cost/quality model routing                        (planned)
-│   ├── runner/           # session-runner process + supervisor + protocol    (planned)
-│   ├── providers/        # harness adapters (claude / codex / opencode)      (planned)
-│   ├── api/              # Fastify server, OpenAPI spec, SSE                 (planned)
-│   └── sdk/              # generated TS client from OpenAPI                   (planned)
+│   ├── contracts/          # Zod schemas → JSON Schemas; event envelope; protocol versions
+│   ├── kernel/              # AEOS_HOME layout, registry, event bus, SQLite derived index
+│   ├── runner/               # session-runner process + supervisor + framed protocol
+│   ├── provider-core/        # HarnessAdapter contract + conformance suite + provider-fake
+│   ├── provider-claude/      # Claude Code hermetic adapter (BYOK, multi-account slots)
+│   ├── provider-opencode/    # OpenCode hermetic adapter
+│   ├── memory/                # file memory (budgeted) + frozen snapshots + FTS5 search
+│   ├── scheduler/             # plan.md + checkpoints; the objective execution loop
+│   ├── api/                   # Fastify server, OpenAPI 3.1, SSE, kill switch
+│   └── sdk/                   # generated TS client + SSE reader from the OpenAPI spec
 ├── apps/
-│   ├── aeosd/            # daemon assembly (composition root)                 (planned)
-│   ├── ade/              # web UI (React + xterm.js)                          (planned)
-│   ├── desktop/          # Tauri wrapper around ade                           (planned)
-│   └── cli/              # aeos CLI (thin SDK client)                         (planned)
-└── docs/                 # specs, plans, ADRs, ROADMAP, PM board
+│   ├── aeosd/               # daemon composition root (the `aeosd` binary)
+│   ├── ade/                  # web UI (React + Vite + Tailwind, shadcn conventions)
+│   └── cli/                   # `aeos` CLI (thin SDK client)
+└── docs/                     # specs, plans, ADRs, ROADMAP, PM board
 ```
 
 ---
 
 ## Status
 
-Phase **P1 — Spine (v0.1)** is in flight. The goal of P1 is one golden-path
-demo: *create agent → give objective → agent works via hermetic Claude Code →
-`kill -9` the daemon → restart → agent resumes at last checkpoint and
-completes → all state inspectable as files.*
+**Phase P1 — Spine (v0.1) is complete.** The golden path is real and
+tested: *create agent → give objective → agent works via a hermetic
+harness → `kill -9` the daemon → restart → agent resumes at last
+checkpoint and completes → all state inspectable as files.*
 
 | Milestone | Status | What it is |
 |---|---|---|
-| **M1** contracts | `[~]` in progress | Monorepo scaffold, Zod schemas, event taxonomy, JSON Schema export, depcruise + CI |
-| M2 kernel | `[ ]` | State store, registry, event bus |
-| M3 runner | `[ ]` | Session-runner process + supervisor + protocol |
-| M4 Claude provider | `[ ]` | First hermetic harness adapter |
-| M5 memory v0 | `[ ]` | File memory + derived FTS index |
-| M6 scheduler v0 | `[ ]` | Durable queues, resume-on-boot |
-| M7 API + SSE + SDK | `[ ]` | OpenAPI surface, generated client |
-| M8 ADE web UI | `[ ]` | The web front-end |
-| M9 E2E + hardening | `[ ]` | P1 exit gate, tags `v0.1` |
+| M1 contracts | `[x]` | Zod schemas, event taxonomy, JSON Schema export |
+| M2 kernel | `[x]` | AEOS_HOME layout, registry, event bus, derived SQLite index |
+| M3 runner | `[x]` | Session-runner process + supervisor + framed protocol |
+| M4 Claude provider | `[x]`¹ | Hermetic profile, translation, resume, BYOK, multi-account slots |
+| M5 memory v0 | `[x]` | Budgeted files-as-truth store, frozen snapshots, FTS5 search |
+| M6 scheduler v0 | `[x]` | plan.md + checkpoints, 3-strike backoff, crash resume |
+| M7 API + SSE + SDK | `[x]` | OpenAPI 3.1, exactly-once SSE, generated client, CLI |
+| M8 ADE web UI | `[x]` | React UI, live session console, files browser, BYOK, cost meter |
+| M9 E2E + hardening | `[x]` | Real-process golden-path E2E (10× green), kill switch, this README |
+| M10 OpenCode adapter | `[x]`¹ | Second hermetic harness, same conformance bar as Claude |
 
-**State of the art today:** the contracts package is real and tested — 17/17
-tests green, JSON Schema export with a drift test, `pnpm build` / `typecheck`
-/ `test` all pass cleanly. Everything downstream is designed, planned, and
-gated on M1's exit.
+¹ Code-complete and merged; gated only on a manual live-harness smoke
+test before the final checkbox flips (tracked in the project's internal
+guides — the automated suite is green either way).
 
-After P1: **P2** (safety + polish, v0.2), **P3** (autonomy, v0.3),
-**P4** (scale + community, v0.4), **P5** (v1.0 public release). 104 tasks
-defined across 31 milestones to v1; 5 done, 99 remain.
+After P1: **P2** (safety + policy engine, budgets, secrets, v0.2), **P3**
+(autonomy — planner, model routing, self-learning, v0.3), **P4** (scale +
+plugin ecosystem, v0.4), **P5** (public v1.0 launch — OSS readiness is
+already done). See [`docs/ROADMAP.md`](docs/ROADMAP.md) for all 107
+tracked tasks, and [open issues](https://github.com/mirrorfolio-idea-labs/AEOS/issues)
+for ones ready to pick up.
 
 ---
 
 ## Build, test, run
 
-Node 22, pnpm 9, ESM, strict TypeScript, Vitest.
+Node 22, pnpm 9, ESM, strict TypeScript, Vitest, Playwright.
 
 ```bash
 pnpm install
 pnpm build
-pnpm test          # 17 passing
+pnpm test          # workspace-wide vitest
 pnpm typecheck
-pnpm depcruise     # boundary enforcement (lands with M1.T6)
+pnpm depcruise     # package-boundary enforcement
 ```
 
 CI-identical chain:
@@ -224,10 +208,19 @@ CI-identical chain:
 pnpm install --frozen-lockfile && pnpm build && pnpm typecheck && pnpm test && pnpm depcruise
 ```
 
-Regenerate committed JSON Schemas after touching `packages/contracts`:
+Regenerate committed generated artifacts after touching their sources
+(both are drift-tested in CI):
 
 ```bash
-pnpm -F @aeos/contracts gen:schemas    # output is committed; drift test catches divergence in CI
+pnpm -F @aeos/contracts gen:schemas    # after editing packages/contracts
+pnpm -F @aeos/api gen:openapi          # after editing packages/api routes
+```
+
+Run the ADE UI's Playwright suite:
+
+```bash
+pnpm -F @aeos/ade exec playwright install chromium
+pnpm -F @aeos/ade test
 ```
 
 ---
@@ -236,10 +229,12 @@ pnpm -F @aeos/contracts gen:schemas    # output is committed; drift test catches
 
 | Doc | What's there |
 |-----|--------------|
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to pick up an issue and ship a PR |
 | [`docs/pm/BOARD.md`](docs/pm/BOARD.md) | Current status, active sprint, drift register |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | The drift anchor — stable task IDs, accept criteria |
-| [`docs/pm/README.md`](docs/pm/README.md) | The PM operating manual (source-of-truth map, sync rules) |
+| [`docs/PROJECT-CONTEXT.md`](docs/PROJECT-CONTEXT.md) | Single-file cold-start onboarding |
 | [`docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`](docs/superpowers/specs/2026-07-12-aeos-architecture-design.md) | Full architecture design |
+| [`docs/adr/`](docs/adr/) | Architecture decision records |
 
 ---
 
@@ -253,19 +248,22 @@ pnpm -F @aeos/contracts gen:schemas    # output is committed; drift test catches
   milestone's exit gate passes, never speculatively.
 - **No cross-package internal imports** — packages talk through published
   entry points (`@aeos/x`), never relative paths into `src/`.
-- **Schemas change only with regenerated `schemas/*.json`** — the drift test
-  enforces it; never hand-edit generated schemas.
 - **Facts are the code.** Docs describe intent; code and git history are the
   facts. On any inconsistency, trust the code, fix the doc, log the drift.
 
----
+## Contributing
+
+Issues are labeled and milestone-tagged; `good first issue` +
+`help wanted` mark self-contained entry points. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
 ## License
 
-TBD — OSS readiness is [`P5.M1`](docs/ROADMAP.md); ADR pending.
+[MIT](LICENSE) — see [ADR-001](docs/adr/ADR-001-license-mit.md) for the
+rationale.
 
 ---
 
-> AEOS is built by Mirrorfolio. It is pre-alpha. The contracts package is the
-> only thing you should treat as real today; everything else is a designed
-> and gated intention. Watch the BOARD, not the hype.
+> AEOS is built by Mirrorfolio. It is alpha software with a complete,
+> tested spine — the golden path works today. Watch the
+> [BOARD](docs/pm/BOARD.md), not the hype.
