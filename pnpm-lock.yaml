@@ -96,22 +96,43 @@ importers:
 
   apps/aeosd:
     dependencies:
+      '@aeos/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@aeos/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@aeos/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
+      '@aeos/provider-claude':
+        specifier: workspace:*
+        version: link:../../packages/provider-claude
+      '@aeos/provider-core':
+        specifier: workspace:*
+        version: link:../../packages/provider-core
+      '@aeos/provider-opencode':
+        specifier: workspace:*
+        version: link:../../packages/provider-opencode
       '@aeos/runner':
         specifier: workspace:*
         version: link:../../packages/runner
+      '@fastify/static':
+        specifier: ^8.0.3
+        version: 8.3.0
       yaml:
         specifier: ^2.6.1
         version: 2.9.0
     devDependencies:
+      '@aeos/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@types/node':
         specifier: ^22
         version: 22.20.1
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
 
   apps/cli:
     dependencies:
