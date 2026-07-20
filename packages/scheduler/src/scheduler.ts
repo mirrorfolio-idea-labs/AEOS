@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import {
   AeosEventSchema,
@@ -23,6 +23,12 @@ export interface RunObjectiveOptions {
   /** Receives every session event plus the scheduler's pause event. */
   onEvent?: (event: AeosEvent) => void;
   sessionIdFactory?: () => string;
+  /**
+   * Kill switch (spec §18): when this file exists, no further sessions are
+   * spawned — the objective pauses before the next task. Runner-level STOP
+   * handling (in-flight sessions) shipped with M3.
+   */
+  stopFile?: string;
 }
 
 export type ObjectiveOutcome =
@@ -64,6 +70,22 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       }
     }
     const resolution = resolveNextTask(plan, checkpoints, maxAttempts);
+    if (resolution.kind === 'run' && opts.stopFile !== undefined) {
+      const stopped = await stat(opts.stopFile).then(
+        () => true,
+        () => false,
+      );
+      if (stopped) {
+        // Kill switch: pause WITHOUT mutating the plan — removing the STOP
+        // file and re-running resumes exactly where we halted.
+        await savePlan(opts.objectiveDir, plan);
+        return {
+          status: 'paused',
+          taskId: resolution.task.id,
+          reason: `STOP file present (${opts.stopFile}) — kill switch engaged`,
+        };
+      }
+    }
 
     if (resolution.kind === 'done') {
       await savePlan(opts.objectiveDir, plan);

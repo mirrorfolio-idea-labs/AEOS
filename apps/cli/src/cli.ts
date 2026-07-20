@@ -47,7 +47,10 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
   aeos objective run <id> --workspace <ws> --agent <agent> [--poll-ms 250] [--timeout-ms 120000]
   aeos objective status <id> --workspace <ws> --agent <agent>
-  aeos events tail [--type-prefix session.] [--agent <id>] [--max <n>]`;
+  aeos events tail [--type-prefix session.] [--agent <id>] [--max <n>]
+  aeos stop --all          # kill switch: no new sessions spawn; in-flight ones finish
+  aeos stop status
+  aeos resume-ops          # lifts the kill switch`;
 
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
@@ -146,6 +149,24 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         await delay(pollMs);
       }
+    }
+    if (group === 'stop' && action === 'status') {
+      io.out(JSON.stringify(await client.stopStatus()));
+      return 0;
+    }
+    if (group === 'stop' && action === undefined) {
+      if (parsed.flags.get('all') === undefined) {
+        io.err('usage: aeos stop --all   (or: aeos stop status)');
+        return 1;
+      }
+      const result = await client.stopAll();
+      io.out(result.stopped ? 'STOP engaged — no new sessions will spawn' : 'not stopped');
+      return 0;
+    }
+    if (group === 'resume-ops') {
+      await client.resumeOps();
+      io.out('STOP lifted — scheduling resumes');
+      return 0;
     }
     if (group === 'events' && action === 'tail') {
       const max = Number(parsed.flags.get('max')?.[0] ?? Infinity);

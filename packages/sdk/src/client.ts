@@ -50,10 +50,12 @@ export class AeosClient {
   }
 
   private async request<T>(method: string, url: string, body?: unknown): Promise<T> {
+    // Only set content-type when a body is actually sent — an empty payload
+    // with a JSON content-type makes Fastify's body parser choke.
     const response = await this.fetch(`${this.opts.baseUrl}${url}`, {
       method,
       headers: {
-        'content-type': 'application/json',
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         ...(this.opts.token === undefined ? {} : { authorization: `Bearer ${this.opts.token}` }),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -120,6 +122,20 @@ export class AeosClient {
       'GET',
       `/v1/objectives/${objectiveId}?workspaceId=${workspaceId}&agentId=${agentId}`,
     );
+  }
+
+  /** Kill switch (spec §18): stops all new session spawns; in-flight sessions finish. */
+  stopAll(): Promise<{ stopped: boolean }> {
+    return this.request('POST', '/v1/stop');
+  }
+
+  /** Lifts the kill switch (removes the STOP file). */
+  resumeOps(): Promise<{ stopped: boolean }> {
+    return this.request('DELETE', '/v1/stop');
+  }
+
+  stopStatus(): Promise<{ stopped: boolean }> {
+    return this.request('GET', '/v1/stop');
   }
 
   searchMemory(
