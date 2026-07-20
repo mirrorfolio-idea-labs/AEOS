@@ -5,7 +5,9 @@
   "private": true,
   "type": "module",
   "main": "./dist/daemon.js",
-  "bin": { "aeosd": "./dist/main.js" },
+  "bin": {
+    "aeosd": "./dist/main.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
@@ -16,9 +18,16 @@
     "@aeos/contracts": "workspace:*",
     "@aeos/kernel": "workspace:*",
     "@aeos/runner": "workspace:*",
-    "yaml": "^2.6.1"
+    "yaml": "^2.6.1",
+    "@aeos/api": "workspace:*",
+    "@aeos/provider-claude": "workspace:*",
+    "@aeos/provider-core": "workspace:*",
+    "@aeos/provider-opencode": "workspace:*",
+    "@fastify/static": "^8.0.3"
   },
   "devDependencies": {
-    "@types/node": "^22"
+    "@types/node": "^22",
+    "@aeos/sdk": "workspace:*",
+    "vitest": "^2.1.8"
   }
 }

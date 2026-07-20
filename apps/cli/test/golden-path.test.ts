@@ -86,6 +86,13 @@ describe('CLI golden path (T4 / M7 exit gate)', () => {
     expect(status.tasks.map((t) => t.status)).toEqual(['completed', 'completed']);
     expect(status.checkpoints).toHaveLength(2);
 
+    expect(await run('stop status')).toBe(0);
+    expect(out.at(-1)).toBe('{"stopped":false}');
+    expect(await run('stop --all')).toBe(0);
+    expect(out.at(-1)).toContain('STOP engaged');
+    expect(await run('resume-ops')).toBe(0);
+    expect(out.at(-1)).toContain('STOP lifted');
+
     expect(await run('agent switch-credential dev --workspace ws1 --profile cp-acme')).toBe(0);
     expect(out.at(-1)).toContain('cp-acme');
 

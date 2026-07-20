@@ -180,6 +180,41 @@
         }
       }
     },
+    "/v1/stop": {
+      "get": {
+        "tags": [
+          "stop"
+        ],
+        "description": "Kill-switch status.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "stop"
+        ],
+        "description": "Engage the kill switch: creates <AEOS_HOME>/STOP. Running tasks finish their current session; nothing new spawns (spec §18).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "stop"
+        ],
+        "description": "Lift the kill switch (removes the STOP file).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/v1/objectives/{id}": {
       "get": {
         "tags": [

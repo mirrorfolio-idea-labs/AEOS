@@ -1,0 +1,31 @@
+name: nightly-live-e2e
+on:
+  schedule:
+    # 03:00 UTC daily — off-peak, budget-capped by the objective itself
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+jobs:
+  live-e2e:
+    runs-on: ubuntu-latest
+    # Secret-gated (spec §18): skips cleanly on forks/PRs and on repos that
+    # haven't configured it yet — never fails CI for missing credentials.
+    if: ${{ github.repository == 'mirrorfolio-idea-labs/AEOS' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: live golden-path smoke (real Claude Code harness)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.AEOS_NIGHTLY_ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::AEOS_NIGHTLY_ANTHROPIC_API_KEY not set — skipping live E2E. See guides/2026-07-20-nightly-live-e2e-setup.md"
+            exit 0
+          fi
+          AEOS_LIVE_SMOKE=1 pnpm -F @aeos/provider-claude test:smoke
+      - name: record result
+        if: always()
+        run: echo "nightly live E2E run at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
