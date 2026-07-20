@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
+import { appendFile, mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -28,6 +28,79 @@ export const objectiveDirFor = (
 /** In-flight objective runs, keyed by objective dir — one at a time each. */
 const running = new Map<string, Promise<unknown>>();
 
+export const stopFilePath = (home: string): string => path.join(home, 'STOP');
+
+/**
+ * Start (or resume) one objective through the sequential scheduler —
+ * shared by the route and the daemon's resume-on-boot scan. Idempotent
+ * while a run is in flight.
+ */
+export function startObjectiveRun(
+  ctx: ApiContext,
+  workspaceId: string,
+  agentId: string,
+  objectiveId: string,
+): void {
+  const agent = getAgent(ctx.home, workspaceId, agentId);
+  const dir = objectiveDirFor(ctx.home, workspaceId, agentId, objectiveId);
+  if (running.has(dir)) return;
+  const run = runObjective({
+    objectiveDir: dir,
+    agent,
+    adapter: ctx.adapterFor(agent),
+    stopFile: stopFilePath(ctx.home),
+    onEvent: (event) => {
+      ctx.bus?.publish(event);
+      // files are truth for spend too: every cost.usage lands in costs.ndjson
+      if (event.type === 'cost.usage') {
+        void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
+      }
+    },
+  }).finally(() => running.delete(dir));
+  running.set(dir, run);
+  run.catch(() => undefined); // surfaced via status; never an unhandled rejection
+}
+
+/**
+ * Resume-on-boot (spec §12): restart every objective whose plan still has
+ * incomplete, unblocked tasks. State is file-derived, so this is safe to
+ * call on every daemon start.
+ */
+export async function resumeIncompleteObjectives(ctx: ApiContext): Promise<string[]> {
+  const resumed: string[] = [];
+  const { listWorkspaces, listAgents } = await import('@aeos/kernel');
+  for (const workspace of listWorkspaces(ctx.home)) {
+    for (const agent of listAgents(ctx.home, workspace.id)) {
+      const objectivesRoot = path.join(agentDir(ctx.home, workspace.id, agent.id), 'objectives');
+      let ids: string[];
+      try {
+        ids = (await readdir(objectivesRoot, { withFileTypes: true }))
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name);
+      } catch {
+        continue;
+      }
+      for (const objectiveId of ids) {
+        try {
+          const plan = parsePlan(
+            await readFile(path.join(objectivesRoot, objectiveId, 'plan.md'), 'utf8'),
+          );
+          const incomplete = plan.tasks.some(
+            (task) => task.status !== 'completed' && task.status !== 'blocked',
+          );
+          if (incomplete) {
+            startObjectiveRun(ctx, workspace.id, agent.id, objectiveId);
+            resumed.push(`${workspace.id}/${agent.id}/${objectiveId}`);
+          }
+        } catch {
+          // objectives without a parseable plan are skipped, never fatal
+        }
+      }
+    }
+  }
+  return resumed;
+}
+
 export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): void {
   app.post('/v1/objectives', {
     schema: { description: 'Create an objective with its plan.md.', tags: ['objectives'] },
@@ -54,30 +127,52 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
     },
     handler: async (request) => {
       const { workspaceId, agentId } = ObjectiveRef.parse(request.query);
-      const agent = getAgent(ctx.home, workspaceId, agentId);
       const dir = objectiveDirFor(ctx.home, workspaceId, agentId, request.params.id);
       try {
         await readFile(path.join(dir, 'plan.md'), 'utf8');
       } catch {
         throw new ApiError(404, `objective "${request.params.id}" has no plan.md`);
       }
-      if (!running.has(dir)) {
-        const run = runObjective({
-          objectiveDir: dir,
-          agent,
-          adapter: ctx.adapterFor(agent),
-          onEvent: (event) => {
-            ctx.bus?.publish(event);
-            // files are truth for spend too: every cost.usage lands in costs.ndjson
-            if (event.type === 'cost.usage') {
-              void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
-            }
-          },
-        }).finally(() => running.delete(dir));
-        running.set(dir, run);
-        run.catch(() => undefined); // surfaced via status; never an unhandled rejection
+      const stopped = await stat(stopFilePath(ctx.home)).then(
+        () => true,
+        () => false,
+      );
+      if (stopped) {
+        throw new ApiError(409, 'STOP file present — kill switch engaged (DELETE /v1/stop to resume operations)');
       }
+      startObjectiveRun(ctx, workspaceId, agentId, request.params.id);
       return ok({ started: true });
+    },
+  });
+
+  app.get('/v1/stop', {
+    schema: { description: 'Kill-switch status.', tags: ['stop'] },
+    handler: async () =>
+      ok({
+        stopped: await stat(stopFilePath(ctx.home)).then(
+          () => true,
+          () => false,
+        ),
+      }),
+  });
+
+  app.post('/v1/stop', {
+    schema: {
+      description:
+        'Engage the kill switch: creates <AEOS_HOME>/STOP. Running tasks finish their current session; nothing new spawns (spec §18).',
+      tags: ['stop'],
+    },
+    handler: async () => {
+      await writeFileAtomic(stopFilePath(ctx.home), `stopped at ${new Date().toISOString()}\n`);
+      return ok({ stopped: true });
+    },
+  });
+
+  app.delete('/v1/stop', {
+    schema: { description: 'Lift the kill switch (removes the STOP file).', tags: ['stop'] },
+    handler: async () => {
+      await rm(stopFilePath(ctx.home), { force: true });
+      return ok({ stopped: false });
     },
   });
 

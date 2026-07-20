@@ -25,6 +25,7 @@ describe('aeosd daemon', () => {
     await daemon.start();
     const health = await daemon.health();
     expect(health.ok).toBe(true);
+    // no `api` config → the api module is absent entirely (M9)
     expect(Object.keys(health.modules)).toEqual(['home', 'index-db', 'event-bus', 'supervisor']);
     // first boot materializes config + audit dir
     expect(fs.existsSync(aeosYamlPath(home))).toBe(true);

@@ -14,9 +14,13 @@ import {
   type ReindexReport,
 } from '@aeos/kernel';
 import { createSupervisor, type Supervisor } from '@aeos/runner';
+import type { Module } from '@aeos/kernel';
+import { startApiModule, type ApiModuleConfig, type ApiModuleHandle } from './api-module.js';
 
 export interface DaemonConfig {
   home: string;
+  /** Mount the HTTP API + UI + resume-on-boot (M7–M9). Omit for kernel-only boots (tests). */
+  api?: ApiModuleConfig;
 }
 
 /** Wiring exposed for tests and, later, the API layer (M7). */
@@ -33,6 +37,8 @@ export interface Daemon {
   health(): Promise<KernelHealth>;
   reindex(): ReindexReport;
   deps: DaemonDeps;
+  /** Set once started with an `api` config. */
+  apiAddress(): string | undefined;
 }
 
 const DEFAULT_AEOS_YAML = 'v: 1\n';
@@ -48,6 +54,7 @@ export function createDaemon(config: DaemonConfig): Daemon {
   let bus: EventBus | undefined;
   let supervisor: Supervisor | undefined;
   let detachTranscript: (() => void) | undefined;
+  let api: ApiModuleHandle | undefined;
 
   const deps: DaemonDeps = {
     home,
@@ -65,7 +72,7 @@ export function createDaemon(config: DaemonConfig): Daemon {
     },
   };
 
-  const kernel = createKernel([
+  const coreModules: Module[] = [
     {
       name: 'home',
       start: async () => {
@@ -130,7 +137,29 @@ export function createDaemon(config: DaemonConfig): Daemon {
       health: async () =>
         supervisor !== undefined ? { ok: true } : { ok: false, detail: 'supervisor not created' },
     },
-  ]);
+  ];
+
+  // The api module only exists when configured — kernel-only boots (tests,
+  // `reindex`) keep the exact module set they had before M9.
+  const apiModule: Module[] = config.api === undefined ? [] : [
+    {
+      name: 'api',
+      start: async () => {
+        api = await startApiModule(home, deps.db, deps.bus, config.api as ApiModuleConfig);
+        if (api.resumed.length > 0) {
+          console.error(`resume-on-boot: ${api.resumed.join(', ')}`);
+        }
+      },
+      stop: async () => {
+        await api?.close();
+        api = undefined;
+      },
+      health: async () =>
+        api !== undefined ? { ok: true } : { ok: false, detail: 'api not mounted' },
+    },
+  ];
+
+  const kernel = createKernel([...coreModules, ...apiModule]);
 
   return {
     start: () => kernel.start(),
@@ -138,5 +167,6 @@ export function createDaemon(config: DaemonConfig): Daemon {
     health: () => kernel.health(),
     reindex: () => reindex(home, deps.db),
     deps,
+    apiAddress: () => api?.address,
   };
 }
