@@ -29,6 +29,31 @@
 
 ---
 
+## What is this, actually?
+
+AEOS runs AI coding agents — like Claude Code — as *persistent workers*
+instead of chat sessions. You give an agent an objective ("fix this bug",
+"add this feature"), it breaks that into a checklist, and it works through
+the checklist one item at a time. Every time it finishes an item, it saves
+its progress to a plain file on disk.
+
+That last part is the whole point: **if the process crashes, your laptop
+dies, or you just close it and come back tomorrow, the agent doesn't
+forget anything.** You restart it and it keeps going from the exact item
+it was on — the same way a build server picks up a job, not the way a
+chat app loses context when you refresh the tab. **ADE** is the web
+dashboard where you watch this happen: create an agent, hand it a task,
+watch its output stream in, browse the files it's written.
+
+Nothing here is magic — it's a small server (`aeosd`) that runs on your
+machine (or eventually a remote box), starts Claude Code as a subprocess
+for you, and keeps careful records. If you've used a task queue, a CI
+runner, or a process supervisor before, the shape will feel familiar.
+
+<details>
+<summary><b>The one-sentence version, for people who want it dense</b></summary>
+<br>
+
 > An agent is not a conversation. It is a durable object with identity,
 > memory, objectives, and a checkpointed plan. Sessions are cheap disposable
 > execution contexts that come and go; the *agent* persists. Recovery never
@@ -36,28 +61,28 @@
 > and keeps working. `kill -9` the daemon; restart; the agent picks up where
 > it stopped.
 
-**AEOS** is the runtime — a local-first daemon that supervises durable,
-resumable AI coding agents whose entire state lives as files. **ADE** is its
-web UI. We build one to prove a thesis: that an AI engineer can be a
-persistent first-class object — not a chat, not a prompt, not a session token
-in someone else's database.
+</details>
+
+### The ideas behind it, explained plainly
 
 <table>
-<tr><td><b>Files are truth</b></td><td>All durable state — memory, transcripts, plans, checkpoints, costs — lives in human-readable files. The SQLite index is <i>derived</i> and rebuildable. If <code>rm -rf index.db</code> is not a safe and routine operation, we have failed.</td></tr>
-<tr><td><b>Contracts over code</b></td><td>Every module boundary is a versioned, schema-defined wire contract (JSON Schema, Zod, NDJSON events, OpenAPI). Any module can be replaced or rewritten without its consumers noticing.</td></tr>
-<tr><td><b>The objective is the recovery unit</b></td><td>Autonomy is structured as durable <i>objectives → plans → tasks</i> with a checkpoint after every step. There is no "resume the chat." There is only "re-enter the plan."</td></tr>
-<tr><td><b>Hermetic harnesses</b></td><td>Each harness (Claude Code, OpenCode) runs in a clean config home by default — no user plugins, skills, or global config leak in. Features re-enabled per-agent via explicit toggles.</td></tr>
-<tr><td><b>Multiple accounts, at once</b></td><td>Named subscription slots give every agent its own persistent Claude Pro/Max login — run four client projects on four accounts, concurrently, without touching your personal login.</td></tr>
-<tr><td><b>Kill switch, always</b></td><td>A single <code>STOP</code> file halts every scheduler from spawning new work; in-flight sessions finish cleanly. <code>aeos stop --all</code> / <code>aeos resume-ops</code>.</td></tr>
+<tr><td><b>Your data is just files</b></td><td>Everything the agent knows — its memory, its progress, its plan — is saved as plain text files you can open, read, and back up yourself. There's a small database for fast search, but it's disposable: delete it and the system rebuilds it from the files. Nothing important lives only in a database.</td></tr>
+<tr><td><b>Progress, not conversation, is what survives</b></td><td>The unit of work is a checklist item with a checkpoint, not a chat message. Recovering from a crash means "look at the checklist, find the next unchecked item" — never "try to replay everything that was said."</td></tr>
+<tr><td><b>Clean environment per agent</b></td><td>Each agent gets its own private config folder — it never touches your personal Claude Code settings, plugins, or history. You explicitly turn features on per-agent if you want them.</td></tr>
+<tr><td><b>Run several accounts side by side</b></td><td>If you juggle multiple clients or Claude subscriptions, each agent can be tied to a different login. Four agents, four separate Claude Pro/Max accounts, running at the same time.</td></tr>
+<tr><td><b>A big red stop button</b></td><td>One command (<code>aeos stop --all</code>) halts every agent from starting new work — whatever's already running finishes cleanly first, nothing gets killed mid-edit.</td></tr>
 </table>
+
+*(If you want the engineering rationale behind these choices, it's all
+written down as ADRs in [`docs/adr/`](docs/adr/).)*
 
 ---
 
 ## Quickstart
 
-Requirements: **Node 22** (`.nvmrc`), **pnpm 9** (via corepack), and the
-[Claude Code CLI](https://docs.claude.com/en/docs/claude-code) if you want
-real (not fake-provider) sessions.
+You'll need **Node.js 22** and **pnpm** (a package manager). If you don't
+have pnpm yet, Node ships a tool called `corepack` that installs it for
+you — that's the second command below.
 
 ```bash
 git clone https://github.com/mirrorfolio-idea-labs/AEOS.git
@@ -65,13 +90,28 @@ cd AEOS
 corepack enable
 pnpm install
 pnpm build
+```
 
-# start the daemon — mounts the API + the built ADE UI on :7777
+Now start the server. If you have an Anthropic API key
+(get one at [console.anthropic.com](https://console.anthropic.com/settings/keys)),
+use it — the agent will do real work:
+
+```bash
 AEOS_HOME=~/.aeos ANTHROPIC_API_KEY=sk-ant-... node apps/aeosd/dist/main.js run
 ```
 
-Open **http://127.0.0.1:7777** — create a workspace, add an agent, run an
-objective, watch it stream. Or drive it from the CLI:
+**Don't have a key yet, or just want to look around first?** Leave it off
+and add `AEOS_PROVIDER=fake` instead — every agent will "run" against a
+scripted stand-in that streams believable-looking output instantly, for
+free, so you can click through the whole UI before spending anything:
+
+```bash
+AEOS_HOME=~/.aeos AEOS_PROVIDER=fake node apps/aeosd/dist/main.js run
+```
+
+Either way, open **http://127.0.0.1:7777** in your browser — create a
+workspace, add an agent, give it an objective, and watch it stream. Or
+skip the browser and drive it from a terminal instead:
 
 ```bash
 export AEOS_API_URL=http://127.0.0.1:7777
@@ -82,16 +122,21 @@ node apps/cli/dist/main.js objective create obj1 --workspace acme --agent dev \
 node apps/cli/dist/main.js objective run obj1 --workspace acme --agent dev
 ```
 
-Kill the daemon mid-objective (`Ctrl-C` or `kill -9`) and start it again —
-the plan resumes exactly where it left off, no data lost. That's the whole
-thesis, demonstrated in one command.
+**Now try the whole point:** while an objective is running, kill the
+server (`Ctrl-C`, or `kill -9` if you want to be dramatic about it) and
+run the start command again. The objective picks up exactly where it
+stopped — no progress lost, nothing re-explained. That one interruption
+and recovery is the entire idea this project exists to prove.
 
-Multiple Claude subscriptions (e.g. one per client)? See
-[`packages/provider-claude/README.md`](packages/provider-claude/README.md#multi-account-subscriptions).
+Want to run several Claude subscriptions at once (e.g. one per client)?
+See [`packages/provider-claude/README.md`](packages/provider-claude/README.md#multi-account-subscriptions).
 
 ---
 
 ## System overview
+
+*This section is for people who want to know how it actually works
+under the hood — skip it if you just wanted to try the thing above.*
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -129,11 +174,10 @@ restart — nothing is ever replayed from a transcript.
 
 ## Repository
 
-pnpm monorepo. `packages/contracts` is the dependency root — Zod schemas
-for the event envelope, domain objects, and canonical event taxonomy,
-exported also as JSON Schema. Everything else depends on `contracts` and
-on each other's published entry points only; dependency-cruiser enforces
-it in CI.
+If you're contributing code, here's the map. It's a monorepo (one Git repo,
+many packages) managed with pnpm. `packages/contracts` defines every shared
+data shape (what an "agent" looks like, what an "event" looks like); every
+other package builds on top of it instead of inventing its own.
 
 ```
 aeos/
@@ -159,10 +203,15 @@ aeos/
 
 ## Status
 
-**Phase P1 — Spine (v0.1) is complete.** The golden path is real and
-tested: *create agent → give objective → agent works via a hermetic
-harness → `kill -9` the daemon → restart → agent resumes at last
-checkpoint and completes → all state inspectable as files.*
+**Short version: the crash-and-resume behavior described above is real,
+tested, and works today.** That was the whole first phase of this
+project (called "P1 — Spine"), and it's done. Everything below is the
+detailed breakdown for people tracking progress closely.
+
+The Quickstart section above *is* the tested golden path: create agent →
+give objective → agent works via a hermetic harness → `kill -9` the
+daemon → restart → agent resumes at last checkpoint and completes → all
+state inspectable as files.
 
 | Milestone | Status | What it is |
 |---|---|---|
