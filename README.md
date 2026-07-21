@@ -76,6 +76,14 @@ runner, or a process supervisor before, the shape will feel familiar.
 *(If you want the engineering rationale behind these choices, it's all
 written down as ADRs in [`docs/adr/`](docs/adr/).)*
 
+None of this was invented in a vacuum. The memory rules above (budgeted
+files, no silent truncation, a Curator that archives instead of
+deletes) are derived from and credited to
+[`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent)
+("Hermes") — see [ADR-006](docs/adr/ADR-006-files-as-truth-memory.md).
+Full prior-art credits for every borrowed idea are in the architecture
+spec.
+
 ---
 
 ## Quickstart
