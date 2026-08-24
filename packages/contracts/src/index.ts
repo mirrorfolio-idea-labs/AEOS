@@ -24,3 +24,11 @@ export {
   type PolicyFile,
   type EffectivePolicy,
 } from './domain/policy.js';
+export {
+  CompiledPolicySchema,
+  NativeFlagsSchema,
+  HARNESS_IDS,
+  type CompiledPolicy,
+  type NativeFlags,
+  type HarnessId,
+} from './domain/compiled-policy.js';

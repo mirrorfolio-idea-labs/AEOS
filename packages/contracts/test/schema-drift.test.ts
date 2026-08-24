@@ -20,6 +20,7 @@ describe('generated JSON Schemas', () => {
       'aeos-event.schema.json',
       'agent-config.schema.json',
       'checkpoint.schema.json',
+      'compiled-policy.schema.json',
       'credential-profile.schema.json',
       'envelope-base.schema.json',
       'objective.schema.json',
