@@ -289,6 +289,42 @@
           }
         }
       }
+    },
+    "/v1/approvals": {
+      "get": {
+        "tags": [
+          "approvals"
+        ],
+        "description": "Pending approval requests (spec §11 approvals flow).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/approvals/{requestId}": {
+      "post": {
+        "tags": [
+          "approvals"
+        ],
+        "description": "Answer a pending approval. Unanswered requests deny on expiry.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "requestId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
     }
   }
 }

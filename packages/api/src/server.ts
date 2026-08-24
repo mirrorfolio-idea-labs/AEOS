@@ -1,14 +1,16 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import swagger from '@fastify/swagger';
 import { openIndexDb, type EventBus, type IndexDb } from '@aeos/kernel';
-import type { AgentConfig, CredentialProfile } from '@aeos/contracts';
+import type { AgentConfig, CredentialProfile, EffectivePolicy } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
+import type { ApprovalsRegistry } from '@aeos/policy';
 import { ApiError, sendError } from './envelope.js';
 import { registerWorkspaceRoutes } from './routes/workspaces.js';
 import { registerAgentRoutes } from './routes/agents.js';
 import { registerObjectiveRoutes } from './routes/objectives.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import { registerEventRoutes } from './routes/events.js';
+import { registerApprovalRoutes } from './routes/approvals.js';
 
 export interface ApiServerOptions {
   /** AEOS_HOME — the file tree is truth; the API is a view over it. */
@@ -21,6 +23,13 @@ export interface ApiServerOptions {
   bus?: EventBus;
   /** Bearer token; REQUIRED when binding beyond loopback (spec §14). */
   token?: string;
+  /**
+   * Resolves an agent's effective policy (spec §11 layered YAML). When
+   * present, every session stream is daemon-side enforced.
+   */
+  policyFor?: (agent: AgentConfig) => Promise<EffectivePolicy>;
+  /** Shared approvals inbox backing POST /v1/approvals/:requestId. */
+  approvals?: ApprovalsRegistry;
 }
 
 export interface ApiContext extends ApiServerOptions {
@@ -69,6 +78,7 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
   registerObjectiveRoutes(app, ctx);
   registerMemoryRoutes(app, ctx);
   registerEventRoutes(app, ctx);
+  registerApprovalRoutes(app, ctx);
 
   app.addHook('onClose', (_instance, done) => {
     ctx.db.close();

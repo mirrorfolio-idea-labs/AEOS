@@ -1,4 +1,4 @@
-import type { AeosEvent, AgentConfig } from '@aeos/contracts';
+import type { AeosEvent, AgentConfig, CompiledPolicy } from '@aeos/contracts';
 
 /** What a harness can and cannot do (spec §9). Asserted by conformance, never hand-maintained docs. */
 export interface CapabilityMatrix {
@@ -28,6 +28,11 @@ export interface SpawnOptions {
   objective: string;
   /** Provider-native resume token from a previous session (capability `resume`). */
   resumeToken?: string;
+  /**
+   * Compiled effective policy (spec §11) — harness-native flags ride along
+   * for adapters that apply them; daemon-side enforcement is independent.
+   */
+  permissionPolicy?: CompiledPolicy;
 }
 
 /**

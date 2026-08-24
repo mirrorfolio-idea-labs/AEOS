@@ -5,6 +5,7 @@ import {
   newEventId,
   type AeosEvent,
   type AgentConfig,
+  type CompiledPolicy,
 } from '@aeos/contracts';
 import { writeFileAtomic } from '@aeos/kernel';
 import type { HarnessAdapter } from '@aeos/provider-core';
@@ -23,6 +24,8 @@ export interface RunObjectiveOptions {
   /** Receives every session event plus the scheduler's pause event. */
   onEvent?: (event: AeosEvent) => void;
   sessionIdFactory?: () => string;
+  /** Compiled policy handed to each spawn (spec §11); enforcement is the caller's guard. */
+  permissionPolicy?: CompiledPolicy;
   /**
    * Kill switch (spec §18): when this file exists, no further sessions are
    * spawned — the objective pauses before the next task. Runner-level STOP
@@ -133,6 +136,7 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       sessionId: nextSessionId(),
       objective: task.title,
       ...(resumeToken === undefined ? {} : { resumeToken }),
+      ...(opts.permissionPolicy === undefined ? {} : { permissionPolicy: opts.permissionPolicy }),
     });
 
     let usd = 0;

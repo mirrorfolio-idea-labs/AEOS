@@ -21,6 +21,7 @@
     "@aeos/contracts": "workspace:*",
     "@aeos/kernel": "workspace:*",
     "@aeos/memory": "workspace:*",
+    "@aeos/policy": "workspace:*",
     "@aeos/provider-core": "workspace:*",
     "@aeos/scheduler": "workspace:*",
     "@fastify/swagger": "^9.4.0",

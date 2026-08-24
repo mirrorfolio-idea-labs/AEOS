@@ -4,6 +4,9 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { agentDir, getAgent, writeFileAtomic } from '@aeos/kernel';
 import { parsePlan, readCheckpoints, runObjective } from '@aeos/scheduler';
+import { compilePolicy } from '@aeos/policy';
+import type { CompiledPolicy } from '@aeos/contracts';
+import { guardAdapter } from '../policy-gate.js';
 import { ApiError, ok } from '../envelope.js';
 import type { ApiContext } from '../server.js';
 
@@ -44,19 +47,30 @@ export function startObjectiveRun(
   const agent = getAgent(ctx.home, workspaceId, agentId);
   const dir = objectiveDirFor(ctx.home, workspaceId, agentId, objectiveId);
   if (running.has(dir)) return;
-  const run = runObjective({
-    objectiveDir: dir,
-    agent,
-    adapter: ctx.adapterFor(agent),
-    stopFile: stopFilePath(ctx.home),
-    onEvent: (event) => {
-      ctx.bus?.publish(event);
-      // files are truth for spend too: every cost.usage lands in costs.ndjson
-      if (event.type === 'cost.usage') {
-        void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
-      }
-    },
-  }).finally(() => running.delete(dir));
+  const run = (async () => {
+    let adapter = ctx.adapterFor(agent);
+    let permissionPolicy: CompiledPolicy | undefined;
+    if (ctx.policyFor !== undefined) {
+      const effective = await ctx.policyFor(agent);
+      adapter = guardAdapter(adapter, effective, ctx.approvals);
+      permissionPolicy = compilePolicy(effective);
+    }
+    return runObjective({
+      objectiveDir: dir,
+      agent,
+      adapter,
+      stopFile: stopFilePath(ctx.home),
+      ...(permissionPolicy === undefined ? {} : { permissionPolicy }),
+      onEvent: (event) => {
+        ctx.bus?.publish(event);
+        // files are truth for spend too: every cost.usage lands in costs.ndjson
+        if (event.type === 'cost.usage') {
+          void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
+        }
+      },
+    });
+  })()
+    .finally(() => running.delete(dir));
   running.set(dir, run);
   run.catch(() => undefined); // surfaced via status; never an unhandled rejection
 }
