@@ -253,6 +253,25 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/policy:
+    dependencies:
+      '@aeos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      yaml:
+        specifier: ^2.6.1
+        version: 2.9.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      typescript:
+        specifier: ~5.6.3
+        version: 5.6.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/provider-claude:
     dependencies:
       '@aeos/contracts':

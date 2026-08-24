@@ -887,6 +887,154 @@
             "payload"
           ],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "v": {
+              "type": "number",
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$"
+            },
+            "ts": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "agentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "const": "approval.resolved"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "requestId": {
+                  "type": "string"
+                },
+                "decision": {
+                  "type": "string",
+                  "enum": [
+                    "approved",
+                    "denied",
+                    "expired"
+                  ]
+                },
+                "by": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "requestId",
+                "decision",
+                "by"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "v",
+            "id",
+            "ts",
+            "source",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "v": {
+              "type": "number",
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$"
+            },
+            "ts": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "agentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "const": "policy.blocked"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tier": {
+                  "type": "string",
+                  "enum": [
+                    "read_files",
+                    "write_files",
+                    "execute_commands",
+                    "install_packages",
+                    "git_commit",
+                    "git_push",
+                    "deploy",
+                    "secrets_access",
+                    "network_access"
+                  ]
+                },
+                "tool": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "tier",
+                "tool",
+                "detail"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "v",
+            "id",
+            "ts",
+            "source",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
         }
       ]
     }

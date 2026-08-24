@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { EnvelopeBaseSchema } from '../envelope.js';
 import { SessionStateSchema } from '../domain/session.js';
+import { TierSchema } from '../domain/policy.js';
 
 const ev = <T extends string, P extends z.ZodTypeAny>(type: T, payload: P) =>
   EnvelopeBaseSchema.extend({ type: z.literal(type), payload });
@@ -33,6 +34,15 @@ export const AeosEventSchema = z.discriminatedUnion('type', [
     detail: z.string(),
     expiresAt: z.string().datetime(),
   })),
+  ev(
+    'approval.resolved',
+    z.object({
+      requestId: z.string(),
+      decision: z.enum(['approved', 'denied', 'expired']),
+      by: z.string(),
+    }),
+  ),
+  ev('policy.blocked', z.object({ tier: TierSchema, tool: z.string(), detail: z.string() })),
 ]);
 
 export type AeosEvent = z.infer<typeof AeosEventSchema>;

@@ -185,7 +185,7 @@ mapped to `allow|confirm|deny`; YAML policies layered workspace → agent →
 objective (most-specific wins); compiled to harness-native flags AND enforced
 daemon-side (defense in depth). Approvals: `approval.request` event →
 `waiting_approval` state → UI/CLI answer; deny-by-default on timeout.
-- [ ] **T1** Policy schema + layered loader/merger. *Accept: fixture matrix of layered policies compiles to expected effective policy.*
+- [x] **T1** Policy schema + layered loader/merger. *Accept: fixture matrix of layered policies compiles to expected effective policy.*
 - [ ] **T2** Policy compiler → harness-native flags (Claude `--allowedTools`/permission modes; Codex `approval_policy`/sandbox). *Accept: golden mapping tests per tier per harness.*
 - [ ] **T3** Daemon-side enforcement at the runner/API boundary. *Accept: provider-fake attempting a denied action is blocked even with permissive harness flags.*
 - [ ] **T4** Approval flow end-to-end incl. configurable timeout → deny. *Accept: integration test covers approve, deny, and expiry paths.*

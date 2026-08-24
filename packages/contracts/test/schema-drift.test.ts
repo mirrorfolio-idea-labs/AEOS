@@ -24,6 +24,7 @@ describe('generated JSON Schemas', () => {
       'envelope-base.schema.json',
       'objective.schema.json',
       'plan-task.schema.json',
+      'policy.schema.json',
       'session-record.schema.json',
       'workspace.schema.json',
     ]);
