@@ -115,6 +115,8 @@ export class AeosClient {
     id: string;
     title: string;
     tasks: Array<{ id: string; title: string }>;
+    budgetUsd?: number;
+    budgetTokens?: number;
   }): Promise<{ id: string }> {
     return this.request('POST', '/v1/objectives', input);
   }
