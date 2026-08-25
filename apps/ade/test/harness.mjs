@@ -8,6 +8,7 @@ import fastifyStatic from '@fastify/static';
 import { createEventBus } from '@aeos/kernel';
 import { FakeAdapter, buildFixtureEvents } from '@aeos/provider-core';
 import { createApiServer, listenApi } from '@aeos/api';
+import { createApprovalsRegistry, loadPolicyStack } from '@aeos/policy';
 
 let home = process.env.AEOS_HOME;
 if (home) {
@@ -26,6 +27,9 @@ const app = await createApiServer({
     }),
   credentialFor: () => ({ id: 'cp-default', kind: 'api-key', secretRef: 'env' }),
   bus: createEventBus(),
+  // mirror the daemon (api-module.ts): real default posture + approvals inbox
+  approvals: createApprovalsRegistry({ defaultTimeoutMs: 30_000 }),
+  policyFor: (agent) => loadPolicyStack({ home, workspaceId: agent.workspaceId, agentId: agent.id }),
 });
 await app.register(fastifyStatic, {
   root: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist'),

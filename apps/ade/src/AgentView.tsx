@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { FolderOpen, KeyRound, Play, TerminalSquare } from 'lucide-react';
+import { FolderOpen, KeyRound, Play, ShieldCheck, TerminalSquare } from 'lucide-react';
 import type { AeosEvent, AgentConfig } from '@aeos/contracts';
 import type { ObjectiveStatus } from '@aeos/sdk';
 import { client } from './api.js';
 import { cn } from './lib/utils.js';
+import { ApprovalsPanel } from './ApprovalsPanel.js';
 import { Badge } from './components/ui/badge.js';
 import { Button } from './components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card.js';
@@ -38,6 +39,15 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
   const [nextProfile, setNextProfile] = useState('');
   const consoleRef = useRef<HTMLDivElement>(null);
   const streaming = useRef(false);
+  // live approvals badge (spec §11 notification hook v0): SSE-driven count
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+
+  useEffect(() => {
+    void client
+      .listApprovals()
+      .then((pending) => setPendingApprovals(pending.length))
+      .catch(() => undefined);
+  }, [agent.id]);
 
   useEffect(() => {
     consoleRef.current?.scrollTo({ top: consoleRef.current.scrollHeight });
@@ -53,6 +63,10 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
           setEvents((previous) => [...previous.slice(-499), event]);
           if (event.type === 'cost.usage') {
             setCostUsd((previous) => previous + (event.payload as { usd: number }).usd);
+          } else if (event.type === 'approval.request') {
+            setPendingApprovals((previous) => previous + 1);
+          } else if (event.type === 'approval.resolved') {
+            setPendingApprovals((previous) => Math.max(0, previous - 1));
           }
         }
       } catch {
@@ -114,6 +128,13 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
           ? 'text-red-400'
           : 'text-indigo-300';
 
+  const refreshApprovalCount = (): void => {
+    void client
+      .listApprovals()
+      .then((pending) => setPendingApprovals(pending.length))
+      .catch(() => undefined);
+  };
+
   return (
     <Tabs defaultValue="objective" className="flex h-full flex-col">
       <header className="flex items-center gap-3 border-b px-5 py-3">
@@ -152,6 +173,14 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
         <TabsList className="ml-auto">
           <TabsTrigger value="objective" data-testid="tab-objective">
             <TerminalSquare className="mr-1.5 h-3.5 w-3.5" /> Sessions
+          </TabsTrigger>
+          <TabsTrigger value="approvals" data-testid="tab-approvals" className="relative">
+            <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Approvals
+            {pendingApprovals > 0 && (
+              <Badge variant="destructive" className="ml-1.5 px-1.5" data-testid="approvals-count">
+                {pendingApprovals}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="files" data-testid="tab-files">
             <FolderOpen className="mr-1.5 h-3.5 w-3.5" /> Access agent files
@@ -259,6 +288,10 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="approvals" className="mt-0">
+          <ApprovalsPanel onChanged={refreshApprovalCount} />
         </TabsContent>
 
         <TabsContent value="files" className="mt-0">
