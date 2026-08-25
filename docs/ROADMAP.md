@@ -201,10 +201,13 @@ metered from `cost.usage` events; hard-stop at cap with checkpoint + notify +
 - [x] **T3** Audit appender covering tool calls, approvals, policy decisions, memory writes, spend. *Accept: golden audit trail for a scripted session; append-only property tested.*
 **Exit gate:** runaway-loop simulation cannot outspend its cap (flagship test).
 
-### M3 — Secrets store  `[ ]`
+### M3 — Secrets store  `[x]`
 **Context brief:** Spec §11. OS keychain where available, age-encrypted file
 fallback; injection into runner env per policy; never written to worktrees,
-profiles, or transcripts — redaction filter on the event pipeline.
+profiles, or transcripts — redaction filter on the event pipeline. *(Scope
+decision 2026-08-25, Kabeer: age-only v0 — the store interface stays
+keychain-ready but no native keychain dependency ships in v0.2; logged as
+drift D10.)*
 - [x] **T1** Secret store (age-encrypted file backend; keychain stays a
   future backend behind the interface) with CRUD API. *Accept: round-trip
   on the age backend incl. second-handle reads; store payload unreadable

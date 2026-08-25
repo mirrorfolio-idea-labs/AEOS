@@ -10,8 +10,8 @@
 
 | | |
 |---|---|
-| **Now** | P2 underway: **M1+M2 complete** (policy/approvals, budgets/audit) (overnight 2026-08-25; verification gauntlet on v0.1.0 passed first — drift clean, stress zero-flake, scale baselines in `notes/`). S05 open. |
-| **Next** | P2.M2 budgets + audit (plan just-in-time). Kabeer's M4/M10 live-harness smokes remain open, non-blocking. |
+| **Now** | P2 underway: **M1+M2+M3 complete** (policy/approvals, budgets/audit, secrets) (2026-08-25; overnight session + evening continuation — dockerized live-smoke evidence in `notes/`). S07 open. |
+| **Next** | P2.M4 memory curator (plan just-in-time). Kabeer's M4/M10 native-host live smokes remain open, non-blocking (dockerized evidence run green via OpenRouter gateway). |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -33,14 +33,13 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[~]` — 8/25 tasks
+### P2 — Safety + polish (v0.2) `[~]` — 11/25 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
 | M1 policy + approvals `[x]` | 5/5 | tiers, layered YAML, daemon-side enforcement, inbox — done 2026-08-25 (overnight session) |
 | M2 budgets + audit `[x]` | 3/3 | daemon-enforced caps w/ resume-with-increase; append-only audit — done 2026-08-25 (overnight session) |
-| M2 budgets + audit | 0/3 | daemon-enforced caps, append-only audit |
-| M3 secrets store | 0/3 | keychain/age, injection, redaction canary |
+| M3 secrets store `[x]` | 3/3 | age-encrypted store (keychain-ready interface), policy-gated injection, pipeline-wide redaction; canary exit gate green — done 2026-08-25 (evening continuation) |
 | M4 memory curator | 0/3 | idle-triggered, dry-run, never-delete |
 | M5 PTY attach + co-edit guard | 0/3 | human takeover, OQ1 ADR |
 | M6 Codex adapter | 0/2 | conformance parity (OpenCode moved to P1.M10) |
@@ -79,7 +78,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 **Total defined work: 107 tasks** (44 P1 + 24 P2 + 11 P3 + 10 P4 + 18 P5)
 across 32 milestones, plus 4 tracked post-v1 backlog items (scope change
 2026-07-19: +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
-retired). Every task has an accept criterion in the ROADMAP; 44 are done
+retired). Every task has an accept criterion in the ROADMAP; 47 are done
 (P1 M1–M8 + M10 code-complete — M4/M10 gated only on Kabeer's manual
 smokes — plus P5.M1), 63 remain to v1 — each open task has a matching
 GitHub issue
@@ -87,9 +86,8 @@ GitHub issue
 
 ## Active sprint
 
-None. [S04](sprints/S04.md) closed 2026-07-20 at the v0.1.0 tag (retro in
-the sprint file). Next sprint opens when work resumes on P2 or the
-manual smokes land.
+[S07](sprints/S07.md) — P2.M3 secrets store, closed 2026-08-25 at the
+canary exit gate. Next sprint opens on P2.M4 (memory curator).
 
 ## Blockers
 
@@ -108,3 +106,5 @@ None.
 | D7 | 2026-07-13 | README badge hardcodes "17/17 tests green" — a static claim that will silently go stale | **Fixed** same day in T6 completion: swapped for the live CI workflow badge |
 | D9 | 2026-08-25 | Spec §7 layout names audit files `audit-YYYY-MM-DD.ndjson` while §11 says `audit/*.ndjsonl` | **Resolved** same day (P2.M2.T3): §7 owns paths — `.ndjson` shipped; §11 wording treated as prose about format, not extension |
 | D8 | 2026-08-25 | Cold-pickup R5 scan (overnight gauntlet): P5.M1 is `[x]` but has no milestone plan file under `docs/superpowers/plans/` (R5 rule 3) | **Waived same day**: executed early under the documented spine exception via PRs #96/#97 inside S03/S04; ADR-001 + the community health files are the durable record — a retroactive plan adds no information |
+| D10 | 2026-08-25 | ROADMAP P2.M3.T1 accept says "keychain + age fallback, round-trip on both backends"; shipped store is age-only v0 (Kabeer decision: no native keychain dep in v0.2) | **Resolved same day**: T1 accept text reworded to age-only v0 with a keychain-ready interface (D2 precedent); S07 log carries the decision |
+| D11 | 2026-08-25 | Dockerized live smokes surfaced harness drift: opencode ≥1.18 replaced the ≤1.17 `--format json` line shapes; the M10 translator skipped every line → zero canonical events from live sessions | **Fixed same day** (7eb1b6f): ≥1.18 step-based shapes translated additively, modern fixture recorded from opencode-ai@1.18.23; July fixtures byte-identical; CLIs pinned in the smoke runner until P2.M7 managed binaries land |
