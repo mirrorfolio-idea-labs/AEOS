@@ -117,7 +117,8 @@ export class CodexAdapter implements HarnessAdapter {
       structuredOutput: true,
       mcp: false, // config.toml MCP wiring lands with feature toggles
       sandbox: true, // codex has native sandbox modes
-      costReporting: true, // token counts only — USD stays unset (no pricing feed)
+      costReporting: true, // token fidelity only — see costUsd below
+      costUsd: false, // codex reports no USD; tokens are real
     };
   }
 

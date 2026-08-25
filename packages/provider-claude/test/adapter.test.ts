@@ -11,6 +11,7 @@ import {
 } from '@aeos/contracts';
 import { type HarnessProfile } from '@aeos/provider-core';
 import { describeAdapterConformance } from '@aeos/provider-core/conformance';
+import { ADAPTER_MATRIX } from '@aeos/provider-core';
 import { ClaudeAdapter } from '../src/adapter.js';
 import type { SecretResolver } from '../src/profile.js';
 
@@ -55,6 +56,7 @@ function makeAdapter(fixture = 'basic-session.ndjson'): ClaudeAdapter {
 }
 
 describeAdapterConformance('claude-code (fixture-driven)', {
+  capabilityClaims: ADAPTER_MATRIX['claude-code'],
   makeAdapter,
   agent,
   rawCorpus: JSON.parse(

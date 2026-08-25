@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AgentConfigSchema } from '@aeos/contracts';
 import { describeAdapterConformance } from '../src/conformance.js';
+import { ADAPTER_MATRIX } from '../src/matrix.js';
 import { FakeAdapter, buildFixtureEvents } from '../src/provider-fake.js';
 
 const agent = AgentConfigSchema.parse({
@@ -21,6 +22,7 @@ function makeAdapter() {
 }
 
 describeAdapterConformance('provider-fake', {
+  capabilityClaims: ADAPTER_MATRIX.fake,
   makeAdapter,
   agent,
   rawCorpus: buildFixtureEvents({ profileId: 'cp-default' }),

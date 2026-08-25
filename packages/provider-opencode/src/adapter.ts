@@ -112,6 +112,7 @@ export class OpencodeAdapter implements HarnessAdapter {
       mcp: true,
       sandbox: false,
       costReporting: true,
+      costUsd: true,
     };
   }
 

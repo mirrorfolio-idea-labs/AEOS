@@ -242,7 +242,7 @@ taxonomy; resume support; passes the M4(P1) conformance suite.
 > **T2 moved** (2026-07-19 scope change): the OpenCode adapter was pulled
 > forward to **P1.M10** — Kabeer needs a second harness in v0.1. The task ID
 > `AEOS-P2.M6.T2` is retired, never reused.
-- [ ] **T3** Cross-harness capability matrix + docs. *Accept: matrix asserted by conformance tests, not hand-maintained.*
+- [x] **T3** Cross-harness capability matrix + docs. *Accept: matrix asserted by conformance tests, not hand-maintained.*
 **Exit gate:** the same fixture objective completes on all adapters (fake, Claude, OpenCode from P1.M10, Codex).
 
 ### M7 — Managed harness binaries  `[ ]`

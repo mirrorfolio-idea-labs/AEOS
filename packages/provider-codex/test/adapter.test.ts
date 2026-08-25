@@ -8,6 +8,7 @@ import {
   type AgentConfig,
 } from '@aeos/contracts';
 import { describeAdapterConformance } from '@aeos/provider-core/conformance';
+import { ADAPTER_MATRIX } from '@aeos/provider-core';
 import type { HarnessProfile } from '@aeos/provider-core';
 import { CodexAdapter, type RunChild } from '../src/adapter.js';
 
@@ -47,6 +48,7 @@ function makeAdapter(): CodexAdapter {
 }
 
 describeAdapterConformance('codex (fixture-driven)', {
+  capabilityClaims: ADAPTER_MATRIX.codex,
   makeAdapter,
   agent,
   rawCorpus: JSON.parse(
