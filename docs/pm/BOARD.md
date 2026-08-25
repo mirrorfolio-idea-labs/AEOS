@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **Now** | P2 underway: **M1 policy+approvals complete** (overnight 2026-08-25; verification gauntlet on v0.1.0 passed first — drift clean, stress zero-flake, scale baselines in `notes/`). S05 open. |
+| **Now** | P2 underway: **M1+M2 complete** (policy/approvals, budgets/audit) (overnight 2026-08-25; verification gauntlet on v0.1.0 passed first — drift clean, stress zero-flake, scale baselines in `notes/`). S05 open. |
 | **Next** | P2.M2 budgets + audit (plan just-in-time). Kabeer's M4/M10 live-harness smokes remain open, non-blocking. |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
@@ -33,11 +33,12 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[~]` — 5/25 tasks
+### P2 — Safety + polish (v0.2) `[~]` — 8/25 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
 | M1 policy + approvals `[x]` | 5/5 | tiers, layered YAML, daemon-side enforcement, inbox — done 2026-08-25 (overnight session) |
+| M2 budgets + audit `[x]` | 3/3 | daemon-enforced caps w/ resume-with-increase; append-only audit — done 2026-08-25 (overnight session) |
 | M2 budgets + audit | 0/3 | daemon-enforced caps, append-only audit |
 | M3 secrets store | 0/3 | keychain/age, injection, redaction canary |
 | M4 memory curator | 0/3 | idle-triggered, dry-run, never-delete |
@@ -105,4 +106,5 @@ None.
 | D5 | 2026-07-13 | Old ROADMAP P4 blurb listed "multi-user auth" inside v1 scope, contradicting spec §14 ("multi-user RBAC is post-v1") | **Fixed** same day: resolved in favor of the spec — moved to post-v1 backlog **B2**; P4.M3.T3 keeps the single-user token layer |
 | D6 | 2026-07-13 | T6 WIP commit `13035e9` leaves `pnpm depcruise` failing: script globs `apps/`, which doesn't exist yet (verified by direct run) | **Fixed** same day in T6 completion: `apps/.gitkeep` created (dir is real — workspace already declares `apps/*`) |
 | D7 | 2026-07-13 | README badge hardcodes "17/17 tests green" — a static claim that will silently go stale | **Fixed** same day in T6 completion: swapped for the live CI workflow badge |
+| D9 | 2026-08-25 | Spec §7 layout names audit files `audit-YYYY-MM-DD.ndjson` while §11 says `audit/*.ndjsonl` | **Resolved** same day (P2.M2.T3): §7 owns paths — `.ndjson` shipped; §11 wording treated as prose about format, not extension |
 | D8 | 2026-08-25 | Cold-pickup R5 scan (overnight gauntlet): P5.M1 is `[x]` but has no milestone plan file under `docs/superpowers/plans/` (R5 rule 3) | **Waived same day**: executed early under the documented spine exception via PRs #96/#97 inside S03/S04; ADR-001 + the community health files are the durable record — a retroactive plan adds no information |

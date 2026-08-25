@@ -192,7 +192,7 @@ daemon-side (defense in depth). Approvals: `approval.request` event →
 - [x] **T5** Approvals inbox in ADE + notification hook. *Accept: Playwright approve/deny round-trip updates session state.*
 **Exit gate:** new-agent default posture (read-only + worktree-write + confirm-everything-else) verified end-to-end.
 
-### M2 — Budgets + audit log  `[~]`
+### M2 — Budgets + audit log  `[x]`
 **Context brief:** Spec §11. Per-agent and per-objective caps (USD + tokens)
 metered from `cost.usage` events; hard-stop at cap with checkpoint + notify +
 `resume-with-increase`. Append-only `audit/*.ndjsonl` for every action class.

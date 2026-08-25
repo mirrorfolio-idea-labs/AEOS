@@ -31,6 +31,21 @@ merged through PR #110. Scope was re-based onto the actual repo state.
 
 ## Task log
 
+## P2.M2 — COMPLETE (T1 85b21c2 · T2 73a79ac · T3 a6ed339)
+
+Exit gate passed: flagship runaway proof green (5 restarts, unchanged
+cap, per-restart spend ≤ one event granularity; cap raise → completes
+with attempts untouched). Audit appender covers all spec classes,
+append-only by construction, day-rollover tested.
+
+Decisions: scheduler is the authoritative budget enforcement point (only
+it writes checkpoints); objective.yaml = files-truth cap config; audit
+extension follows §7 (.ndjson) — logged as drift D9; memory.written
+onEvent hook staged for P2.M4 curator (no live caller yet — noted, not
+invented). Budget e2e waitSettled race fixed by demanding observed
+terminal state under load. Lesson repeated: fixture cost granularity
+defines trip semantics — set caps BELOW per-event spend to trip fast.
+
 ### AEOS-P2.M1.T4 — DONE (commit a623675)
 Real-process e2e proves approve/deny/expiry against the default posture.
 Decisions: golden-path fixture homes now write an explicit
