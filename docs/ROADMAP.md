@@ -179,7 +179,7 @@ takeover available — demonstrated by the P2 integration suite; `v0.2` tagged.
 Detailed plans per milestone are written just-in-time at each predecessor's
 exit (same rule as P1).
 
-### M1 — Policy engine + approvals inbox  `[~]`
+### M1 — Policy engine + approvals inbox  `[x]`
 **Context brief:** Spec §11. Permission tiers (`read_files … network_access`)
 mapped to `allow|confirm|deny`; YAML policies layered workspace → agent →
 objective (most-specific wins); compiled to harness-native flags AND enforced

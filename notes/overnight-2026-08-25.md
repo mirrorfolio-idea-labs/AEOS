@@ -26,8 +26,41 @@ merged through PR #110. Scope was re-based onto the actual repo state.
       cycles) · ADE Playwright ×2 (chromium headless-shell downloaded — env
       setup only; playwright pre-existing devDep). Logs in /tmp/opencode/.
 - [x] V3 benchmarks — **DONE** (see Baselines below)
-- [ ] Gate G0∧G1∧G2
-- [ ] P2.M1 policy engine + approvals inbox (T1–T5)
+- [x] Gate G0∧G1∧G2 — **PASSED** 04:52 → P2.M1 authorized
+- [~] P2.M1 policy engine + approvals inbox (T1–T5)
+
+## Task log
+
+### AEOS-P2.M1.T4 — DONE (commit a623675)
+Real-process e2e proves approve/deny/expiry against the default posture.
+Decisions: golden-path fixture homes now write an explicit
+execute_commands:allow workspace policy — that suite proves crash/resume
+mechanics and must not park on approvals (posture has its own e2e); test
+daemons use pid-derived ports after colliding with golden-path's fixed
+7801–7810 range under parallel vitest. SDK listApprovals unwraps
+{pending:[...]}. Surprise: AgentConfig type demands full featureToggles
+(zod defaults don't loosen the TS shape).
+
+### AEOS-P2.M1.T3 — DONE (commit 24ca36c)
+Guard wraps adapter streams at startObjectiveRun; deny/confirm paths,
+fail-closed without registry; /v1/approvals GET+POST; openapi.json +
+sdk types regenerated. Accept proven incl. "permissive flags still
+blocked" (fake ignores flags by construction = worst-case harness).
+
+### AEOS-P2.M1.T2 — DONE (commit bba331f)
+classifyToolCall fail-closed table + compilePolicy goldens per tier x
+harness; CompiledPolicy wire shape in contracts (+JSON Schema).
+Drift-test lesson: expected-schema lists are alphabetically sorted.
+
+### AEOS-P2.M1.T1 — DONE (commit 76d776d)
+Schemas (`PolicyFileSchema` strict layers / `EffectivePolicySchema` total),
+9 spec tiers, layered merge ws→agent→objective over `DEFAULT_POSTURE`,
+fs loader with loud-on-malformed. Contracts +2 event types
+(`approval.resolved`, `policy.blocked`) + golden lines + `policy.schema.json`.
+Suite: 231 passed (+8). Surprise: zod@3 has no `partialRecord` (zod4 API) —
+explicit strict object instead; workspace imports resolve against dist/, so
+contracts needs a rebuild before dependents see new exports.
+
 
 ## Log
 
