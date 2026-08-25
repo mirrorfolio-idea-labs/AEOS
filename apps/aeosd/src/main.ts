@@ -38,6 +38,9 @@ async function main(): Promise<number> {
       ...(process.env['AEOS_FAKE_PACE_MS'] === undefined
         ? {}
         : { fakePaceMs: Number(process.env['AEOS_FAKE_PACE_MS']) }),
+      ...(process.env['AEOS_APPROVAL_TIMEOUT_MS'] === undefined
+        ? {}
+        : { approvalTimeoutMs: Number(process.env['AEOS_APPROVAL_TIMEOUT_MS']) }),
       env: process.env,
     };
   const daemon = createDaemon({

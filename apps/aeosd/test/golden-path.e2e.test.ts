@@ -91,8 +91,19 @@ async function waitForTask(
   }
 }
 
-async function setUpAgent(client: AeosClient): Promise<void> {
+/**
+ * The golden path proves crash/resume MECHANICS (P1), not policy posture
+ * (P2.M1). Its fixture home opts into a permissive execute tier so the run
+ * never parks on an approval — posture coverage lives in approval-flow.e2e.
+ */
+async function setUpAgent(client: AeosClient, home: string): Promise<void> {
   await client.createWorkspace({ id: 'ws1', name: 'Workspace' });
+  const { writeFile, mkdir } = await import('node:fs/promises');
+  await mkdir(path.join(home, 'workspaces', 'ws1'), { recursive: true });
+  await writeFile(
+    path.join(home, 'workspaces', 'ws1', 'policy.yaml'),
+    'tiers:\n  execute_commands: allow\n',
+  );
   await client.createAgent({
     id: 'dev',
     workspaceId: 'ws1',
@@ -110,7 +121,7 @@ describe('P1 exit gate — golden path with kill -9 (T1)', () => {
       const home = await mkdtemp(path.join(os.tmpdir(), `aeos-e2e-${cycle}-`));
       const port = 7801 + cycle;
       const first = await startDaemon(home, port);
-      await setUpAgent(first.client);
+      await setUpAgent(first.client, home);
       await first.client.createObjective({
         workspaceId: 'ws1',
         agentId: 'dev',
@@ -162,7 +173,7 @@ describe('kill switch (T3)', () => {
     // spawns" rather than racing a fast fake provider to the finish line.
     // Wide margin because full-workspace CI runs many suites concurrently.
     const daemon = await startDaemon(home, port, 600);
-    await setUpAgent(daemon.client);
+    await setUpAgent(daemon.client, home);
     await daemon.client.createObjective({
       workspaceId: 'ws1',
       agentId: 'dev',

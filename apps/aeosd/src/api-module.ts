@@ -5,6 +5,8 @@ import { CredentialProfileSchema, type AgentConfig, type CredentialProfile } fro
 import { FakeAdapter, buildFixtureEvents, type HarnessAdapter } from '@aeos/provider-core';
 import { ClaudeAdapter, type SecretResolver } from '@aeos/provider-claude';
 import { OpencodeAdapter } from '@aeos/provider-opencode';
+import { createApprovalsRegistry } from '@aeos/policy';
+import { loadPolicyStack } from '@aeos/policy';
 import {
   createApiServer,
   listenApi,
@@ -21,6 +23,8 @@ export interface ApiModuleConfig {
   /** Built ADE UI to serve at `/` (skipped when absent). */
   uiDir?: string;
   fakePaceMs?: number;
+  /** Confirm-tier approval deadline; expiry denies (spec §11). */
+  approvalTimeoutMs?: number;
   /** Env snapshot (main.ts owns process.env) — used by the v0 secret resolver. */
   env: Readonly<Record<string, string | undefined>>;
 }
@@ -92,6 +96,14 @@ export async function startApiModule(
     adapterFor,
     credentialFor: (agent) => credentialFor(config, agent),
     bus,
+    // spec §11: layered policy files + shared approvals inbox, daemon-enforced
+    approvals: createApprovalsRegistry({ defaultTimeoutMs: config.approvalTimeoutMs ?? 300_000 }),
+    policyFor: (agent) =>
+      loadPolicyStack({
+        home,
+        workspaceId: agent.workspaceId,
+        agentId: agent.id,
+      }),
     ...(config.token === undefined ? {} : { token: config.token }),
   });
 
