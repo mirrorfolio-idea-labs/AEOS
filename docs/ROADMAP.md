@@ -226,7 +226,7 @@ changes only via `memory.propose`.
 - [x] **T3** Curator audit trail + never-delete guarantee. *Accept: every byte of archived content recoverable from `.archive/`; test proves no deletion path exists.*
 **Exit gate:** curator run over fixture memory is deterministic, audited, and lossless.
 
-### M5 — PTY attach + co-edit guard  `[ ]`
+### M5 — PTY attach + co-edit guard  `[x]`
 **Context brief:** Spec §9–§10 (PTY as human-takeover escape hatch; WebSocket
 only for PTY) + spec §20 OQ1 (human edits agent worktree — resolve by ADR here).
 - [x] **T1** Runner PTY allocation bridged alongside event parsing. *Accept: takeover session still produces a coherent canonical event stream.*

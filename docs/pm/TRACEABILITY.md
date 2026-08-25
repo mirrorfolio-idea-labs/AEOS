@@ -1,7 +1,7 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of `c4eb850`, 2026-08-25 (P1 complete, `v0.1.0`
-> tagged; P2 M1–M4 done). Regenerate per [README R3](README.md). Spec =
+> **Generated view** — as of `fceb790`, 2026-08-25 (P1 complete, `v0.1.0`
+> tagged; P2 M1–M5 done). Regenerate per [README R3](README.md). Spec =
 > `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
@@ -89,6 +89,9 @@ their source of truth; the spec deliberately doesn't cover them.
 | AEOS-P2.M4.T1 curator scaffold + idle trigger + dry-run | `packages/memory/src/curator.ts` (scan/dry-run/isCuratorDue), aeosd `daemon.ts` opt-in module | `memory/test/curator.test.ts`, `apps/aeosd/test/curator-trigger.e2e.test.ts` | `4bd9012` |
 | AEOS-P2.M4.T2 aging/dedup/summarize via memory.propose | `curator.ts` passes 1–2 (consolidation, dedup) + apply path over `enqueueProposal`/`applyProposals` | `memory/test/curator.test.ts` (T2 block) | `d61e857` |
 | AEOS-P2.M4.T3 own audit trail + never-delete guarantee | `CuratorPathError` root guard; trail assertions; byte-multiset proof | `memory/test/curator-guarantees.test.ts`, e2e full-loop case (M4 exit gate) | `c4eb850` |
+| AEOS-P2.M5.T1 runner PTY allocation | `runner/src/protocol/{messages,client}.ts` pty messages, `runner/src/runner/runner.ts` shell lifecycle + metadata pty.log | `runner/test/pty.test.ts` (coherence, single-shell, metadata-only) | `2b2312e` |
+| AEOS-P2.M5.T2 WS attach + xterm tab | `api/src/routes/attach.ts` (allow-tier gate), supervisor PtyBridge seam, `apps/ade/src/TerminalPanel.tsx` | `api/test/attach.test.ts`, `apps/ade/test/ade.spec.ts` T5 (Playwright) | `ec3ea46` |
+| AEOS-P2.M5.T3 co-edit guard + ADR-009 | `policy/src/co-edit.ts`, scheduler `watchedRepo` option, `docs/adr/ADR-009-co-edit-guard.md` | `policy/test/co-edit.test.ts`, `scheduler/test/co-edit-guard.test.ts` | `fceb790` |
 
 Verified 2026-07-14 by direct run on `main` after the M2 merge (code-as-truth):
 install → build → typecheck → test (69/69 across contracts/kernel/aeosd) →
@@ -122,6 +125,13 @@ lists across scans), audited (append-only UTC-split curator trail +
 first live `memory.written` rows in the main audit), lossless (pre-run
 byte multiset fully contained post-run). Invariant rescan: 62 checked,
 0 violations.
+
+Verified 2026-08-25 at `fceb790` on `overnight/2026-08-24` (P2.M5 exit):
+CI-identical chain green — 327 vitest passed / 2 skipped across 69 files,
+depcruise clean; ADE Playwright 6/6 including the takeover loop (attach →
+type → echo → release → headless). Exit gate: mid-session human takeover
+and clean handback demonstrated end-to-end; co-edit pause proven by the
+scheduler integration test. Invariant rescan: 65 checked, 0 violations.
 
 ## Deployment
 

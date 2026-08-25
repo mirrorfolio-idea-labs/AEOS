@@ -280,3 +280,72 @@ ADE Playwright ran 5/5 earlier this session post-sweep; apps/ade untouched
 by M4 commits. Branch `overnight/2026-08-24`, not pushed (no instruction).
 Worktree clean apart from Kabeer's untracked `goal-prompt.md` and
 `.claude-flow/`.
+
+---
+
+# Overnight continuation #3 — same night, post-approval
+
+Kabeer answered mid-session and approved both P2.M5 dependency sets
+(`node-pty`; `@xterm/xterm` + `@xterm/addon-fit`) via a direct question, so
+the session continued past the M4 stop point. S09 opened with the JIT plan
+(`f610f05`); `@fastify/websocket` was added as required infrastructure for
+the approved WS-attach scope (first-party fastify plugin; recorded in S09).
+
+## Tasks completed this continuation
+
+- **AEOS-P2.M5.T1 `2b2312e`** — runner PTY allocation: additive wire
+  messages (no version bump), minimal-env takeover shell (`$SHELL`,
+  TERM=xterm-256color, cwd=ptyCwd), metadata-only `pty.log`, single-shell
+  guard (`pty_already_active`), teardown on child exit/ptyClose/close.
+  Canonical-stream coherence pinned by gap-free-seq assertion while the
+  shell is live.
+- **AEOS-P2.M5.T2 `ec3ea46`** — WS attach route behind an allow-tier gate
+  (policy evaluated per attach), supervisor `PtyBridge` seam
+  (dependency-inverted — @aeos/api never imports @aeos/runner), ADE
+  TerminalPanel (xterm.js + fit) behind a Takeover tab tracking the live
+  session from SSE, Playwright T5 driving park→grant→attach→type→echo→
+  release→headless. Query-token WS auth scoped to this route only.
+- **AEOS-P2.M5.T3 `fceb790`** — co-edit guard + ADR-009 (OQ1):
+  detect-and-pause via porcelain snapshots around each task; kill-switch
+  semantics (no strike); ships unwired until real worktrees exist (agent
+  dir contains scheduler-written objectives/ state today).
+- **AEOS-P2.M5 EXIT GATE PASSED**: takeover + clean handback demonstrated
+  end-to-end (Playwright T5, 6/6); co-edit pause proven by scheduler
+  integration test; full bar 327 passed / 2 skipped across 69 files;
+  depcruise clean; invariant rescan 65 checked / 0 violations. P2 now
+  17/25.
+
+## Debug lessons worth keeping
+
+1. **Evaluation-order capture**: passing `{ ptyCwd: tmp }` into a helper
+   that assigns `tmp` captured the PREVIOUS test's deleted dir → shells
+   chdir'd into nothing (`chdir(2) failed`), surfacing only under suite
+   load. Fix: helper owns the wiring. pty.log forensics found it fast.
+2. **@fastify/websocket v11** hands handlers the raw WebSocket, NOT a
+   `{socket}` wrapper. A swallowed TypeError left connections silently
+   open. Probe handler args when a plugin version jumps.
+3. **vitest default timeouts (5s)** masquerade as logic failures under
+   load — set per-test timeouts explicitly on anything spawning processes,
+   and remember detached-runner connect deadlines are separate knobs.
+4. When a test can legitimately pass either way depending on external
+   state (dead shell → re-open is legal), make it prove the precondition
+   first (echo round-trip) instead of asserting blindly.
+
+## Exact next task for the next session
+
+**P2.M6 Codex adapter — blocked on tooling**: `codex` CLI is not installed
+on this machine, and T1's accept requires fixtures *recorded from real
+runs* (spec §18; fabricating them would violate the no-hallucination rule).
+Options for Kabeer: install Codex CLI (`npm i -g @openai/codex` or distro
+equivalent) so the next overnight run can record fixtures + build T1/T3;
+or explicitly approve spec-derived fixtures as the golden source (a ROADMAP
+accept-text tweak, D2 precedent). Everything else is ready: S10 opens with
+the usual JIT plan; conformance parity comes free via provider-core.
+
+## Green bar at stop (final)
+
+CI-identical chain GREEN at HEAD `1c33900-to-be` (+ close-out): 327 passed
+/ 2 skipped across 69 files; depcruise clean (no violations); ADE
+Playwright 6/6. Branch `overnight/2026-08-24`, not pushed (no instruction).
+Worktree clean apart from Kabeer's untracked `goal-prompt.md` and
+`.claude-flow/` artifacts.
