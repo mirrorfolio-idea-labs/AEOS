@@ -209,8 +209,8 @@ profiles, or transcripts — redaction filter on the event pipeline.
   future backend behind the interface) with CRUD API. *Accept: round-trip
   on the age backend incl. second-handle reads; store payload unreadable
   without its identity key; tamper fails typed.*
-- [ ] **T2** Policy-gated env injection into runners. *Accept: secret available in-session only when policy allows; absent otherwise.*
-- [ ] **T3** Redaction filter on the event pipeline. *Accept: canary secret planted in a session never appears in transcripts, events, or audit logs.*
+- [x] **T2** Policy-gated env injection into runners. *Accept: secret available in-session only when policy allows; absent otherwise.*
+- [x] **T3** Redaction filter on the event pipeline. *Accept: canary secret planted in a session never appears in transcripts, events, or audit logs.*
 **Exit gate:** canary-leak test green across all sinks.
 
 ### M4 — Memory curator  `[ ]`

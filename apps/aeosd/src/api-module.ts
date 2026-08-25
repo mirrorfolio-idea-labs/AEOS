@@ -33,6 +33,11 @@ export interface ApiModuleConfig {
    * `env`; anything else is looked up in the store when one is attached.
    */
   secretStore?: SecretStore;
+  /**
+   * Set by the daemon when redaction is active: every successfully
+   * resolved value registers for pipeline-wide scrubbing (spec §11).
+   */
+  registerSecretValue?: (value: string) => void;
 }
 
 export interface ApiModuleHandle {
@@ -73,9 +78,16 @@ export async function startApiModule(
       const envValue = secretRef.startsWith('env:')
         ? config.env[secretRef.slice(4)]
         : undefined;
-      if (envValue !== undefined && envValue.length > 0) return Promise.resolve(envValue);
+      const resolveEnv = (value: string): Promise<string> => {
+        config.registerSecretValue?.(value);
+        return Promise.resolve(value);
+      };
+      if (envValue !== undefined && envValue.length > 0) return resolveEnv(envValue);
       if (!secretRef.startsWith('env:') && config.secretStore !== undefined) {
-        return config.secretStore.get(secretRef);
+        return config.secretStore.get(secretRef).then((v) => {
+          config.registerSecretValue?.(v);
+          return v;
+        });
       }
       return Promise.reject(new Error(`secret "${secretRef}" is not available in the daemon env`));
     },
@@ -85,9 +97,19 @@ export async function startApiModule(
   const adapterFor = (agent: AgentConfig): HarnessAdapter => {
     const provider = config.providerOverride ?? agent.harness.provider;
     if (provider === 'fake') {
+      const events = buildFixtureEvents({ profileId: agent.credentialProfileId });
+      // e2e seam: a scripted tool output lets tests plant markers (e.g. the
+      // P2.M3 canary-leak proof) without touching provider-core fixtures
+      const scriptedOutput = config.env['AEOS_FAKE_TOOL_OUTPUT'];
+      if (scriptedOutput !== undefined) {
+        const result = events.find((e) => e.type === 'item.tool_result');
+        if (result !== undefined && result.type === 'item.tool_result' && 'output' in result.payload) {
+          result.payload.output = scriptedOutput;
+        }
+      }
       return new FakeAdapter({
         providerSessionId: `ses_${agent.id}`,
-        events: buildFixtureEvents({ profileId: agent.credentialProfileId }),
+        events,
         ...(config.fakePaceMs === undefined ? {} : { paceMs: config.fakePaceMs }),
       });
     }

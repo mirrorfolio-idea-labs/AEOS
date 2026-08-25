@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import {
   aeosYamlPath,
   attachAuditWriter,
+  attachRedaction,
   attachTranscriptWriter,
   auditDir,
   createEventBus,
@@ -111,13 +112,31 @@ export function createDaemon(config: DaemonConfig): Daemon {
     {
       name: 'event-bus',
       start: async () => {
-        bus = createEventBus();
+        // spec §11 redaction: scrub registered secret values before ANY
+        // subscriber (transcript, audit, SSE, REST) ever sees an event
+        const redactionValues = new Set<string>();
+        if (config.api?.secretStore !== undefined) {
+          for (const ref of await config.api.secretStore.list()) {
+            try {
+              redactionValues.add(await config.api.secretStore.get(ref));
+            } catch {
+              // unreadable refs simply don't register — the store stays locked
+            }
+          }
+        }
+        const redactingBus = attachRedaction(createEventBus(), () => redactionValues);
+        bus = redactingBus;
+        if (config.api !== undefined) {
+          (config.api as ApiModuleConfig).registerSecretValue = (value: string): void => {
+            redactionValues.add(value);
+          };
+        }
         // runner-owned sessions write their own transcript (spec §10) — the
         // daemon must not double-append while a live runner exists
-        detachTranscript = attachTranscriptWriter(bus, home, deps.db, {
+        detachTranscript = attachTranscriptWriter(redactingBus, home, deps.db, {
           skipSession: (sessionId) => supervisor?.hasLiveRunner(sessionId) ?? false,
         });
-        detachAudit = attachAuditWriter(bus, home);
+        detachAudit = attachAuditWriter(redactingBus, home);
       },
       stop: async () => {
         detachTranscript?.();
