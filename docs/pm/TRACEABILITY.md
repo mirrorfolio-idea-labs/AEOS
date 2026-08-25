@@ -1,7 +1,7 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of `fceb790`, 2026-08-25 (P1 complete, `v0.1.0`
-> tagged; P2 M1–M5 done). Regenerate per [README R3](README.md). Spec =
+> **Generated view** — as of `3c6063d`, 2026-08-26 (P1 complete, `v0.1.0`
+> tagged; P2 M1–M6 done). Regenerate per [README R3](README.md). Spec =
 > `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
@@ -92,6 +92,8 @@ their source of truth; the spec deliberately doesn't cover them.
 | AEOS-P2.M5.T1 runner PTY allocation | `runner/src/protocol/{messages,client}.ts` pty messages, `runner/src/runner/runner.ts` shell lifecycle + metadata pty.log | `runner/test/pty.test.ts` (coherence, single-shell, metadata-only) | `2b2312e` |
 | AEOS-P2.M5.T2 WS attach + xterm tab | `api/src/routes/attach.ts` (allow-tier gate), supervisor PtyBridge seam, `apps/ade/src/TerminalPanel.tsx` | `api/test/attach.test.ts`, `apps/ade/test/ade.spec.ts` T5 (Playwright) | `ec3ea46` |
 | AEOS-P2.M5.T3 co-edit guard + ADR-009 | `policy/src/co-edit.ts`, scheduler `watchedRepo` option, `docs/adr/ADR-009-co-edit-guard.md` | `policy/test/co-edit.test.ts`, `scheduler/test/co-edit-guard.test.ts` | `fceb790` |
+| AEOS-P2.M6.T1 Codex adapter | `packages/provider-codex/*` (recorded fixtures, CODEX_HOME profile, thread/turn/item translation), aeosd wiring | `provider-codex/test/*` (golden byte-identical, resume, conformance) | `9dafcd5` |
+| AEOS-P2.M6.T3 cross-harness capability matrix | `provider-core/src/matrix.ts` + claims-equality conformance + README table enforcement | `provider-core/test/capability-matrix.test.ts` + all four adapter suites | `3c6063d` |
 
 Verified 2026-07-14 by direct run on `main` after the M2 merge (code-as-truth):
 install → build → typecheck → test (69/69 across contracts/kernel/aeosd) →
@@ -138,3 +140,11 @@ scheduler integration test. Invariant rescan: 65 checked, 0 violations.
 None yet by design — P1 ships a local daemon; CI (M1.T6) plus the nightly
 secret-gated live-harness workflow (M9.T2) are the only pipelines until
 P4 deploy targets.
+
+Verified 2026-08-26 at `3c6063d` on `feat/p2-m6-codex` (P2.M6 exit):
+CI-identical chain green — 344 vitest passed / 2 skipped across 73 files,
+depcruise clean; Playwright unaffected (6 specs last recorded green at the
+M5 close). Exit gate: same fixture objective completes on fake, Claude,
+OpenCode, and Codex (fixture-driven conformance per adapter); capability
+matrix test-enforced across adapters and README. Invariant rescan: 67
+checked, 0 violations.

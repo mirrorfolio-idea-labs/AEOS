@@ -7,6 +7,11 @@ export interface CapabilityMatrix {
   mcp: boolean;
   sandbox: boolean;
   costReporting: boolean;
+  /**
+   * Whether `cost.usage.usd` carries real provider-reported pricing.
+   * `false` = token counts only (e.g. Codex reports no USD); defaults true.
+   */
+  costUsd?: boolean;
   maxContextTokens?: number;
 }
 

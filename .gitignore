@@ -17,3 +17,4 @@ packages/scratch/
 apps/ade/.playwright-home/
 apps/ade/test-results/
 apps/ade/playwright-report/
+.claude-flow/

@@ -120,6 +120,7 @@ export class ClaudeAdapter implements HarnessAdapter {
       mcp: true,
       sandbox: true,
       costReporting: true,
+      costUsd: true,
     };
   }
 

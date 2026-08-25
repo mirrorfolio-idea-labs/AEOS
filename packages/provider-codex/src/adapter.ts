@@ -8,13 +8,13 @@ import type {
   SessionHandle,
   SpawnOptions,
 } from '@aeos/provider-core';
-import { buildOpencodeProfile, type SecretResolver } from './profile.js';
-import { OpencodeStreamTranslator } from './translate.js';
+import { buildCodexProfile, type SecretResolver } from './profile.js';
+import { CodexStreamTranslator } from './translate.js';
 
 const GOLDEN_TS = '2026-01-01T00:00:00.000Z';
 const goldenId = (n: number): string => String(n).padStart(26, '0');
 
-/** Child seam — identical contract to provider-claude's RunChild. */
+/** Child seam — identical contract to provider-claude's / provider-opencode's. */
 export type RunChild = (
   profile: HarnessProfile,
   argv: readonly string[],
@@ -38,27 +38,27 @@ const defaultRunChild: RunChild = async function* (profile, argv, signal) {
   }
 };
 
-export interface OpencodeAdapterOptions {
+export interface CodexAdapterOptions {
   agentDir: (agent: AgentConfig) => string;
   credential: (agent: AgentConfig) => CredentialProfile;
   secrets: SecretResolver;
-  /** Slot → persistent data home for subscription accounts (see profile.ts). */
+  /** Slot → persistent login home for subscription accounts (see profile.ts). */
   subscriptionHomeFor?: (slot: string) => string;
   runChild?: RunChild;
 }
 
-class OpencodeSessionHandle implements SessionHandle {
+class CodexSessionHandle implements SessionHandle {
   readonly events: AsyncIterable<AeosEvent>;
   private readonly abort = new AbortController();
 
   constructor(
-    private readonly translator: OpencodeStreamTranslator,
+    private readonly translator: CodexStreamTranslator,
     runChild: RunChild,
     opts: SpawnOptions,
     argv: readonly string[],
   ) {
     const { signal } = this.abort;
-    const stream = async function* (this: OpencodeSessionHandle): AsyncGenerator<AeosEvent> {
+    const stream = async function* (this: CodexSessionHandle): AsyncGenerator<AeosEvent> {
       try {
         for await (const line of runChild(opts.profile, argv, signal)) {
           if (signal.aborted) return;
@@ -71,6 +71,8 @@ class OpencodeSessionHandle implements SessionHandle {
           }
           yield* this.translator.translateLine(parsed);
         }
+        // codex has no explicit idle line — a clean process exit ends the session
+        if (!signal.aborted) yield* this.translator.sessionEnd();
       } catch (error: unknown) {
         if (signal.aborted) return;
         throw error;
@@ -96,12 +98,16 @@ class OpencodeSessionHandle implements SessionHandle {
   }
 }
 
-/** OpenCode provider (spec §9, P1.M10): XDG-hermetic profile + event translation. */
-export class OpencodeAdapter implements HarnessAdapter {
-  readonly id = 'opencode';
+/**
+ * OpenAI Codex provider (spec §9, P2.M6): CODEX_HOME-hermetic profile +
+ * thread/turn/item translation. `codex exec --json` headless only; sandbox
+ * selection rides the policy compiler like every other harness flag.
+ */
+export class CodexAdapter implements HarnessAdapter {
+  readonly id = 'codex';
   private readonly runChild: RunChild;
 
-  constructor(private readonly opts: OpencodeAdapterOptions) {
+  constructor(private readonly opts: CodexAdapterOptions) {
     this.runChild = opts.runChild ?? defaultRunChild;
   }
 
@@ -109,15 +115,15 @@ export class OpencodeAdapter implements HarnessAdapter {
     return {
       resume: true,
       structuredOutput: true,
-      mcp: true,
-      sandbox: false,
-      costReporting: true,
-      costUsd: true,
+      mcp: false, // config.toml MCP wiring lands with feature toggles
+      sandbox: true, // codex has native sandbox modes
+      costReporting: true, // token fidelity only — see costUsd below
+      costUsd: false, // codex reports no USD; tokens are real
     };
   }
 
   createProfile(agent: AgentConfig): Promise<HarnessProfile> {
-    return buildOpencodeProfile({
+    return buildCodexProfile({
       agent,
       agentDir: this.opts.agentDir(agent),
       credential: this.opts.credential(agent),
@@ -130,28 +136,29 @@ export class OpencodeAdapter implements HarnessAdapter {
 
   buildArgv(opts: SpawnOptions): string[] {
     return [
-      'opencode',
-      'run',
+      'codex',
+      'exec',
+      '--json',
+      '--skip-git-repo-check',
+      ...(opts.resumeToken === undefined
+        ? []
+        : ['resume', opts.resumeToken]),
       opts.objective,
-      '--format',
-      'json',
-      ...opts.profile.argv,
-      ...(opts.resumeToken === undefined ? [] : ['--session', opts.resumeToken]),
     ];
   }
 
   spawn(opts: SpawnOptions): SessionHandle {
-    const translator = new OpencodeStreamTranslator({
+    const translator = new CodexStreamTranslator({
       sessionId: opts.sessionId,
       profileId: opts.profile.env['AEOS_CREDENTIAL_PROFILE_ID'] ?? 'unknown',
     });
-    return new OpencodeSessionHandle(translator, this.runChild, opts, this.buildArgv(opts));
+    return new CodexSessionHandle(translator, this.runChild, opts, this.buildArgv(opts));
   }
 
-  /** Pure fixture translation — deterministic ids, same contract as ClaudeAdapter. */
+  /** Pure fixture translation — deterministic ids, same contract as siblings. */
   translate(raw: unknown): AeosEvent[] {
     let counter = 0;
-    const translator = new OpencodeStreamTranslator({
+    const translator = new CodexStreamTranslator({
       sessionId: 'translate',
       profileId: 'translate',
       newId: () => goldenId(counter++),
