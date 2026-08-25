@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { agentDir, type EventBus, type IndexDb } from '@aeos/kernel';
+import { agentDir, getAgent, type EventBus, type IndexDb } from '@aeos/kernel';
+import type { Supervisor } from '@aeos/runner';
 import { CredentialProfileSchema, type AgentConfig, type CredentialProfile } from '@aeos/contracts';
 import { FakeAdapter, buildFixtureEvents, type HarnessAdapter } from '@aeos/provider-core';
 import { ClaudeAdapter, type SecretResolver } from '@aeos/provider-claude';
@@ -72,6 +73,7 @@ export async function startApiModule(
   db: IndexDb,
   bus: EventBus,
   config: ApiModuleConfig,
+  supervisor?: Supervisor,
 ): Promise<ApiModuleHandle> {
   const secrets: SecretResolver = {
     resolve: (secretRef: string) => {
@@ -143,6 +145,19 @@ export async function startApiModule(
       }
       return entries;
     },
+    // P2.M5 human takeover: supervisor-backed PTY bridge behind the policy gate
+    ...(supervisor === undefined
+      ? {}
+      : {
+          resolveAgent: (sessionId: string) => {
+            const owner = supervisor.sessionOwner(sessionId);
+            return owner === undefined
+              ? undefined
+              : getAgent(home, owner.workspaceId, owner.agentId);
+          },
+          attachPty: (sessionId: string, onOutput: (data: string) => void) =>
+            supervisor.attachPty(sessionId, onOutput),
+        }),
     ...(config.token === undefined ? {} : { token: config.token }),
   });
 

@@ -14,7 +14,9 @@ export { RingBuffer, type RingEntry } from './runner/ring-buffer.js';
 export { Runner, type RunnerOptions } from './runner/runner.js';
 export {
   createSupervisor,
+  PtyAttachError,
   type AdoptionReport,
+  type PtyHandle,
   type StartSessionOptions,
   type Supervisor,
   type SupervisorOptions,

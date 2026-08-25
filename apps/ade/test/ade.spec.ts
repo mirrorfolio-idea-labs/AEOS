@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { agentDir } from '@aeos/kernel';
@@ -115,4 +115,37 @@ test('T4: BYOK switch is visible in UI state and cost.usage rows land in costs.n
   expect(rows.length).toBeGreaterThan(0);
   expect(rows.every((row) => row.type === 'cost.usage')).toBe(true);
   expect(rows[0]?.payload.usd).toBeGreaterThan(0);
+});
+
+test('T5: PTY takeover — terminal attach echoes input; release returns to headless', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByTestId('agent-backend-dev').click();
+  await page.getByTestId('objective-id').fill('obj-term');
+  await page.getByTestId('objective-tasks').fill('T1: park please');
+  await page.getByTestId('run-objective').click();
+  await expect(page.getByTestId('console')).toContainText('session.created', { timeout: 15_000 });
+  // the parked approval keeps the session live — that's what we take over
+  await expect(page.getByTestId('approvals-count')).toHaveText('1', { timeout: 15_000 });
+
+  // takeover is least-privilege: grant execute_commands=allow only NOW —
+  // policy is evaluated per attach request, like an admin granting access
+  // while the session waits
+  await writeFile(
+    path.join(agentDir(HOME, 'client-acme', 'backend-dev'), 'policy.yaml'),
+    'tiers:\n  execute_commands: allow\n',
+  );
+
+  await page.getByTestId('tab-terminal').click();
+  await expect(page.getByTestId('terminal-panel')).toBeVisible();
+  await page.locator('.xterm-helper-textarea').focus();
+  await page.keyboard.type('echo aeos-term-e2e');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('terminal-panel')).toContainText('aeos-term-e2e', {
+    timeout: 10_000,
+  });
+
+  await page.getByTestId('pty-release').click();
+  await expect(page.getByTestId('terminal-empty')).toBeVisible();
 });

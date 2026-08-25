@@ -184,7 +184,13 @@ export function createDaemon(config: DaemonConfig): Daemon {
     {
       name: 'api',
       start: async () => {
-        api = await startApiModule(home, deps.db, deps.bus, config.api as ApiModuleConfig);
+        api = await startApiModule(
+          home,
+          deps.db,
+          deps.bus,
+          config.api as ApiModuleConfig,
+          deps.supervisor,
+        );
         if (api.resumed.length > 0) {
           console.error(`resume-on-boot: ${api.resumed.join(', ')}`);
         }

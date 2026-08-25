@@ -81,6 +81,21 @@ export class AeosClient {
     return this.request('GET', '/v1/health');
   }
 
+  /**
+   * WebSocket URL for a session's PTY attach endpoint (spec §14 — WS only
+   * for takeover). Auth rides the upgrade request via `token` query param
+   * when configured (browsers cannot set headers on WebSocket).
+   */
+  attachUrl(sessionId: string): string {
+    const base = this.opts.baseUrl === '' && typeof location !== 'undefined'
+      ? location.origin
+      : this.opts.baseUrl;
+    const wsBase = base.replace(/^http/, 'ws');
+    return this.opts.token === undefined
+      ? `${wsBase}/v1/sessions/${sessionId}/attach`
+      : `${wsBase}/v1/sessions/${sessionId}/attach?token=${encodeURIComponent(this.opts.token)}`;
+  }
+
   createWorkspace(workspace: Workspace): Promise<Workspace> {
     return this.request('POST', '/v1/workspaces', workspace);
   }

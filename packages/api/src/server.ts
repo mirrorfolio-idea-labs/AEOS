@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import swagger from '@fastify/swagger';
+import websocket from '@fastify/websocket';
 import { openIndexDb, type EventBus, type IndexDb } from '@aeos/kernel';
 import type { AgentConfig, CredentialProfile, EffectivePolicy } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
@@ -11,6 +12,24 @@ import { registerObjectiveRoutes } from './routes/objectives.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
+import { registerAttachRoute } from './routes/attach.js';
+
+/** Daemon-side PTY handle for one takeover session (P2.M5). */
+export interface PtyHandle {
+  input(data: string): void;
+  resize(cols: number, rows: number): void;
+  /** Tears the takeover shell down — release returns the session to headless. */
+  release(): void;
+}
+
+/**
+ * Resolves a live session's runner PTY. Dependency-inverted: the API package
+ * defines the seam, the daemon (supervisor) supplies it.
+ */
+export type PtyBridge = (
+  sessionId: string,
+  onOutput: (data: string) => void,
+) => Promise<PtyHandle>;
 
 export interface ApiServerOptions {
   /** AEOS_HOME — the file tree is truth; the API is a view over it. */
@@ -35,6 +54,10 @@ export interface ApiServerOptions {
    * (spec §11 injection). Consulted only under `secrets_access: allow`.
    */
   injectSecrets?: (agent: AgentConfig) => Promise<Record<string, string>>;
+  /** Session id → owning agent (for policy checks on session-scoped routes). */
+  resolveAgent?: (sessionId: string) => AgentConfig | undefined;
+  /** Live-runner PTY bridge for `/v1/sessions/:id/attach` (P2.M5). */
+  attachPty?: PtyBridge;
 }
 
 export interface ApiContext extends ApiServerOptions {
@@ -56,13 +79,23 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
       },
     },
   });
+  // WebSocket only for PTY attach (spec §14) — SSE carries everything else
+  await app.register(websocket);
 
   app.setErrorHandler((error, _request, reply) => sendError(reply, error));
 
   if (opts.token !== undefined) {
     const token = opts.token;
     app.addHook('onRequest', (request, reply, done) => {
-      if (request.headers.authorization === `Bearer ${token}`) {
+      // Browsers cannot set headers on WebSocket upgrades — the attach route
+      // additionally accepts ?token= (scoped to that route only)
+      const queryToken = request.url.startsWith('/v1/sessions/') && request.url.includes('/attach')
+        ? new URL(request.url, 'http://localhost').searchParams.get('token')
+        : null;
+      if (
+        request.headers.authorization === `Bearer ${token}` ||
+        (queryToken !== null && queryToken === token)
+      ) {
         done();
         return;
       }
@@ -84,6 +117,7 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
   registerMemoryRoutes(app, ctx);
   registerEventRoutes(app, ctx);
   registerApprovalRoutes(app, ctx);
+  registerAttachRoute(app, ctx);
 
   app.addHook('onClose', (_instance, done) => {
     ctx.db.close();
