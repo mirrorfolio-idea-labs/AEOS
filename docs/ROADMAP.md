@@ -196,7 +196,7 @@ daemon-side (defense in depth). Approvals: `approval.request` event →
 **Context brief:** Spec §11. Per-agent and per-objective caps (USD + tokens)
 metered from `cost.usage` events; hard-stop at cap with checkpoint + notify +
 `resume-with-increase`. Append-only `audit/*.ndjsonl` for every action class.
-- [ ] **T1** Budget config + meter wired to the event bus. *Accept: simulated spend crossing cap hard-stops with a checkpoint written.*
+- [x] **T1** Budget config + meter wired to the event bus. *Accept: simulated spend crossing cap hard-stops with a checkpoint written.*
 - [ ] **T2** Notify + `resume-with-increase` path. *Accept: fixture objective resumes and completes after cap raise.*
 - [ ] **T3** Audit appender covering tool calls, approvals, policy decisions, memory writes, spend. *Accept: golden audit trail for a scripted session; append-only property tested.*
 **Exit gate:** runaway-loop simulation cannot outspend its cap (flagship test).

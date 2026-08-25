@@ -8,6 +8,8 @@ import {
   type CompiledPolicy,
 } from '@aeos/contracts';
 import { writeFileAtomic } from '@aeos/kernel';
+import { BudgetMeter, readObjectiveFile, type BudgetCaps } from '@aeos/policy';
+import type { Objective } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
 import { parsePlan, serializePlan, withTaskStatus, type ParsedPlan } from './plan.js';
 import { readCheckpoints, resolveNextTask, writeCheckpoint } from './checkpoint.js';
@@ -27,6 +29,13 @@ export interface RunObjectiveOptions {
   /** Compiled policy handed to each spawn (spec §11); enforcement is the caller's guard. */
   permissionPolicy?: CompiledPolicy;
   /**
+   * Objective-scope spend caps (spec §11). Overrides `<objectiveDir>/
+   * objective.yaml` when present. Crossing a cap HARD-STOPS the run: the
+   * task's checkpoint returns to `pending` WITHOUT consuming a strike, so
+   * raising the cap and re-starting resumes cleanly.
+   */
+  budget?: BudgetCaps;
+  /**
    * Kill switch (spec §18): when this file exists, no further sessions are
    * spawned — the objective pauses before the next task. Runner-level STOP
    * handling (in-flight sessions) shipped with M3.
@@ -39,6 +48,14 @@ export type ObjectiveOutcome =
   | { status: 'paused'; taskId: string; reason: string };
 
 const planPath = (objectiveDir: string): string => path.join(objectiveDir, 'plan.md');
+
+function budgetCapsFromFile(file: Objective | undefined): BudgetCaps {
+  if (file === undefined) return {};
+  return {
+    ...(file.budgetUsd === undefined ? {} : { usdCap: file.budgetUsd }),
+    ...(file.budgetTokens === undefined ? {} : { tokenCap: file.budgetTokens }),
+  };
+}
 
 async function loadPlan(objectiveDir: string): Promise<ParsedPlan> {
   return parsePlan(await readFile(planPath(objectiveDir), 'utf8'));
@@ -58,6 +75,9 @@ async function savePlan(objectiveDir: string, plan: ParsedPlan): Promise<void> {
  */
 export async function runObjective(opts: RunObjectiveOptions): Promise<ObjectiveOutcome> {
   const maxAttempts = opts.maxAttempts ?? 3;
+  const fileBudget = readObjectiveFile(opts.objectiveDir);
+  const caps = opts.budget ?? budgetCapsFromFile(fileBudget);
+  const meter = new BudgetMeter(caps);
   const backoff = opts.backoff ?? (() => Promise.resolve());
   const emit = opts.onEvent ?? (() => undefined);
   const nextSessionId = opts.sessionIdFactory ?? newEventId;
@@ -143,17 +163,56 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
     let tokens = 0;
     let terminal: 'completed' | 'failed' | 'none' = 'none';
     let failureReason = 'session ended without a terminal event';
+    let budgetStop: { kind: 'usd' | 'tokens'; cap: number; spent: number } | null = null;
     for await (const event of handle.events) {
-      emit(event);
+      // once over cap: drain silently — a hard-stopped session has no side effects
+      if (budgetStop === null) emit(event);
       if (event.type === 'cost.usage') {
+        const taskTokens = event.payload.inputTokens + event.payload.outputTokens;
         usd += event.payload.usd;
-        tokens += event.payload.inputTokens + event.payload.outputTokens;
+        tokens += taskTokens;
+        const reading = meter.record({ usd: event.payload.usd, tokens: taskTokens });
+        if (reading.exceeded !== null && budgetStop === null) {
+          const kind = reading.exceeded;
+          const cap = kind === 'usd' ? (caps.usdCap ?? 0) : (caps.tokenCap ?? 0);
+          const spent = kind === 'usd' ? reading.totalUsd : reading.totalTokens;
+          budgetStop = { kind, cap, spent };
+          emit(
+            AeosEventSchema.parse({
+              v: 1,
+              id: newEventId(),
+              ts: new Date().toISOString(),
+              source: 'scheduler',
+              agentId: opts.agent.id,
+              taskId: task.id,
+              type: 'budget.exceeded',
+              payload: { scope: 'objective', id: opts.objectiveDir, kind, cap, spent },
+            }),
+          );
+        }
       } else if (event.type === 'session.completed') {
         terminal = 'completed';
       } else if (event.type === 'session.failed') {
         terminal = 'failed';
         failureReason = event.payload.reason;
       }
+    }
+
+    if (budgetStop !== null) {
+      await writeCheckpoint(opts.objectiveDir, {
+        taskId: task.id,
+        status: 'pending', // NOT a strike: raising the cap resumes cleanly
+        attempts,
+        summary: `hard-stopped: budget ${budgetStop.kind} cap ${String(budgetStop.cap)} reached at ${String(budgetStop.spent)}`,
+        costs: { usd, tokens },
+        ...(handle.resumeToken === undefined ? {} : { providerResumeToken: handle.resumeToken }),
+      });
+      await savePlan(opts.objectiveDir, withTaskStatus(plan, task.id, 'pending'));
+      return {
+        status: 'paused',
+        taskId: task.id,
+        reason: `budget ${budgetStop.kind} cap reached`,
+      };
     }
 
     if (terminal === 'completed') {

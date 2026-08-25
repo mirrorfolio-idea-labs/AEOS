@@ -14,3 +14,4 @@
 {"v":1,"id":"01JZX6YV1T9GN0WT5V40000E0A","ts":"2026-07-13T10:00:13.000Z","source":"kernel","sessionId":"01JZX6YV1T9GN0WT5V4SESS04","type":"session.orphaned","payload":{}}
 {"v":1,"id":"01JZX6YV1T9GN0WT5V40000F0A","ts":"2026-07-13T10:00:14.000Z","source":"policy","sessionId":"01JZX6YV1T9GN0WT5V4SESS04","type":"approval.resolved","payload":{"requestId":"a1","decision":"approved","by":"kabeer"}}
 {"v":1,"id":"01JZX6YV1T9GN0WT5V40000G0A","ts":"2026-07-13T10:00:15.000Z","source":"policy","sessionId":"01JZX6YV1T9GN0WT5V4SESS04","type":"policy.blocked","payload":{"tier":"git_push","tool":"Bash","detail":"blocked by policy: git_push"}}
+{"v":1,"id":"01JZX6YV1T9GN0WT5V40000H0A","ts":"2026-07-13T10:00:16.000Z","source":"policy","sessionId":"01JZX6YV1T9GN0WT5V4SESS04","type":"budget.exceeded","payload":{"scope":"objective","id":"obj-1","kind":"usd","cap":0.01,"spent":0.02}}

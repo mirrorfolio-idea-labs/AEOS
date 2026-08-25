@@ -19,6 +19,9 @@ const CreateObjective = ObjectiveRef.extend({
   id: z.string().min(1),
   title: z.string().min(1),
   tasks: z.array(z.object({ id: z.string().min(1), title: z.string().min(1) })).min(1),
+  /** Objective-scope spend caps (spec §11); persisted as objective.yaml. */
+  budgetUsd: z.number().positive().optional(),
+  budgetTokens: z.number().int().positive().optional(),
 });
 
 export const objectiveDirFor = (
@@ -124,6 +127,18 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
       const dir = objectiveDirFor(ctx.home, body.workspaceId, body.agentId, body.id);
       await mkdir(path.join(dir, 'checkpoints'), { recursive: true });
       await writeFileAtomic(path.join(dir, 'objective.md'), `# ${body.title}\n`);
+      if (body.budgetUsd !== undefined || body.budgetTokens !== undefined) {
+        const { stringify } = await import('yaml');
+        const { ObjectiveSchema } = await import('@aeos/contracts');
+        const objectiveFile = ObjectiveSchema.parse({
+          id: body.id,
+          agentId: body.agentId,
+          title: body.title,
+          ...(body.budgetUsd === undefined ? {} : { budgetUsd: body.budgetUsd }),
+          ...(body.budgetTokens === undefined ? {} : { budgetTokens: body.budgetTokens }),
+        });
+        await writeFileAtomic(path.join(dir, 'objective.yaml'), stringify(objectiveFile));
+      }
       await writeFileAtomic(
         path.join(dir, 'plan.md'),
         `# ${body.title}\n\n${body.tasks.map((t) => `- [ ] **${t.id}** ${t.title}`).join('\n')}\n`,

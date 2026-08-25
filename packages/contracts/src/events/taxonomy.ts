@@ -43,6 +43,16 @@ export const AeosEventSchema = z.discriminatedUnion('type', [
     }),
   ),
   ev('policy.blocked', z.object({ tier: TierSchema, tool: z.string(), detail: z.string() })),
+  ev(
+    'budget.exceeded',
+    z.object({
+      scope: z.literal('objective'),
+      id: z.string(),
+      kind: z.enum(['usd', 'tokens']),
+      cap: z.number().positive(),
+      spent: z.number().nonnegative(),
+    }),
+  ),
 ]);
 
 export type AeosEvent = z.infer<typeof AeosEventSchema>;

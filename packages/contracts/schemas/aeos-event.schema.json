@@ -1035,6 +1035,87 @@
             "payload"
           ],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "v": {
+              "type": "number",
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$"
+            },
+            "ts": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "agentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "const": "budget.exceeded"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "const": "objective"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "usd",
+                    "tokens"
+                  ]
+                },
+                "cap": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "spent": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "scope",
+                "id",
+                "kind",
+                "cap",
+                "spent"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "v",
+            "id",
+            "ts",
+            "source",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
         }
       ]
     }

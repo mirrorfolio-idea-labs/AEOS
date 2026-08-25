@@ -191,6 +191,9 @@ importers:
       fastify:
         specifier: ^5.2.0
         version: 5.10.0
+      yaml:
+        specifier: ^2.6.1
+        version: 2.9.0
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -359,6 +362,9 @@ importers:
       '@aeos/kernel':
         specifier: workspace:*
         version: link:../kernel
+      '@aeos/policy':
+        specifier: workspace:*
+        version: link:../policy
       '@aeos/provider-core':
         specifier: workspace:*
         version: link:../provider-core
