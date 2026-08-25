@@ -51,6 +51,48 @@ export const ProtoErrorSchema = z.object({
   message: z.string(),
 }).strict();
 
+// ── PTY takeover messages (additive, P2.M5): a runner only emits these after
+// receiving `ptyOpen`, so mixed-version pairs never exchange unknown types.
+
+const dims = z.number().int().positive();
+
+export const PtyOpenSchema = z.object({
+  t: z.literal('ptyOpen'),
+  cols: dims,
+  rows: dims,
+}).strict();
+
+export const PtyStartedSchema = z.object({
+  t: z.literal('ptyStarted'),
+  cols: dims,
+  rows: dims,
+}).strict();
+
+export const PtyInputSchema = z.object({
+  t: z.literal('ptyInput'),
+  data: z.string().max(8192),
+}).strict();
+
+export const PtyResizeSchema = z.object({
+  t: z.literal('ptyResize'),
+  cols: dims,
+  rows: dims,
+}).strict();
+
+export const PtyOutputSchema = z.object({
+  t: z.literal('ptyOutput'),
+  data: z.string().max(65536),
+}).strict();
+
+export const PtyCloseSchema = z.object({
+  t: z.literal('ptyClose'),
+}).strict();
+
+export const PtyClosedSchema = z.object({
+  t: z.literal('ptyClosed'),
+  exitCode: z.number().int(),
+}).strict();
+
 export const WireMessageSchema = z.discriminatedUnion('t', [
   HelloSchema,
   HelloAckSchema,
@@ -59,12 +101,22 @@ export const WireMessageSchema = z.discriminatedUnion('t', [
   ReplaySchema,
   StopSchema,
   ProtoErrorSchema,
+  PtyOpenSchema,
+  PtyStartedSchema,
+  PtyInputSchema,
+  PtyResizeSchema,
+  PtyOutputSchema,
+  PtyCloseSchema,
+  PtyClosedSchema,
 ]);
 
 export type WireMessage = z.infer<typeof WireMessageSchema>;
 export type Hello = z.infer<typeof HelloSchema>;
 export type HelloAck = z.infer<typeof HelloAckSchema>;
 export type EventMessage = z.infer<typeof EventMessageSchema>;
+export type PtyWireMessage = z.infer<
+  typeof PtyStartedSchema | typeof PtyOutputSchema | typeof PtyClosedSchema
+>;
 
 /** The version range this build of the runner/daemon speaks. */
 export const SUPPORTED_VERSIONS = { minV: PROTOCOL_VERSION, maxV: PROTOCOL_VERSION } as const;

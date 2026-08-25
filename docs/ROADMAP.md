@@ -229,7 +229,7 @@ changes only via `memory.propose`.
 ### M5 — PTY attach + co-edit guard  `[ ]`
 **Context brief:** Spec §9–§10 (PTY as human-takeover escape hatch; WebSocket
 only for PTY) + spec §20 OQ1 (human edits agent worktree — resolve by ADR here).
-- [ ] **T1** Runner PTY allocation bridged alongside event parsing. *Accept: takeover session still produces a coherent canonical event stream.*
+- [x] **T1** Runner PTY allocation bridged alongside event parsing. *Accept: takeover session still produces a coherent canonical event stream.*
 - [ ] **T2** WebSocket attach endpoint + xterm.js interactive tab (attach/release). *Accept: Playwright types a command via UI terminal; release returns to headless.*
 - [ ] **T3** Co-edit detection ADR + guard (dirty-worktree check → pause + notify). *Accept: human edit in agent worktree pauses the task with an `approval.request`.*
 **Exit gate:** mid-session human takeover and clean handback demonstrated.

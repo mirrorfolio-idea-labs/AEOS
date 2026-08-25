@@ -1,8 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
+import type { IPty } from 'node-pty';
 import { newEventId, PROTOCOL_VERSION, type AeosEvent } from '@aeos/contracts';
 import { encodeFrame, FrameDecoder } from '../protocol/frames.js';
 import {
@@ -20,6 +22,8 @@ export interface RunnerOptions {
   socketPath: string;
   /** argv[0] = command, rest = args. Arbitrary child in M3; harness in M4. */
   childArgv: string[];
+  /** Working directory for the human-takeover PTY shell (P2.M5). */
+  ptyCwd?: string;
   agentId?: string;
   heartbeatMs?: number;
   /** Kills the child and emits session.failed when exceeded. */
@@ -51,6 +55,7 @@ export class Runner {
   private readonly ring: RingBuffer<AeosEvent>;
   private readonly connections = new Set<Connection>();
   private child: ChildProcess | undefined;
+  private pty: IPty | undefined;
   private server: net.Server | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
   private hardTimeoutTimer: NodeJS.Timeout | undefined;
@@ -99,6 +104,7 @@ export class Runner {
     if (this.child !== undefined && this.child.exitCode === null && this.child.signalCode === null) {
       await this.exitPromise; // `killed` only means the signal was sent — wait for the real exit
     }
+    this.killPty();
     if (this.heartbeatTimer !== undefined) clearInterval(this.heartbeatTimer);
     if (this.hardTimeoutTimer !== undefined) clearTimeout(this.hardTimeoutTimer);
     for (const conn of this.connections) conn.socket.destroy();
@@ -129,6 +135,7 @@ export class Runner {
     this.exitPromise = new Promise((resolve) => {
       child.once('exit', (code) => {
         if (this.hardTimeoutTimer !== undefined) clearTimeout(this.hardTimeoutTimer);
+        this.killPty(); // session over — no orphaned takeover shells
         if (code === 0) {
           this.record(this.makeEvent('session.completed', {}));
         } else if (!this.hasFailureEvent()) {
@@ -139,6 +146,57 @@ export class Runner {
         resolve(code);
       });
     });
+  }
+
+  // ── PTY takeover (spec §9 execution modes, P2.M5) ──────────────────────
+
+  /**
+   * Allocate the takeover shell. The environment is deliberately minimal —
+   * HOME/PATH/SHELL/TERM only, never the daemon's process.env, so nothing
+   * secret can leak into an interactive session a human drives.
+   */
+  private async openPty(cols: number, rows: number): Promise<void> {
+    const pty = await import('node-pty');
+    const shell = process.env['SHELL'] ?? '/bin/bash';
+    const term = pty.spawn(shell, [], {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd: this.opts.ptyCwd ?? os.homedir(),
+      env: {
+        HOME: process.env['HOME'] ?? '',
+        PATH: process.env['PATH'] ?? '/usr/bin:/bin',
+        SHELL: shell,
+        TERM: 'xterm-256color',
+        ...(process.env['USER'] === undefined ? {} : { USER: process.env['USER'] }),
+      },
+    });
+    this.pty = term;
+    this.logPty('open', 0);
+    term.onData((data) => {
+      this.logPty('out', Buffer.byteLength(data));
+      this.broadcast({ t: 'ptyOutput', data });
+    });
+    term.onExit(({ exitCode }) => {
+      this.pty = undefined;
+      this.logPty('close', 0);
+      this.broadcast({ t: 'ptyClosed', exitCode });
+    });
+    this.broadcast({ t: 'ptyStarted', cols, rows });
+  }
+
+  private killPty(): void {
+    this.pty?.kill();
+    this.pty = undefined;
+  }
+
+  /** Metadata-only traffic log — inspectable takeovers without keystrokes. */
+  private logPty(dir: 'open' | 'close' | 'in' | 'out', bytes: number): void {
+    fs.mkdirSync(this.opts.sessionDir, { recursive: true });
+    fs.appendFileSync(
+      path.join(this.opts.sessionDir, 'pty.log'),
+      `${JSON.stringify({ ts: new Date().toISOString(), dir, ...(bytes > 0 ? { bytes } : {}) })}\n`,
+    );
   }
 
   private hasFailureEvent(): boolean {
@@ -270,6 +328,27 @@ export class Runner {
         return;
       case 'heartbeat':
         return; // client liveness pings need no reply
+      case 'ptyOpen': {
+        if (this.pty !== undefined) {
+          this.sendError(conn.socket, 'pty_already_active', new Error('a takeover shell is already running'));
+          return;
+        }
+        void this.openPty(message.cols, message.rows).catch((error: unknown) => {
+          this.sendError(conn.socket, 'pty_open_failed', error);
+        });
+        return;
+      }
+      case 'ptyInput': {
+        this.pty?.write(message.data);
+        this.logPty('in', Buffer.byteLength(message.data));
+        return;
+      }
+      case 'ptyResize':
+        this.pty?.resize(message.cols, message.rows);
+        return;
+      case 'ptyClose':
+        this.killPty();
+        return;
       default:
         this.sendError(conn.socket, 'unexpected_message', new Error(message.t));
     }

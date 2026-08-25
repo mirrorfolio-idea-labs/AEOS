@@ -7,6 +7,7 @@ import {
   SUPPORTED_VERSIONS,
   VersionMismatchError,
   type HelloAck,
+  type PtyWireMessage,
 } from './messages.js';
 
 export interface RunnerClientOptions {
@@ -16,6 +17,10 @@ export interface RunnerClientOptions {
   fromSeq?: number;
   onEvent?: (seq: number, event: AeosEvent) => void;
   onHeartbeat?: (seq: number | undefined) => void;
+  /** PTY takeover traffic (ptyStarted/ptyOutput/ptyClosed). */
+  onPtyMessage?: (message: PtyWireMessage) => void;
+  /** Post-handshake protocol errors (e.g. pty_already_active). */
+  onProtoError?: (code: string, message: string) => void;
   onDisconnect?: () => void;
   connectTimeoutMs?: number;
 }
@@ -25,6 +30,12 @@ export interface RunnerClient {
   helloAck: HelloAck;
   stop(reason: string): void;
   close(): void;
+  /** Allocate the takeover shell; resolves on `ptyStarted`. */
+  openPty(cols: number, rows: number): Promise<void>;
+  sendPtyInput(data: string): void;
+  resizePty(cols: number, rows: number): void;
+  /** Tear the takeover shell down — release returns the session to headless. */
+  releasePty(): void;
 }
 
 export class RunnerConnectError extends Error {
@@ -44,6 +55,10 @@ export function connectRunner(options: RunnerClientOptions): Promise<RunnerClien
     const socket = net.connect(options.socketPath);
     const decoder = new FrameDecoder();
     let settled = false;
+    const pendingOpen: {
+      resolve: (() => void) | undefined;
+      reject: ((error: Error) => void) | undefined;
+    } = { resolve: undefined, reject: undefined };
 
     const timeout = setTimeout(() => {
       if (!settled) {
@@ -66,6 +81,7 @@ export function connectRunner(options: RunnerClientOptions): Promise<RunnerClien
 
     socket.once('error', fail);
     socket.once('close', () => {
+      pendingOpen.reject?.(new RunnerConnectError('socket closed while opening PTY'));
       if (settled) options.onDisconnect?.();
       else fail(new RunnerConnectError('socket closed during handshake'));
     });
@@ -103,6 +119,7 @@ export function connectRunner(options: RunnerClientOptions): Promise<RunnerClien
             settled = true;
             clearTimeout(timeout);
             socket.write(encodeFrame({ t: 'replay', fromSeq: options.fromSeq ?? 0 }));
+            const pendingOpenRef = pendingOpen;
             resolve({
               helloAck: message,
               stop(reason: string) {
@@ -110,6 +127,22 @@ export function connectRunner(options: RunnerClientOptions): Promise<RunnerClien
               },
               close() {
                 socket.destroy();
+              },
+              openPty(cols: number, rows: number): Promise<void> {
+                return new Promise((res, rej) => {
+                  pendingOpenRef.resolve = res;
+                  pendingOpenRef.reject = rej;
+                  socket.write(encodeFrame({ t: 'ptyOpen', cols, rows }));
+                });
+              },
+              sendPtyInput(data: string) {
+                socket.write(encodeFrame({ t: 'ptyInput', data }));
+              },
+              resizePty(cols: number, rows: number) {
+                socket.write(encodeFrame({ t: 'ptyResize', cols, rows }));
+              },
+              releasePty() {
+                socket.write(encodeFrame({ t: 'ptyClose' }));
               },
             });
           } else if (message.t === 'protoError') {
@@ -123,6 +156,18 @@ export function connectRunner(options: RunnerClientOptions): Promise<RunnerClien
         }
         if (message.t === 'event') options.onEvent?.(message.seq, message.event);
         else if (message.t === 'heartbeat') options.onHeartbeat?.(message.seq);
+        else if (message.t === 'ptyStarted' || message.t === 'ptyOutput' || message.t === 'ptyClosed') {
+          if (message.t === 'ptyStarted') pendingOpen.resolve?.();
+          options.onPtyMessage?.(message);
+        } else if (message.t === 'protoError') {
+          if (pendingOpen.reject !== undefined) {
+            pendingOpen.reject(new Error(`${message.code}: ${message.message}`));
+            pendingOpen.reject = undefined;
+            pendingOpen.resolve = undefined;
+          } else {
+            options.onProtoError?.(message.code, message.message);
+          }
+        }
       }
     });
   });
