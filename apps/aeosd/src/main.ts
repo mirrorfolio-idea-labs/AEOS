@@ -52,6 +52,15 @@ async function main(): Promise<number> {
   const daemon = createDaemon({
     home: resolveHome(),
     ...(apiConfig === undefined ? {} : { api: apiConfig }),
+    // opt-in curator (P2.M4): dry-run idle trigger; apply mode lands in T2
+    ...(process.env['AEOS_CURATOR'] !== '1'
+      ? {}
+      : {
+          curator: {
+            idleMs: Number(process.env['AEOS_CURATOR_IDLE_MS'] ?? 900_000),
+            minIntervalMs: Number(process.env['AEOS_CURATOR_MIN_INTERVAL_MS'] ?? 21_600_000),
+          },
+        }),
   });
 
   if (command === 'reindex') {
