@@ -73,6 +73,13 @@
           "type": "string",
           "minLength": 1
         },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "modelPreferences": {
           "type": "object",
           "additionalProperties": {

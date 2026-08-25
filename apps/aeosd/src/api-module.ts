@@ -7,7 +7,7 @@ import { ClaudeAdapter, type SecretResolver } from '@aeos/provider-claude';
 import { OpencodeAdapter } from '@aeos/provider-opencode';
 import { createApprovalsRegistry } from '@aeos/policy';
 import { loadPolicyStack } from '@aeos/policy';
-import type { SecretStore } from '@aeos/secrets';
+import { secretEnvName, type SecretStore } from '@aeos/secrets';
 import {
   createApiServer,
   listenApi,
@@ -113,6 +113,14 @@ export async function startApiModule(
         workspaceId: agent.workspaceId,
         agentId: agent.id,
       }),
+    // spec §11 injection: declared refs only, resolved env-first/store-second
+    injectSecrets: async (agent) => {
+      const entries: Record<string, string> = {};
+      for (const ref of agent.secrets ?? []) {
+        entries[secretEnvName(ref)] = await secrets.resolve(ref);
+      }
+      return entries;
+    },
     ...(config.token === undefined ? {} : { token: config.token }),
   });
 

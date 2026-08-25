@@ -30,6 +30,11 @@ export interface ApiServerOptions {
   policyFor?: (agent: AgentConfig) => Promise<EffectivePolicy>;
   /** Shared approvals inbox backing POST /v1/approvals/:requestId. */
   approvals?: ApprovalsRegistry;
+  /**
+   * Resolves an agent's declared secret refs to runner-env entries
+   * (spec §11 injection). Consulted only under `secrets_access: allow`.
+   */
+  injectSecrets?: (agent: AgentConfig) => Promise<Record<string, string>>;
 }
 
 export interface ApiContext extends ApiServerOptions {

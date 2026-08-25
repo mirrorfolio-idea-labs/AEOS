@@ -55,7 +55,10 @@ export function startObjectiveRun(
     let permissionPolicy: CompiledPolicy | undefined;
     if (ctx.policyFor !== undefined) {
       const effective = await ctx.policyFor(agent);
-      adapter = guardAdapter(adapter, effective, ctx.approvals);
+      adapter = guardAdapter(adapter, effective, {
+        ...(ctx.approvals === undefined ? {} : { registry: ctx.approvals }),
+        ...(ctx.injectSecrets === undefined ? {} : { inject: ctx.injectSecrets }),
+      });
       permissionPolicy = compilePolicy(effective);
     }
     return runObjective({

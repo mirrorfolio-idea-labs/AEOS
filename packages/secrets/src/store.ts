@@ -10,6 +10,11 @@ export interface SecretStore {
   list(): Promise<string[]>;
 }
 
+/** Deterministic runner-env name for a secret ref (`AEOS_SECRET_<REF>`). */
+export function secretEnvName(ref: string): string {
+  return `AEOS_SECRET_${ref.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`;
+}
+
 export class SecretNotFoundError extends Error {
   constructor(ref: string) {
     super(`secret "${ref}" is not in the store`);
