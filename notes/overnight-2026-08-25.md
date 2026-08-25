@@ -180,3 +180,103 @@ pause event.
 - BOARD: P2 at 11/25, M3 `[x]`, drift D10/D11 logged; S07 closed with retro.
 - Next open work: **P2.M4 memory curator** (plan just-in-time; its first
   live caller for the staged `memory.written` emitter).
+
+---
+
+# Overnight continuation #2 — same day, later (second session)
+
+Picked up cold at 19:18 IST. Phase 0 sweep first (`notes/sweep-2026-08-25.md`,
+commit `7929635`): ID↔checkbox invariant clean across all 107 tasks; drift
+D12–D14 logged and fixed doc-only (phase headers P2/P5 → `[~]`; BOARD header;
+TRACEABILITY regenerated through P2.M3). Green bar re-proven first-hand at
+`c6b2600` + ADE Playwright 5/5.
+
+S08 opened, M4 plan authored just-in-time (`a32b334`). Key plan decision:
+**v0.2 curator ops are deterministic/mechanical** — the exit gate demands a
+deterministic run, which rules out a live model in the loop; summarize ships
+as extractive behind a pluggable seam for the P3 router. Trigger is an
+activity-gap check (durable cron is P3.M5); daemon module opt-in via
+`AEOS_CURATOR=1`.
+
+## Tasks completed this continuation
+
+- **AEOS-P2.M4.T1 `4bd9012`** — curator scaffold + idle trigger + dry-run.
+  `scanMemory` = deterministic stale-file proposals (mtime asc, path asc,
+  identity/MEMORY.md exempt); `runCurator` writes its own append-only trail
+  at `audit/curator-<utcdate>.ndjson` (one line per run incl. dry-runs);
+  apply mode refuses until T2. Daemon wiring opt-in (`AEOS_CURATOR=1`),
+  pure `isCuratorDue` eligibility fn unit-tested timer-free.
+- **AEOS-P2.M4.T2 `d61e857`** — dedup (sha256 within dir, keep
+  lexicographically-first) + over-budget consolidation (two oldest →
+  `<stem>.curated.md`) passes; apply mode enqueues and applies through the
+  existing propose pipeline; failures reported with queue retained;
+  pluggable `summarize(sources)` seam for the P3 router.
+- **AEOS-P2.M4.T3 `c4eb850`** — `CuratorPathError` root guard (absolute +
+  normalized, no `..`); trail proven append-only and UTC-split; byte-multiset
+  losslessness proof across an all-three-proposal-kinds fixture; e2e full
+  loop (daemon dry-run trigger → induced apply → `memory.written` in main
+  audit → lossless).
+
+**P2.M4 EXIT GATE PASSED**: deterministic (identical lists across scans),
+audited (own trail + first live `memory.written` emitter), lossless
+(multiset containment). Full bar at close: 313 passed / 2 skipped across
+64 files; depcruise clean; invariant rescan 62 checked / 0 violations.
+
+### Decisions made that were not prespecified in the repo (this leg)
+
+1. **v0.2 curator ops are deterministic/mechanical** — the exit gate demands
+   determinism, ruling out a live model; summarize ships extractive behind
+   the `summarize` seam until P3.M2 routing exists. Basis: ROADMAP M4 exit
+   gate wording + spec §18 provider-fake testing strategy.
+2. **Idle = activity gap** — durable cron is P3.M5; eligibility is a pure
+   function over last-activity/last-run timestamps fed by a bus subscription.
+3. **Opt-in via `AEOS_CURATOR=1`** with idle/interval knobs — mirrors the
+   secrets-store flag precedent so existing deployments/golden-path are
+   untouched.
+4. **The daemon stays dry-run-only** — auto-applying memory mutations
+   without a human gate would contradict the P2.M1 confirm-first posture;
+   apply mode exists and is exercised by tests/e2e, but wiring an automatic
+   (or approvals-gated) apply trigger is deferred for Kabeer's sign-off.
+5. **MEMORY.md excluded from the losslessness proof** — it is the derived,
+   rebuilt index (files are truth), not memory content; the guarantee covers
+   content bytes.
+
+### Doc errors found → fixed this leg
+
+- Sweep drift D12/D13/D14 (phase headers, stale generated views, late T2
+  flip) — fixed/logged in `7929635`.
+- M4 plan text synced to as-built summarizer rule via R2 inside `d61e857`.
+
+## Exact next task for the next session
+
+**`AEOS-P2.M5.T1` — Runner PTY allocation bridged alongside event parsing**
+— but **STOP first**: it requires `node-pty` (and T2 needs `@xterm/*`),
+third-party dependencies not in package.json. Per the standing stop
+conditions, list-and-don't-install applies: Kabeer must approve before any
+code lands. M5.T3 additionally resolves OQ1 (co-edit guard ADR). Once
+approved, open S09, author the M5 plan just-in-time, and proceed in the
+usual loop.
+
+### Surprises / lessons
+
+- The trigger e2e failed mysteriously ("48ms") until spotted: my own test
+  helper `waitFor(predicate)` was called **without its `ms` argument** →
+  `deadline = NaN` → poll loop never ran. Debugged by replicating
+  step-by-step in a scratch test that passed, forcing a diff of the two
+  files. Lesson: don't make timeout params optional on helpers that always
+  need them — TypeScript would have caught it.
+- aeosd gained its first direct `@aeos/memory` dependency (declared in the
+  same commit, S04 lesson applied).
+- RED earned its keep twice in T3: the losslessness test initially failed
+  on MEMORY.md — correctly exposing that the index is derived, which the
+  test now documents explicitly rather than papering over.
+
+## Green bar at stop
+
+`pnpm install --frozen-lockfile && pnpm build && pnpm typecheck && pnpm
+test && pnpm depcruise` — GREEN at HEAD `c4eb850` (+ PM close-out commit):
+313 passed / 2 skipped across 64 files; depcruise clean (no violations).
+ADE Playwright ran 5/5 earlier this session post-sweep; apps/ade untouched
+by M4 commits. Branch `overnight/2026-08-24`, not pushed (no instruction).
+Worktree clean apart from Kabeer's untracked `goal-prompt.md` and
+`.claude-flow/`.

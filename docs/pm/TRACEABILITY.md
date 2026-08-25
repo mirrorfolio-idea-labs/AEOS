@@ -1,7 +1,7 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of `c6b2600`, 2026-08-25 (P1 complete, `v0.1.0`
-> tagged; P2 M1–M3 done). Regenerate per [README R3](README.md). Spec =
+> **Generated view** — as of `c4eb850`, 2026-08-25 (P1 complete, `v0.1.0`
+> tagged; P2 M1–M4 done). Regenerate per [README R3](README.md). Spec =
 > `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
@@ -86,6 +86,9 @@ their source of truth; the spec deliberately doesn't cover them.
 | AEOS-P2.M3.T1 age secret store CRUD | `packages/secrets/src/store.ts`, aeosd resolver fallback | `secrets/test/store.test.ts` | `7dceaa4` |
 | AEOS-P2.M3.T2 policy-gated env injection | contracts `AgentConfig.secrets`, `packages/api/src/policy-gate.ts` injection | `api/test/injection.test.ts` | `2a018fe` |
 | AEOS-P2.M3.T3 pipeline-wide redaction filter | `packages/kernel/src/bus/redact.ts`, daemon boot/resolver registration | `kernel/test/redact.test.ts`, `apps/aeosd/test/canary-leak.e2e.test.ts` (M3 exit gate) | `b00fb2d` |
+| AEOS-P2.M4.T1 curator scaffold + idle trigger + dry-run | `packages/memory/src/curator.ts` (scan/dry-run/isCuratorDue), aeosd `daemon.ts` opt-in module | `memory/test/curator.test.ts`, `apps/aeosd/test/curator-trigger.e2e.test.ts` | `4bd9012` |
+| AEOS-P2.M4.T2 aging/dedup/summarize via memory.propose | `curator.ts` passes 1–2 (consolidation, dedup) + apply path over `enqueueProposal`/`applyProposals` | `memory/test/curator.test.ts` (T2 block) | `d61e857` |
+| AEOS-P2.M4.T3 own audit trail + never-delete guarantee | `CuratorPathError` root guard; trail assertions; byte-multiset proof | `memory/test/curator-guarantees.test.ts`, e2e full-loop case (M4 exit gate) | `c4eb850` |
 
 Verified 2026-07-14 by direct run on `main` after the M2 merge (code-as-truth):
 install → build → typecheck → test (69/69 across contracts/kernel/aeosd) →
@@ -111,6 +114,14 @@ depcruise clean (389 modules, 1213 dependencies); ADE Playwright 5/5 run
 first-hand in the same sweep; golden-path E2E (SIGKILL+resume ×10, kill
 switch) inside the vitest run. Task-ID↔checkbox invariant clean across all
 107 ROADMAP tasks (59 checked).
+
+Verified 2026-08-25 at `c4eb850` on `overnight/2026-08-24` (P2.M4 exit):
+CI-identical chain green — 313 vitest passed / 2 skipped across 64 files,
+depcruise clean. Exit gate evidence: deterministic (identical proposal
+lists across scans), audited (append-only UTC-split curator trail +
+first live `memory.written` rows in the main audit), lossless (pre-run
+byte multiset fully contained post-run). Invariant rescan: 62 checked,
+0 violations.
 
 ## Deployment
 

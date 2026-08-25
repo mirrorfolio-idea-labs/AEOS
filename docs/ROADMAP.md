@@ -216,7 +216,7 @@ drift D10.)*
 - [x] **T3** Redaction filter on the event pipeline. *Accept: canary secret planted in a session never appears in transcripts, events, or audit logs.*
 **Exit gate:** canary-leak test green across all sinks.
 
-### M4 — Memory curator  `[ ]`
+### M4 — Memory curator  `[x]`
 **Context brief:** Spec §8. Idle-triggered background job running as a
 cheap-model session with dry-run mode and its own audit trail; summarizes,
 dedupes, ages (active → stale → archived); archives, never deletes; applies

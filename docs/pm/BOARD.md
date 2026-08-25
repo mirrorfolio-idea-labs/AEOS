@@ -1,7 +1,7 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-08-25 (`c6b2600`), **P1 complete (`v0.1.0`
-> tagged); P2 underway — M1–M3 done, M4 next.**
+> **Generated view** — as of 2026-08-25 (`c4eb850`), **P1 complete (`v0.1.0`
+> tagged); P2 underway — M1–M4 done, M5 next.**
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -11,9 +11,8 @@
 
 | | |
 |---|---|
-| **Now** | P2 underway: **M1+M2+M3 complete** (policy/approvals, budgets/audit, secrets) (2026-08-25; overnight session + evening continuation — dockerized live-smoke evidence in `notes/`). S07 closed at the canary
-gate; S08 opens on P2.M4. |
-| **Next** | P2.M4 memory curator (plan just-in-time). Kabeer's M4/M10 native-host live smokes remain open, non-blocking (dockerized evidence run green via OpenRouter gateway). |
+| **Now** | P2 underway: **M1–M4 complete** (policy/approvals, budgets/audit, secrets, memory curator) as of 2026-08-25 (overnight session + two continuations). S08 closed at the M4 exit gate. |
+| **Next** | P2.M5 PTY attach + co-edit guard — **needs Kabeer's approval first**: `node-pty` + `@xterm/*` are new third-party deps the overnight stop conditions forbid installing unilaterally. M4/M10 native-host live smokes remain open, non-blocking. |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -35,15 +34,15 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[~]` — 11/25 tasks
+### P2 — Safety + polish (v0.2) `[~]` — 14/25 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
 | M1 policy + approvals `[x]` | 5/5 | tiers, layered YAML, daemon-side enforcement, inbox — done 2026-08-25 (overnight session) |
 | M2 budgets + audit `[x]` | 3/3 | daemon-enforced caps w/ resume-with-increase; append-only audit — done 2026-08-25 (overnight session) |
 | M3 secrets store `[x]` | 3/3 | age-encrypted store (keychain-ready interface), policy-gated injection, pipeline-wide redaction; canary exit gate green — done 2026-08-25 (evening continuation) |
-| M4 memory curator | 0/3 | idle-triggered, dry-run, never-delete |
-| M5 PTY attach + co-edit guard | 0/3 | human takeover, OQ1 ADR |
+| M4 memory curator `[x]` | 3/3 | idle-triggered dry-run scaffold, propose-pipeline ops (deterministic v0), own trail + never-delete proof; daemon stays dry-run-only for now — done 2026-08-25 (second overnight continuation) |
+| M5 PTY attach + co-edit guard | 0/3 | human takeover, OQ1 ADR — **blocked on dep approval** (`node-pty`, `@xterm/*`) |
 | M6 Codex adapter | 0/2 | conformance parity (OpenCode moved to P1.M10) |
 | M7 managed binaries | 0/2 | pin/verify, version-gated capabilities |
 | M8 Tauri wrapper | 0/3 | desktop shell, notifications, CI artifacts |
@@ -80,16 +79,17 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 **Total defined work: 107 tasks** (44 P1 + 24 P2 + 11 P3 + 10 P4 + 18 P5)
 across 32 milestones, plus 4 tracked post-v1 backlog items (scope change
 2026-07-19: +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
-retired). Every task has an accept criterion in the ROADMAP; 59 are done
+retired). Every task has an accept criterion in the ROADMAP; 62 are done
 (P1 M1–M8 + M10 code-complete — M4/M10 gated only on Kabeer's manual
-smokes — plus P5.M1 and P2.M1–M3), 48 remain to v1 — each open task has a matching
+smokes — plus P5.M1 and P2.M1–M4), 45 remain to v1 — each open task has a matching
 GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
 ## Active sprint
 
-[S07](sprints/S07.md) — P2.M3 secrets store, closed 2026-08-25 at the
-canary exit gate. Next sprint opens on P2.M4 (memory curator).
+None open — [S08](sprints/S08.md) closed 2026-08-25 at the P2.M4 exit
+gate (deterministic, audited, lossless). Next sprint opens on P2.M5
+**after** Kabeer approves its new dependencies (`node-pty`, `@xterm/*`).
 
 ## Blockers
 
