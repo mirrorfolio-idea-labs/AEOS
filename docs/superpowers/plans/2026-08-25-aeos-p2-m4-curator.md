@@ -121,11 +121,11 @@ trigger e2e → wire daemon → full green bar → commit
   - extend `scanMemory` with dedup + over-budget detection:
     **dedup** — identical sha256 within one dir → keep lexicographically
     first path, propose archiving the rest (reason `duplicate`);
-    **over-budget** — `dirUsage(dir) > index.budgets[dir]` → propose
+    **over-budget** — usage > `index.budgets[dir]` → propose
     consolidating the two oldest files into one summarized file
     (reason `over-budget`; title from the older file, content =
-    extractive summary capped at half the smaller file's length, min 200
-    chars); skipped entirely when either candidate is in `identity/`;
+    the built-in extractive summary — leading half of each source,
+    newline-joined — or the injected `summarize(sources)` seam);
   - implement apply mode: map proposals → `MemoryProposal`s
     (archive → `{op:'archive'}`; over-budget → `{op:'consolidate'}`),
     `enqueueProposal` each, then `applyProposals(root, onApplied)` — the

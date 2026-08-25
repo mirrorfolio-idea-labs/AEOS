@@ -222,7 +222,7 @@ cheap-model session with dry-run mode and its own audit trail; summarizes,
 dedupes, ages (active → stale → archived); archives, never deletes; applies
 changes only via `memory.propose`.
 - [x] **T1** Curator job scaffold + idle trigger + dry-run mode. *Accept: dry-run emits a proposal report and changes nothing.*
-- [ ] **T2** Aging/dedup/summarize operations via `memory.propose`. *Accept: fixture memory tree reorganized as expected; budgets respected.*
+- [x] **T2** Aging/dedup/summarize operations via `memory.propose`. *Accept: fixture memory tree reorganized as expected; budgets respected.*
 - [ ] **T3** Curator audit trail + never-delete guarantee. *Accept: every byte of archived content recoverable from `.archive/`; test proves no deletion path exists.*
 **Exit gate:** curator run over fixture memory is deterministic, audited, and lossless.
 
