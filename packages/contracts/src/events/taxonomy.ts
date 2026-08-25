@@ -53,6 +53,7 @@ export const AeosEventSchema = z.discriminatedUnion('type', [
       spent: z.number().nonnegative(),
     }),
   ),
+  ev('memory.written', z.object({ path: z.string(), bytes: z.number().int().nonnegative() })),
 ]);
 
 export type AeosEvent = z.infer<typeof AeosEventSchema>;

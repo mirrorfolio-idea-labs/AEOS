@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import {
   aeosYamlPath,
+  attachAuditWriter,
   attachTranscriptWriter,
   auditDir,
   createEventBus,
@@ -54,6 +55,7 @@ export function createDaemon(config: DaemonConfig): Daemon {
   let bus: EventBus | undefined;
   let supervisor: Supervisor | undefined;
   let detachTranscript: (() => void) | undefined;
+  let detachAudit: (() => void) | undefined;
   let api: ApiModuleHandle | undefined;
 
   const deps: DaemonDeps = {
@@ -115,10 +117,13 @@ export function createDaemon(config: DaemonConfig): Daemon {
         detachTranscript = attachTranscriptWriter(bus, home, deps.db, {
           skipSession: (sessionId) => supervisor?.hasLiveRunner(sessionId) ?? false,
         });
+        detachAudit = attachAuditWriter(bus, home);
       },
       stop: async () => {
         detachTranscript?.();
         detachTranscript = undefined;
+        detachAudit?.();
+        detachAudit = undefined;
         bus = undefined;
       },
       health: async () => (bus !== undefined ? { ok: true } : { ok: false, detail: 'bus not created' }),

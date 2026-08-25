@@ -15,3 +15,4 @@
 {"v":1,"id":"01JZX6YV1T9GN0WT5V40000F0A","ts":"2026-07-13T10:00:14.000Z","source":"policy","sessionId":"01JZX6YV1T9GN0WT5V4SESS04","type":"approval.resolved","payload":{"requestId":"a1","decision":"approved","by":"kabeer"}}
 {"v":1,"id":"01JZX6YV1T9GN0WT5V40000G0A","ts":"2026-07-13T10:00:15.000Z","source":"policy","sessionId":"01JZX6YV1T9GN0WT5V4SESS04","type":"policy.blocked","payload":{"tier":"git_push","tool":"Bash","detail":"blocked by policy: git_push"}}
 {"v":1,"id":"01JZX6YV1T9GN0WT5V40000H0A","ts":"2026-07-13T10:00:16.000Z","source":"policy","sessionId":"01JZX6YV1T9GN0WT5V4SESS04","type":"budget.exceeded","payload":{"scope":"objective","id":"obj-1","kind":"usd","cap":0.01,"spent":0.02}}
+{"v":1,"id":"01JZX6YV1T9GN0WT5V40000J0A","ts":"2026-07-13T10:00:17.000Z","source":"memory","sessionId":"01JZX6YV1T9GN0WT5V4SESS04","type":"memory.written","payload":{"path":"lessons/sqlite.md","bytes":512}}

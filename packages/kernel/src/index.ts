@@ -38,6 +38,7 @@ export {
   TranscriptRoutingError,
   type TranscriptWriterOptions,
 } from './bus/transcript.js';
+export { attachAuditWriter } from './audit/audit.js';
 export {
   CodecError,
   readAgentYaml,

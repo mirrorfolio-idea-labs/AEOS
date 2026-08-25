@@ -61,9 +61,14 @@ async function startDaemon(home: string, port: number): Promise<DaemonHandle> {
 }
 
 async function waitSettled(client: AeosClient): Promise<ObjectiveStatus> {
-  for (let i = 0; i < 300; i++) {
+  for (let i = 0; i < 400; i++) {
     const status = await client.objectiveStatus('ws1', 'ada', 'obj-cap');
-    if (!status.running) return status;
+    // demand an OBSERVED terminal task state, not just run-flag absence:
+    // under full-suite CPU load the flag can clear while plan writes lag
+    const terminal = status.tasks.every(
+      (task) => task.status === 'pending' || task.status === 'completed' || task.status === 'blocked',
+    );
+    if (!status.running && terminal) return status;
     await delay(25);
   }
   throw new Error('objective never settled');
