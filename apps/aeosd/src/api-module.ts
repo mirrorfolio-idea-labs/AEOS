@@ -6,6 +6,7 @@ import { CredentialProfileSchema, type AgentConfig, type CredentialProfile } fro
 import { FakeAdapter, buildFixtureEvents, type HarnessAdapter } from '@aeos/provider-core';
 import { ClaudeAdapter, type SecretResolver } from '@aeos/provider-claude';
 import { OpencodeAdapter } from '@aeos/provider-opencode';
+import { CodexAdapter } from '@aeos/provider-codex';
 import { createApprovalsRegistry } from '@aeos/policy';
 import { loadPolicyStack } from '@aeos/policy';
 import { secretEnvName, type SecretStore } from '@aeos/secrets';
@@ -21,7 +22,7 @@ export interface ApiModuleConfig {
   host?: string;
   token?: string;
   /** Force one provider for every agent (the E2E forces `fake`). */
-  providerOverride?: 'fake' | 'claude-code' | 'opencode';
+  providerOverride?: 'fake' | 'claude-code' | 'opencode' | 'codex';
   /** Built ADE UI to serve at `/` (skipped when absent). */
   uiDir?: string;
   fakePaceMs?: number;
@@ -121,7 +122,16 @@ export async function startApiModule(
       secrets,
       subscriptionHomeFor,
     };
-    return provider === 'opencode' ? new OpencodeAdapter(common) : new ClaudeAdapter(common);
+    if (provider === 'opencode') return new OpencodeAdapter(common);
+    if (provider === 'codex') {
+      return new CodexAdapter({
+        ...common,
+        // ChatGPT-plan slots map to persistent login homes (P2.M3 resolver
+        // fallback covers non-env refs; subscription passthrough is opt-in)
+        subscriptionHomeFor: (slot: string) => path.join(home, 'subscriptions', slot),
+      });
+    }
+    return new ClaudeAdapter(common);
   };
 
   const app = await createApiServer({

@@ -238,7 +238,7 @@ only for PTY) + spec §20 OQ1 (human edits agent worktree — resolve by ADR her
 **Context brief:** Spec §9. Hermetic profile (`CODEX_HOME` + generated
 `config.toml`); translate `thread/turn/item` and SSE into the canonical
 taxonomy; resume support; passes the M4(P1) conformance suite.
-- [ ] **T1** Codex adapter (profile, spawn, translate, resume). *Accept: recorded-fixture translation byte-identical; conformance green.*
+- [x] **T1** Codex adapter (profile, spawn, translate, resume). *Accept: recorded-fixture translation byte-identical; conformance green.*
 > **T2 moved** (2026-07-19 scope change): the OpenCode adapter was pulled
 > forward to **P1.M10** — Kabeer needs a second harness in v0.1. The task ID
 > `AEOS-P2.M6.T2` is retired, never reused.
