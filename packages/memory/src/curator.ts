@@ -21,6 +21,19 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Typed rejection for roots a caller should never hand the curator. */
+export class CuratorPathError extends Error {}
+
+/** Roots must be absolute and already normalized — no `..` escapes. */
+function assertSafeRoot(root: string): void {
+  if (!path.isAbsolute(root)) {
+    throw new CuratorPathError(`curator root must be absolute: ${root}`);
+  }
+  if (path.resolve(root) !== root || root.split(path.sep).includes('..')) {
+    throw new CuratorPathError(`curator root must be normalized without '..' segments: ${root}`);
+  }
+}
+
 export type CuratorProposal =
   | { op: 'archive'; path: string; reason: 'stale' | 'duplicate' }
   | {
@@ -255,6 +268,7 @@ export async function runCurator(
   root: string,
   options: RunCuratorOptions,
 ): Promise<CuratorRunReport> {
+  assertSafeRoot(root);
   const proposals = await scanMemory(root, {
     now: options.now,
     ...(options.staleDays === undefined ? {} : { staleDays: options.staleDays }),

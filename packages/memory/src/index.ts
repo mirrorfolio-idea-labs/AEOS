@@ -37,6 +37,7 @@ export {
   type MemorySearchHit,
 } from './fts.js';
 export {
+  CuratorPathError,
   isCuratorDue,
   runCurator,
   scanMemory,
