@@ -4,6 +4,13 @@
  * ANTHROPIC_API_KEY in the environment. Run via:
  *
  *   AEOS_LIVE_SMOKE=1 pnpm -F @aeos/provider-opencode test:smoke
+ *
+ * Gateway mode (e.g. dockerized runs through an Anthropic-compatible
+ * proxy backed by a different upstream): set AEOS_SMOKE_GATEWAY_URL and
+ * optionally AEOS_SMOKE_MODEL — the credential becomes a `gateway`
+ * profile, so the child gets ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN
+ * (and ANTHROPIC_MODEL when a model override is given) instead of
+ * ANTHROPIC_API_KEY.
  */
 import { mkdtempSync } from 'node:fs';
 import os from 'node:os';
@@ -13,6 +20,21 @@ import { AeosEventSchema, AgentConfigSchema, CredentialProfileSchema } from '@ae
 import { OpencodeAdapter } from '../src/adapter.js';
 
 const live = process.env['AEOS_LIVE_SMOKE'] === '1';
+const gatewayUrl = process.env['AEOS_SMOKE_GATEWAY_URL'];
+const modelOverride = process.env['AEOS_SMOKE_MODEL'];
+
+const credentialFor = (apiKey: string) => {
+  if (gatewayUrl === undefined) {
+    return CredentialProfileSchema.parse({ id: 'cp-smoke', kind: 'api-key', secretRef: 'env' });
+  }
+  return CredentialProfileSchema.parse({
+    id: 'cp-smoke',
+    kind: 'gateway',
+    baseUrl: gatewayUrl,
+    secretRef: 'env',
+    ...(modelOverride === undefined ? {} : { model: modelOverride }),
+  });
+};
 
 describe.skipIf(!live)('live smoke — real hermetic OpenCode session', () => {
   it('completes a tiny objective end-to-end through the adapter', async () => {
@@ -28,8 +50,7 @@ describe.skipIf(!live)('live smoke — real hermetic OpenCode session', () => {
     });
     const adapter = new OpencodeAdapter({
       agentDir: () => mkdtempSync(path.join(os.tmpdir(), 'aeos-oc-smoke-')),
-      credential: () =>
-        CredentialProfileSchema.parse({ id: 'cp-smoke', kind: 'api-key', secretRef: 'env' }),
+      credential: () => credentialFor(apiKey as string),
       secrets: { resolve: () => Promise.resolve(apiKey as string) },
     });
 
