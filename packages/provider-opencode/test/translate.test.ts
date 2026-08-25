@@ -23,7 +23,7 @@ async function translateFixture(name: string) {
 }
 
 describe('golden translation', () => {
-  for (const name of ['basic-session', 'failing-session']) {
+  for (const name of ['basic-session', 'failing-session', 'modern-session']) {
     it(`${name}.ndjson translates byte-identically to its expected file`, async () => {
       const { events } = await translateFixture(`${name}.ndjson`);
       const expected = await readFile(path.join(fixturesDir, `${name}.expected.json`), 'utf8');
@@ -58,6 +58,18 @@ describe('translation semantics', () => {
     expect(translator.costUsd).toBeCloseTo(0.0098);
   });
 
+  it('≥1.18 step shapes: text part becomes the message, stop finish completes, cost is captured', async () => {
+    const { events, translator } = await translateFixture('modern-session.ndjson');
+    const types = events.map((e) => e.type);
+    expect(types).toEqual(['session.created', 'item.message', 'cost.usage', 'session.completed']);
+    const message = events[1];
+    expect(message?.type === 'item.message' && message.payload.text).toBe('pong');
+    const cost = events.find((e) => e.type === 'cost.usage');
+    expect(cost?.type === 'cost.usage' && cost.payload.profileId).toBe('cp-golden');
+    expect(cost?.type === 'cost.usage' && cost.payload.usd).toBeCloseTo(0.023376);
+    expect(translator.costUsd).toBeCloseTo(0.023376);
+  });
+
   it('unknown and non-JSON lines are counted; session.error ends in session.failed with the message', async () => {
     const { events, translator } = await translateFixture('failing-session.ndjson');
     expect(translator.skippedLines).toBe(2);
@@ -69,7 +81,12 @@ describe('translation semantics', () => {
   });
 
   it('fixtures contain no secret material', async () => {
-    for (const name of ['basic-session.ndjson', 'failing-session.ndjson', 'continuation-session.ndjson']) {
+    for (const name of [
+      'basic-session.ndjson',
+      'failing-session.ndjson',
+      'continuation-session.ndjson',
+      'modern-session.ndjson',
+    ]) {
       expect(await readFile(path.join(fixturesDir, name), 'utf8')).not.toMatch(
         /sk-[A-Za-z0-9_-]{8,}/,
       );
