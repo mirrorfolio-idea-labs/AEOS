@@ -8,7 +8,7 @@ import {
   type CompiledPolicy,
 } from '@aeos/contracts';
 import { writeFileAtomic } from '@aeos/kernel';
-import { BudgetMeter, readObjectiveFile, type BudgetCaps } from '@aeos/policy';
+import { BudgetMeter, diffStatuses, readObjectiveFile, worktreeStatus, type BudgetCaps } from '@aeos/policy';
 import type { Objective } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
 import { parsePlan, serializePlan, withTaskStatus, type ParsedPlan } from './plan.js';
@@ -41,6 +41,12 @@ export interface RunObjectiveOptions {
    * handling (in-flight sessions) shipped with M3.
    */
   stopFile?: string;
+  /**
+   * Co-edit guard repo (ADR-009, spec §20 OQ1): when set and a foreign edit
+   * appears in this tree between a task's start and its successful end, the
+   * objective pauses behind an approval.request — kill-switch semantics.
+   */
+  watchedRepo?: string;
 }
 
 export type ObjectiveOutcome =
@@ -150,6 +156,10 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       ...(resumeToken === undefined ? {} : { providerResumeToken: resumeToken }),
     });
 
+    // co-edit baseline: everything already dirty here counts as known state
+    const baselineStatus =
+      opts.watchedRepo !== undefined ? await worktreeStatus(opts.watchedRepo) : undefined;
+
     const profile = await opts.adapter.createProfile(opts.agent);
     const handle = opts.adapter.spawn({
       profile,
@@ -213,6 +223,39 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
         taskId: task.id,
         reason: `budget ${budgetStop.kind} cap reached`,
       };
+    }
+
+    if (terminal === 'completed' && baselineStatus !== undefined) {
+      // co-edit guard (ADR-009): a foreign edit in the watched tree between
+      // task start and task end pauses the objective behind an approval —
+      // kill-switch semantics (no plan mutation, no strike)
+      const changed = diffStatuses(baselineStatus, await worktreeStatus(opts.watchedRepo as string));
+      if (changed.length > 0) {
+        const detail = `co-edit guard: foreign changes in ${opts.watchedRepo}: ${changed.join(', ')}`;
+        emit(
+          AeosEventSchema.parse({
+            v: 1,
+            id: newEventId(),
+            ts: new Date().toISOString(),
+            source: 'scheduler',
+            agentId: opts.agent.id,
+            taskId: task.id,
+            type: 'approval.request',
+            payload: {
+              requestId: newEventId(),
+              action: 'objective.resume',
+              detail,
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            },
+          }),
+        );
+        await savePlan(opts.objectiveDir, plan); // T1 stays as written at spawn
+        return {
+          status: 'paused',
+          taskId: task.id,
+          reason: `co-edit detected (${String(changed[0])})`,
+        };
+      }
     }
 
     if (terminal === 'completed') {

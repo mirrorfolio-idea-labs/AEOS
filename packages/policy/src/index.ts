@@ -6,3 +6,7 @@ export { createApprovalsRegistry, type ApprovalsRegistry, type PendingApproval, 
 export { createSessionGuard, type SessionGuardOptions } from './guard.js';
 export { BudgetMeter, type BudgetCaps, type MeterReading, type Spend } from './budget-meter.js';
 export { readObjectiveFile } from './objective-file.js';
+export {
+  diffStatuses,
+  worktreeStatus,
+} from './co-edit.js';
