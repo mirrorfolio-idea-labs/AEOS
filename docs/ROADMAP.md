@@ -170,7 +170,7 @@ credential profiles reuse the M4 model including multi-account slots.
 - [x] **T3** Conformance: OpenCode adapter passes the provider-core suite. *Accept: conformance green in CI alongside claude + fake.*
 **Exit gate:** the same fixture objective completes on the fake, Claude, and OpenCode adapters.
 
-## Phase P2 — Safety + polish (v0.2)  `[ ]`
+## Phase P2 — Safety + polish (v0.2)  `[~]`
 
 **Exit gate for the phase:** a new agent runs under least-privilege policy with
 daemon-enforced budget caps, every action audited, secrets never leaking into
@@ -352,7 +352,7 @@ on PVC; contracts unchanged.
 - [ ] **T2** K8s manifests/Helm chart. *Accept: golden path green on a `kind` cluster in CI (nightly).*
 **Exit gate = P4 exit gate** (top of this section).
 
-## Phase P5 — v1.0 public open-source release  `[ ]`
+## Phase P5 — v1.0 public open-source release  `[~]`
 
 **Exit gate for the phase (= v1 launch):** `v1.0.0` tagged and public; an
 outsider installs and completes the quickstart on a clean machine using only

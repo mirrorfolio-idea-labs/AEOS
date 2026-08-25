@@ -1,6 +1,7 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-07-20, **Phase P1 complete, v0.1.0 tagged.** Session parked.
+> **Generated view** — as of 2026-08-25 (`c6b2600`), **P1 complete (`v0.1.0`
+> tagged); P2 underway — M1–M3 done, M4 next.**
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,7 +11,8 @@
 
 | | |
 |---|---|
-| **Now** | P2 underway: **M1+M2+M3 complete** (policy/approvals, budgets/audit, secrets) (2026-08-25; overnight session + evening continuation — dockerized live-smoke evidence in `notes/`). S07 open. |
+| **Now** | P2 underway: **M1+M2+M3 complete** (policy/approvals, budgets/audit, secrets) (2026-08-25; overnight session + evening continuation — dockerized live-smoke evidence in `notes/`). S07 closed at the canary
+gate; S08 opens on P2.M4. |
 | **Next** | P2.M4 memory curator (plan just-in-time). Kabeer's M4/M10 native-host live smokes remain open, non-blocking (dockerized evidence run green via OpenRouter gateway). |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
@@ -78,9 +80,9 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 **Total defined work: 107 tasks** (44 P1 + 24 P2 + 11 P3 + 10 P4 + 18 P5)
 across 32 milestones, plus 4 tracked post-v1 backlog items (scope change
 2026-07-19: +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
-retired). Every task has an accept criterion in the ROADMAP; 47 are done
+retired). Every task has an accept criterion in the ROADMAP; 59 are done
 (P1 M1–M8 + M10 code-complete — M4/M10 gated only on Kabeer's manual
-smokes — plus P5.M1), 63 remain to v1 — each open task has a matching
+smokes — plus P5.M1 and P2.M1–M3), 48 remain to v1 — each open task has a matching
 GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
@@ -108,3 +110,6 @@ None.
 | D8 | 2026-08-25 | Cold-pickup R5 scan (overnight gauntlet): P5.M1 is `[x]` but has no milestone plan file under `docs/superpowers/plans/` (R5 rule 3) | **Waived same day**: executed early under the documented spine exception via PRs #96/#97 inside S03/S04; ADR-001 + the community health files are the durable record — a retroactive plan adds no information |
 | D10 | 2026-08-25 | ROADMAP P2.M3.T1 accept says "keychain + age fallback, round-trip on both backends"; shipped store is age-only v0 (Kabeer decision: no native keychain dep in v0.2) | **Resolved same day**: T1 accept text reworded to age-only v0 with a keychain-ready interface (D2 precedent); S07 log carries the decision |
 | D11 | 2026-08-25 | Dockerized live smokes surfaced harness drift: opencode ≥1.18 replaced the ≤1.17 `--format json` line shapes; the M10 translator skipped every line → zero canonical events from live sessions | **Fixed same day** (7eb1b6f): ≥1.18 step-based shapes translated additively, modern fixture recorded from opencode-ai@1.18.23; July fixtures byte-identical; CLIs pinned in the smoke runner until P2.M7 managed binaries land |
+| D12 | 2026-08-25 | Cold-pickup sweep (overnight continuation): ROADMAP phase headers for P2 and P5 still `[ ]` despite completed tasks inside them (P2 11/25; P5.M1 4/4) — same class as D1 | **Fixed same day**: both phase headers → `[~]` |
+| D13 | 2026-08-25 | Generated views stale after the three P2 exits (R3): BOARD header still read "as of 2026-07-20 … Session parked" while its body was current, and TRACEABILITY was untouched since `v0.1.0` (no P2.M1–M3 rows) | **Fixed same day**: BOARD header corrected to `c6b2600`; TRACEABILITY regenerated through P2.M3 with a fresh verification record |
+| D14 | 2026-08-25 | R5 scan: T2's checkbox flip missed its own commit (2a018fe) and landed retroactively in b00fb2d (self-documented there) — one-time violation of the same-commit rule | **Logged, no action**: ID↔checkbox invariant verified clean across all 107 tasks |

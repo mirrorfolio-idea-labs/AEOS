@@ -1,7 +1,7 @@
 # Traceability — requirements → design → implementation → testing → deployment
 
-> **Generated view** — as of `v0.1.0` (Phase P1 complete), 2026-07-20.
-> Regenerate per [README R3](README.md). Spec =
+> **Generated view** — as of `c6b2600`, 2026-08-25 (P1 complete, `v0.1.0`
+> tagged; P2 M1–M3 done). Regenerate per [README R3](README.md). Spec =
 > `docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`.
 
 ## Requirements → milestones (design coverage)
@@ -75,6 +75,17 @@ their source of truth; the spec deliberately doesn't cover them.
 | AEOS-P1.M9.T3 STOP kill switch | `packages/scheduler/src/scheduler.ts`, `packages/api/src/routes/objectives.ts`, `apps/cli/src/cli.ts` | `apps/aeosd/test/golden-path.e2e.test.ts` (kill-switch spec) | PR #110 |
 | AEOS-P1.M9.T4 docs + ADRs + tag | `README.md`, `docs/adr/ADR-002..008.md` | clean-clone quickstart verified manually | PR #110, tag `v0.1.0` |
 | AEOS-P1.M10.T1–T3 OpenCode adapter | `packages/provider-opencode/src/*` | `test/{profile,translate,adapter}.test.ts` | PR #105 |
+| AEOS-P2.M1.T1 tier schemas + layered loader | `packages/contracts/src/domain/policy.ts`, `packages/policy/src/{load,merge}.ts` | `contracts/test/policy.test.ts`, `policy/test/{load,merge}.test.ts` | `76d776d` |
+| AEOS-P2.M1.T2 classification + harness flag compiler | `packages/policy/src/{classify,compile}.ts`, `contracts/src/domain/compiled-policy.ts` | `policy/test/{classify,compile}.test.ts` | `bba331f` |
+| AEOS-P2.M1.T3 daemon-side enforcement + approvals endpoints | `packages/policy/src/{guard,registry}.ts`, `packages/api/src/{policy-gate,routes/approvals}.ts` | `api/test/enforcement.test.ts`, `policy/test/guard.test.ts` | `24ca36c` |
+| AEOS-P2.M1.T4 approval flow e2e incl. timeout-deny | aeosd `api-module.ts` wiring, `packages/sdk/src/client.ts` | `apps/aeosd/test/approval-flow.e2e.test.ts` | `a623675` |
+| AEOS-P2.M1.T5 approvals inbox + notification hook | `apps/ade/src/ApprovalsPanel.tsx`, `AgentView.tsx` | `apps/ade/test/ade.spec.ts` (Playwright T2b) | `44e3099` |
+| AEOS-P2.M2.T1 budget meter + scheduler hard-stop | `packages/policy/src/{budget-meter,objective-file}.ts`, contracts budget events | `policy/test/budget-meter.test.ts` | `85b21c2` |
+| AEOS-P2.M2.T2 resume-with-increase | aeosd objectives-route wiring, `packages/sdk/src/client.ts` | `apps/aeosd/test/budget-resume.e2e.test.ts` | `73a79ac` |
+| AEOS-P2.M2.T3 append-only audit appender | `packages/kernel/src/audit/audit.ts`, memory propose onEvent hook | `kernel/test/audit.test.ts` | `a6ed339` |
+| AEOS-P2.M3.T1 age secret store CRUD | `packages/secrets/src/store.ts`, aeosd resolver fallback | `secrets/test/store.test.ts` | `7dceaa4` |
+| AEOS-P2.M3.T2 policy-gated env injection | contracts `AgentConfig.secrets`, `packages/api/src/policy-gate.ts` injection | `api/test/injection.test.ts` | `2a018fe` |
+| AEOS-P2.M3.T3 pipeline-wide redaction filter | `packages/kernel/src/bus/redact.ts`, daemon boot/resolver registration | `kernel/test/redact.test.ts`, `apps/aeosd/test/canary-leak.e2e.test.ts` (M3 exit gate) | `b00fb2d` |
 
 Verified 2026-07-14 by direct run on `main` after the M2 merge (code-as-truth):
 install → build → typecheck → test (69/69 across contracts/kernel/aeosd) →
@@ -92,6 +103,14 @@ daemon E2E (golden path 10×, kill switch) run separately in CI. A fresh
 `git clone` → `pnpm install --frozen-lockfile` → `pnpm build` → boot
 `aeosd` → drive the full CLI workflow was verified manually against the
 exact README quickstart commands before tagging.
+
+Verified 2026-08-25 at `c6b2600` on `overnight/2026-08-24` (cold-pickup
+reconciliation sweep): CI-identical chain green — 287 vitest passed /
+2 skipped (env-gated smokes, docker-runnable per S07) across 61 files,
+depcruise clean (389 modules, 1213 dependencies); ADE Playwright 5/5 run
+first-hand in the same sweep; golden-path E2E (SIGKILL+resume ×10, kill
+switch) inside the vitest run. Task-ID↔checkbox invariant clean across all
+107 ROADMAP tasks (59 checked).
 
 ## Deployment
 
