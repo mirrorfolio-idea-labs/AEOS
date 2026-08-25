@@ -21,10 +21,13 @@
     "@aeos/contracts": "workspace:*",
     "@aeos/kernel": "workspace:*",
     "@aeos/memory": "workspace:*",
+    "@aeos/policy": "workspace:*",
     "@aeos/provider-core": "workspace:*",
     "@aeos/scheduler": "workspace:*",
     "@fastify/swagger": "^9.4.0",
+    "@fastify/websocket": "^11.3.0",
     "fastify": "^5.2.0",
+    "yaml": "^2.6.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

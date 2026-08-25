@@ -1,6 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+import { createFileSecretStore } from '@aeos/secrets';
 import { createDaemon } from './daemon.js';
 
 /**
@@ -38,11 +39,28 @@ async function main(): Promise<number> {
       ...(process.env['AEOS_FAKE_PACE_MS'] === undefined
         ? {}
         : { fakePaceMs: Number(process.env['AEOS_FAKE_PACE_MS']) }),
+      ...(process.env['AEOS_APPROVAL_TIMEOUT_MS'] === undefined
+        ? {}
+        : { approvalTimeoutMs: Number(process.env['AEOS_APPROVAL_TIMEOUT_MS']) }),
+      // opt-in store attachment (spec §11): boot enumerates <home>/secrets
+      // into the redaction registry and backs non-env credential refs
+      ...(process.env['AEOS_SECRETS_STORE'] !== '1'
+        ? {}
+        : { secretStore: createFileSecretStore(resolveHome()) }),
       env: process.env,
     };
   const daemon = createDaemon({
     home: resolveHome(),
     ...(apiConfig === undefined ? {} : { api: apiConfig }),
+    // opt-in curator (P2.M4): dry-run idle trigger; apply mode lands in T2
+    ...(process.env['AEOS_CURATOR'] !== '1'
+      ? {}
+      : {
+          curator: {
+            idleMs: Number(process.env['AEOS_CURATOR_IDLE_MS'] ?? 900_000),
+            minIntervalMs: Number(process.env['AEOS_CURATOR_MIN_INTERVAL_MS'] ?? 21_600_000),
+          },
+        }),
   });
 
   if (command === 'reindex') {

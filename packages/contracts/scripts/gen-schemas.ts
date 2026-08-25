@@ -4,8 +4,9 @@ import { fileURLToPath } from 'node:url';
 import type { ZodTypeAny } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
-  AeosEventSchema, AgentConfigSchema, CheckpointSchema, CredentialProfileSchema,
-  EnvelopeBaseSchema, ObjectiveSchema, PlanTaskSchema, SessionRecordSchema, WorkspaceSchema,
+  AeosEventSchema, AgentConfigSchema, CheckpointSchema, CompiledPolicySchema,
+  CredentialProfileSchema, EnvelopeBaseSchema, ObjectiveSchema, PlanTaskSchema,
+  PolicyFileSchema, SessionRecordSchema, WorkspaceSchema,
 } from '../src/index.js';
 
 const SOURCES: Record<string, ZodTypeAny> = {
@@ -16,6 +17,8 @@ const SOURCES: Record<string, ZodTypeAny> = {
   'agent-config': AgentConfigSchema,
   'session-record': SessionRecordSchema,
   'objective': ObjectiveSchema,
+  'policy': PolicyFileSchema,
+  'compiled-policy': CompiledPolicySchema,
   'plan-task': PlanTaskSchema,
   'checkpoint': CheckpointSchema,
 };

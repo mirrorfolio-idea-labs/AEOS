@@ -33,11 +33,13 @@ export {
   type EventFilter,
   type EventHandler,
 } from './bus/bus.js';
+export { attachRedaction } from './bus/redact.js';
 export {
   attachTranscriptWriter,
   TranscriptRoutingError,
   type TranscriptWriterOptions,
 } from './bus/transcript.js';
+export { attachAuditWriter } from './audit/audit.js';
 export {
   CodecError,
   readAgentYaml,

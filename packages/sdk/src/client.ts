@@ -39,6 +39,16 @@ export interface EventStreamOptions {
   signal?: AbortSignal;
 }
 
+export interface PendingApproval {
+  requestId: string;
+  sessionId: string;
+  tier: string;
+  detail: string;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 /** Thin typed client over the AEOS daemon API (generated types: src/generated/). */
 export class AeosClient {
   private readonly fetch: typeof fetch;
@@ -69,6 +79,21 @@ export class AeosClient {
 
   health(): Promise<{ status: string; home: string }> {
     return this.request('GET', '/v1/health');
+  }
+
+  /**
+   * WebSocket URL for a session's PTY attach endpoint (spec §14 — WS only
+   * for takeover). Auth rides the upgrade request via `token` query param
+   * when configured (browsers cannot set headers on WebSocket).
+   */
+  attachUrl(sessionId: string): string {
+    const base = this.opts.baseUrl === '' && typeof location !== 'undefined'
+      ? location.origin
+      : this.opts.baseUrl;
+    const wsBase = base.replace(/^http/, 'ws');
+    return this.opts.token === undefined
+      ? `${wsBase}/v1/sessions/${sessionId}/attach`
+      : `${wsBase}/v1/sessions/${sessionId}/attach?token=${encodeURIComponent(this.opts.token)}`;
   }
 
   createWorkspace(workspace: Workspace): Promise<Workspace> {
@@ -105,6 +130,8 @@ export class AeosClient {
     id: string;
     title: string;
     tasks: Array<{ id: string; title: string }>;
+    budgetUsd?: number;
+    budgetTokens?: number;
   }): Promise<{ id: string }> {
     return this.request('POST', '/v1/objectives', input);
   }
@@ -136,6 +163,20 @@ export class AeosClient {
 
   stopStatus(): Promise<{ stopped: boolean }> {
     return this.request('GET', '/v1/stop');
+  }
+
+  /** Pending approval requests (spec §11 approvals flow). */
+  async listApprovals(): Promise<PendingApproval[]> {
+    const data = await this.request<{ pending: PendingApproval[] }>('GET', '/v1/approvals');
+    return data.pending;
+  }
+
+  /** Answer a pending approval; unanswered requests deny on expiry. */
+  resolveApproval(
+    requestId: string,
+    decision: 'approve' | 'deny',
+  ): Promise<{ resolved: boolean; decision: string }> {
+    return this.request('POST', `/v1/approvals/${requestId}`, { decision });
   }
 
   searchMemory(

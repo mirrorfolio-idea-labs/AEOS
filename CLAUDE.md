@@ -43,3 +43,4 @@ entry points — dependency-cruiser enforces this.
 - The commit that completes a task flips its ROADMAP checkbox in the same commit (PM rule R1).
 - Milestone plans are written just-in-time, only after the previous milestone's exit gate passes.
 - No cross-package internal imports; schemas change only with regenerated `schemas/*.json`.
+- Branch ladder: build PRs target `develop`; `staging` and `main` are promotion tiers with their own gates — see `docs/RELEASE.md`.

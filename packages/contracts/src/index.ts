@@ -13,3 +13,22 @@ export {
   type Objective, type PlanTask, type Checkpoint,
 } from './domain/objective.js';
 export { AeosEventSchema, AEOS_EVENT_TYPES, type AeosEvent } from './events/taxonomy.js';
+export {
+  PERMISSION_TIERS,
+  TierSchema,
+  PolicyModeSchema,
+  PolicyFileSchema,
+  EffectivePolicySchema,
+  type PermissionTier,
+  type PolicyMode,
+  type PolicyFile,
+  type EffectivePolicy,
+} from './domain/policy.js';
+export {
+  CompiledPolicySchema,
+  NativeFlagsSchema,
+  HARNESS_IDS,
+  type CompiledPolicy,
+  type NativeFlags,
+  type HarnessId,
+} from './domain/compiled-policy.js';

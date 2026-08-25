@@ -1,6 +1,7 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-07-20, **Phase P1 complete, v0.1.0 tagged.** Session parked.
+> **Generated view** — as of 2026-08-25 (`fceb790`), **P1 complete (`v0.1.0`
+> tagged); P2 underway — M1–M5 done, M6 next (needs Codex CLI).**
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -10,8 +11,8 @@
 
 | | |
 |---|---|
-| **Now** | **v0.1.0 tagged and released** (PR #110 merged M9; all P1 issues #24–#27 closed). Session parked — resume guide: `guides/2026-07-20-session-parking-resume.md`. Community profile 100%. |
-| **Next** | Kabeer's M4/M10 live-harness smokes (guides in `guides/`) whenever convenient — not blocking. Then: pick a P2 milestone to open S05, or continue toward v0.2. |
+| **Now** | P2 underway: **M1–M5 complete** (policy/approvals, budgets/audit, secrets, memory curator, PTY takeover + co-edit guard) as of 2026-08-25 (overnight session + two continuations). S09 closed at the M5 exit gate. |
+| **Next** | P2.M6 Codex adapter — **blocked on tooling**: the `codex` CLI isn't installed, and T1's accept requires fixtures recorded from real runs (spec §18). Install Codex CLI or approve spec-derived fixtures before starting. M4/M10 native-host live smokes remain open, non-blocking. |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -33,15 +34,16 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[ ]` — 0/25 tasks
+### P2 — Safety + polish (v0.2) `[~]` — 17/25 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
-| M1 policy + approvals | 0/5 | tiers, layered YAML, daemon-side enforcement, inbox |
-| M2 budgets + audit | 0/3 | daemon-enforced caps, append-only audit |
-| M3 secrets store | 0/3 | keychain/age, injection, redaction canary |
-| M4 memory curator | 0/3 | idle-triggered, dry-run, never-delete |
-| M5 PTY attach + co-edit guard | 0/3 | human takeover, OQ1 ADR |
+| M1 policy + approvals `[x]` | 5/5 | tiers, layered YAML, daemon-side enforcement, inbox — done 2026-08-25 (overnight session) |
+| M2 budgets + audit `[x]` | 3/3 | daemon-enforced caps w/ resume-with-increase; append-only audit — done 2026-08-25 (overnight session) |
+| M3 secrets store `[x]` | 3/3 | age-encrypted store (keychain-ready interface), policy-gated injection, pipeline-wide redaction; canary exit gate green — done 2026-08-25 (evening continuation) |
+| M4 memory curator `[x]` | 3/3 | idle-triggered dry-run scaffold, propose-pipeline ops (deterministic v0), own trail + never-delete proof; daemon stays dry-run-only for now — done 2026-08-25 (second overnight continuation) |
+| M5 PTY attach + co-edit guard `[x]` | 3/3 | runner PTY (minimal-env shell), WS attach gated to allow-tier + xterm Takeover tab, ADR-009 detect-and-pause guard (unwired by design until worktrees) — done 2026-08-25 (deps approved mid-session; third overnight continuation) |
+| M6 Codex adapter | 0/2 | conformance parity — **blocked on `codex` CLI for fixture recording** |
 | M6 Codex adapter | 0/2 | conformance parity (OpenCode moved to P1.M10) |
 | M7 managed binaries | 0/2 | pin/verify, version-gated capabilities |
 | M8 Tauri wrapper | 0/3 | desktop shell, notifications, CI artifacts |
@@ -78,17 +80,18 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 **Total defined work: 107 tasks** (44 P1 + 24 P2 + 11 P3 + 10 P4 + 18 P5)
 across 32 milestones, plus 4 tracked post-v1 backlog items (scope change
 2026-07-19: +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
-retired). Every task has an accept criterion in the ROADMAP; 44 are done
+retired). Every task has an accept criterion in the ROADMAP; 65 are done
 (P1 M1–M8 + M10 code-complete — M4/M10 gated only on Kabeer's manual
-smokes — plus P5.M1), 63 remain to v1 — each open task has a matching
+smokes — plus P5.M1 and P2.M1–M5), 42 remain to v1 — each open task has a matching
 GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
 ## Active sprint
 
-None. [S04](sprints/S04.md) closed 2026-07-20 at the v0.1.0 tag (retro in
-the sprint file). Next sprint opens when work resumes on P2 or the
-manual smokes land.
+None open — [S09](sprints/S09.md) closed 2026-08-25 at the P2.M5 exit
+gate (mid-session takeover + clean handback demonstrated). Next sprint
+opens on P2.M6 **after** the fixture-recording question is resolved
+(`codex` CLI installed, or explicit approval for spec-derived fixtures).
 
 ## Blockers
 
@@ -105,3 +108,10 @@ None.
 | D5 | 2026-07-13 | Old ROADMAP P4 blurb listed "multi-user auth" inside v1 scope, contradicting spec §14 ("multi-user RBAC is post-v1") | **Fixed** same day: resolved in favor of the spec — moved to post-v1 backlog **B2**; P4.M3.T3 keeps the single-user token layer |
 | D6 | 2026-07-13 | T6 WIP commit `13035e9` leaves `pnpm depcruise` failing: script globs `apps/`, which doesn't exist yet (verified by direct run) | **Fixed** same day in T6 completion: `apps/.gitkeep` created (dir is real — workspace already declares `apps/*`) |
 | D7 | 2026-07-13 | README badge hardcodes "17/17 tests green" — a static claim that will silently go stale | **Fixed** same day in T6 completion: swapped for the live CI workflow badge |
+| D9 | 2026-08-25 | Spec §7 layout names audit files `audit-YYYY-MM-DD.ndjson` while §11 says `audit/*.ndjsonl` | **Resolved** same day (P2.M2.T3): §7 owns paths — `.ndjson` shipped; §11 wording treated as prose about format, not extension |
+| D8 | 2026-08-25 | Cold-pickup R5 scan (overnight gauntlet): P5.M1 is `[x]` but has no milestone plan file under `docs/superpowers/plans/` (R5 rule 3) | **Waived same day**: executed early under the documented spine exception via PRs #96/#97 inside S03/S04; ADR-001 + the community health files are the durable record — a retroactive plan adds no information |
+| D10 | 2026-08-25 | ROADMAP P2.M3.T1 accept says "keychain + age fallback, round-trip on both backends"; shipped store is age-only v0 (Kabeer decision: no native keychain dep in v0.2) | **Resolved same day**: T1 accept text reworded to age-only v0 with a keychain-ready interface (D2 precedent); S07 log carries the decision |
+| D11 | 2026-08-25 | Dockerized live smokes surfaced harness drift: opencode ≥1.18 replaced the ≤1.17 `--format json` line shapes; the M10 translator skipped every line → zero canonical events from live sessions | **Fixed same day** (7eb1b6f): ≥1.18 step-based shapes translated additively, modern fixture recorded from opencode-ai@1.18.23; July fixtures byte-identical; CLIs pinned in the smoke runner until P2.M7 managed binaries land |
+| D12 | 2026-08-25 | Cold-pickup sweep (overnight continuation): ROADMAP phase headers for P2 and P5 still `[ ]` despite completed tasks inside them (P2 11/25; P5.M1 4/4) — same class as D1 | **Fixed same day**: both phase headers → `[~]` |
+| D13 | 2026-08-25 | Generated views stale after the three P2 exits (R3): BOARD header still read "as of 2026-07-20 … Session parked" while its body was current, and TRACEABILITY was untouched since `v0.1.0` (no P2.M1–M3 rows) | **Fixed same day**: BOARD header corrected to `c6b2600`; TRACEABILITY regenerated through P2.M3 with a fresh verification record |
+| D14 | 2026-08-25 | R5 scan: T2's checkbox flip missed its own commit (2a018fe) and landed retroactively in b00fb2d (self-documented there) — one-time violation of the same-commit rule | **Logged, no action**: ID↔checkbox invariant verified clean across all 107 tasks |

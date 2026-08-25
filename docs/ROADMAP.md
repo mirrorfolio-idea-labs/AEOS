@@ -170,7 +170,7 @@ credential profiles reuse the M4 model including multi-account slots.
 - [x] **T3** Conformance: OpenCode adapter passes the provider-core suite. *Accept: conformance green in CI alongside claude + fake.*
 **Exit gate:** the same fixture objective completes on the fake, Claude, and OpenCode adapters.
 
-## Phase P2 — Safety + polish (v0.2)  `[ ]`
+## Phase P2 — Safety + polish (v0.2)  `[~]`
 
 **Exit gate for the phase:** a new agent runs under least-privilege policy with
 daemon-enforced budget caps, every action audited, secrets never leaking into
@@ -179,53 +179,59 @@ takeover available — demonstrated by the P2 integration suite; `v0.2` tagged.
 Detailed plans per milestone are written just-in-time at each predecessor's
 exit (same rule as P1).
 
-### M1 — Policy engine + approvals inbox  `[ ]`
+### M1 — Policy engine + approvals inbox  `[x]`
 **Context brief:** Spec §11. Permission tiers (`read_files … network_access`)
 mapped to `allow|confirm|deny`; YAML policies layered workspace → agent →
 objective (most-specific wins); compiled to harness-native flags AND enforced
 daemon-side (defense in depth). Approvals: `approval.request` event →
 `waiting_approval` state → UI/CLI answer; deny-by-default on timeout.
-- [ ] **T1** Policy schema + layered loader/merger. *Accept: fixture matrix of layered policies compiles to expected effective policy.*
-- [ ] **T2** Policy compiler → harness-native flags (Claude `--allowedTools`/permission modes; Codex `approval_policy`/sandbox). *Accept: golden mapping tests per tier per harness.*
-- [ ] **T3** Daemon-side enforcement at the runner/API boundary. *Accept: provider-fake attempting a denied action is blocked even with permissive harness flags.*
-- [ ] **T4** Approval flow end-to-end incl. configurable timeout → deny. *Accept: integration test covers approve, deny, and expiry paths.*
-- [ ] **T5** Approvals inbox in ADE + notification hook. *Accept: Playwright approve/deny round-trip updates session state.*
+- [x] **T1** Policy schema + layered loader/merger. *Accept: fixture matrix of layered policies compiles to expected effective policy.*
+- [x] **T2** Policy compiler → harness-native flags (Claude `--allowedTools`/permission modes; Codex `approval_policy`/sandbox). *Accept: golden mapping tests per tier per harness.*
+- [x] **T3** Daemon-side enforcement at the runner/API boundary. *Accept: provider-fake attempting a denied action is blocked even with permissive harness flags.*
+- [x] **T4** Approval flow end-to-end incl. configurable timeout → deny. *Accept: integration test covers approve, deny, and expiry paths.*
+- [x] **T5** Approvals inbox in ADE + notification hook. *Accept: Playwright approve/deny round-trip updates session state.*
 **Exit gate:** new-agent default posture (read-only + worktree-write + confirm-everything-else) verified end-to-end.
 
-### M2 — Budgets + audit log  `[ ]`
+### M2 — Budgets + audit log  `[x]`
 **Context brief:** Spec §11. Per-agent and per-objective caps (USD + tokens)
 metered from `cost.usage` events; hard-stop at cap with checkpoint + notify +
 `resume-with-increase`. Append-only `audit/*.ndjsonl` for every action class.
-- [ ] **T1** Budget config + meter wired to the event bus. *Accept: simulated spend crossing cap hard-stops with a checkpoint written.*
-- [ ] **T2** Notify + `resume-with-increase` path. *Accept: fixture objective resumes and completes after cap raise.*
-- [ ] **T3** Audit appender covering tool calls, approvals, policy decisions, memory writes, spend. *Accept: golden audit trail for a scripted session; append-only property tested.*
+- [x] **T1** Budget config + meter wired to the event bus. *Accept: simulated spend crossing cap hard-stops with a checkpoint written.*
+- [x] **T2** Notify + `resume-with-increase` path. *Accept: fixture objective resumes and completes after cap raise.*
+- [x] **T3** Audit appender covering tool calls, approvals, policy decisions, memory writes, spend. *Accept: golden audit trail for a scripted session; append-only property tested.*
 **Exit gate:** runaway-loop simulation cannot outspend its cap (flagship test).
 
-### M3 — Secrets store  `[ ]`
+### M3 — Secrets store  `[x]`
 **Context brief:** Spec §11. OS keychain where available, age-encrypted file
 fallback; injection into runner env per policy; never written to worktrees,
-profiles, or transcripts — redaction filter on the event pipeline.
-- [ ] **T1** Secret store (keychain + age fallback) with CRUD API. *Accept: round-trip on both backends; store file unreadable without key.*
-- [ ] **T2** Policy-gated env injection into runners. *Accept: secret available in-session only when policy allows; absent otherwise.*
-- [ ] **T3** Redaction filter on the event pipeline. *Accept: canary secret planted in a session never appears in transcripts, events, or audit logs.*
+profiles, or transcripts — redaction filter on the event pipeline. *(Scope
+decision 2026-08-25, Kabeer: age-only v0 — the store interface stays
+keychain-ready but no native keychain dependency ships in v0.2; logged as
+drift D10.)*
+- [x] **T1** Secret store (age-encrypted file backend; keychain stays a
+  future backend behind the interface) with CRUD API. *Accept: round-trip
+  on the age backend incl. second-handle reads; store payload unreadable
+  without its identity key; tamper fails typed.*
+- [x] **T2** Policy-gated env injection into runners. *Accept: secret available in-session only when policy allows; absent otherwise.*
+- [x] **T3** Redaction filter on the event pipeline. *Accept: canary secret planted in a session never appears in transcripts, events, or audit logs.*
 **Exit gate:** canary-leak test green across all sinks.
 
-### M4 — Memory curator  `[ ]`
+### M4 — Memory curator  `[x]`
 **Context brief:** Spec §8. Idle-triggered background job running as a
 cheap-model session with dry-run mode and its own audit trail; summarizes,
 dedupes, ages (active → stale → archived); archives, never deletes; applies
 changes only via `memory.propose`.
-- [ ] **T1** Curator job scaffold + idle trigger + dry-run mode. *Accept: dry-run emits a proposal report and changes nothing.*
-- [ ] **T2** Aging/dedup/summarize operations via `memory.propose`. *Accept: fixture memory tree reorganized as expected; budgets respected.*
-- [ ] **T3** Curator audit trail + never-delete guarantee. *Accept: every byte of archived content recoverable from `.archive/`; test proves no deletion path exists.*
+- [x] **T1** Curator job scaffold + idle trigger + dry-run mode. *Accept: dry-run emits a proposal report and changes nothing.*
+- [x] **T2** Aging/dedup/summarize operations via `memory.propose`. *Accept: fixture memory tree reorganized as expected; budgets respected.*
+- [x] **T3** Curator audit trail + never-delete guarantee. *Accept: every byte of archived content recoverable from `.archive/`; test proves no deletion path exists.*
 **Exit gate:** curator run over fixture memory is deterministic, audited, and lossless.
 
-### M5 — PTY attach + co-edit guard  `[ ]`
+### M5 — PTY attach + co-edit guard  `[x]`
 **Context brief:** Spec §9–§10 (PTY as human-takeover escape hatch; WebSocket
 only for PTY) + spec §20 OQ1 (human edits agent worktree — resolve by ADR here).
-- [ ] **T1** Runner PTY allocation bridged alongside event parsing. *Accept: takeover session still produces a coherent canonical event stream.*
-- [ ] **T2** WebSocket attach endpoint + xterm.js interactive tab (attach/release). *Accept: Playwright types a command via UI terminal; release returns to headless.*
-- [ ] **T3** Co-edit detection ADR + guard (dirty-worktree check → pause + notify). *Accept: human edit in agent worktree pauses the task with an `approval.request`.*
+- [x] **T1** Runner PTY allocation bridged alongside event parsing. *Accept: takeover session still produces a coherent canonical event stream.*
+- [x] **T2** WebSocket attach endpoint + xterm.js interactive tab (attach/release). *Accept: Playwright types a command via UI terminal; release returns to headless.*
+- [x] **T3** Co-edit detection ADR + guard (dirty-worktree check → pause + notify). *Accept: human edit in agent worktree pauses the task with an `approval.request`.*
 **Exit gate:** mid-session human takeover and clean handback demonstrated.
 
 ### M6 — Codex adapter  `[ ]`
@@ -346,7 +352,7 @@ on PVC; contracts unchanged.
 - [ ] **T2** K8s manifests/Helm chart. *Accept: golden path green on a `kind` cluster in CI (nightly).*
 **Exit gate = P4 exit gate** (top of this section).
 
-## Phase P5 — v1.0 public open-source release  `[ ]`
+## Phase P5 — v1.0 public open-source release  `[~]`
 
 **Exit gate for the phase (= v1 launch):** `v1.0.0` tagged and public; an
 outsider installs and completes the quickstart on a clean machine using only

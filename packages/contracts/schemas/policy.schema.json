@@ -1,0 +1,94 @@
+{
+  "$ref": "#/definitions/policy",
+  "definitions": {
+    "policy": {
+      "type": "object",
+      "properties": {
+        "tiers": {
+          "type": "object",
+          "properties": {
+            "read_files": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            },
+            "write_files": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            },
+            "execute_commands": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            },
+            "install_packages": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            },
+            "git_commit": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            },
+            "git_push": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            },
+            "deploy": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            },
+            "secrets_access": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            },
+            "network_access": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "confirmTimeoutSeconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

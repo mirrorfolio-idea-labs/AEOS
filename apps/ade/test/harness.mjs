@@ -8,6 +8,7 @@ import fastifyStatic from '@fastify/static';
 import { createEventBus } from '@aeos/kernel';
 import { FakeAdapter, buildFixtureEvents } from '@aeos/provider-core';
 import { createApiServer, listenApi } from '@aeos/api';
+import { createApprovalsRegistry, loadPolicyStack } from '@aeos/policy';
 
 let home = process.env.AEOS_HOME;
 if (home) {
@@ -26,6 +27,29 @@ const app = await createApiServer({
     }),
   credentialFor: () => ({ id: 'cp-default', kind: 'api-key', secretRef: 'env' }),
   bus: createEventBus(),
+  // mirror the daemon (api-module.ts): real default posture + approvals inbox
+  approvals: createApprovalsRegistry({ defaultTimeoutMs: 30_000 }),
+  policyFor: (agent) => loadPolicyStack({ home, workspaceId: agent.workspaceId, agentId: agent.id }),
+  // P2.M5: pipe-backed takeover bridge for UI tests — real PTY mechanics are
+  // covered by the runner/supervisor suites; this exercises the WS↔xterm path
+  resolveAgent: () => ({
+    id: 'backend-dev',
+    workspaceId: 'client-acme',
+    name: 'Backend Dev',
+    harness: { provider: 'claude-code' },
+    credentialProfileId: 'cp-default',
+  }),
+  attachPty: async (_sessionId, onOutput) => {
+    const { spawn } = await import('node:child_process');
+    const shell = spawn('/bin/bash', ['-i'], { stdio: ['pipe', 'pipe', 'pipe'] });
+    shell.stdout.on('data', (chunk) => onOutput(chunk.toString()));
+    shell.stderr.on('data', (chunk) => onOutput(chunk.toString()));
+    return {
+      input: (data) => shell.stdin.write(data),
+      resize: () => undefined,
+      release: () => shell.kill(),
+    };
+  },
 });
 await app.register(fastifyStatic, {
   root: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist'),

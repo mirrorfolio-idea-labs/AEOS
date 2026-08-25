@@ -36,3 +36,14 @@ export {
   updateMemoryFts,
   type MemorySearchHit,
 } from './fts.js';
+export {
+  CuratorPathError,
+  isCuratorDue,
+  runCurator,
+  scanMemory,
+  type CuratorProposal,
+  type CuratorRunReport,
+  type IsCuratorDueInput,
+  type RunCuratorOptions,
+  type ScanMemoryOptions,
+} from './curator.js';

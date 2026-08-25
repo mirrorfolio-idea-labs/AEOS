@@ -5,8 +5,11 @@ import {
   newEventId,
   type AeosEvent,
   type AgentConfig,
+  type CompiledPolicy,
 } from '@aeos/contracts';
 import { writeFileAtomic } from '@aeos/kernel';
+import { BudgetMeter, diffStatuses, readObjectiveFile, worktreeStatus, type BudgetCaps } from '@aeos/policy';
+import type { Objective } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
 import { parsePlan, serializePlan, withTaskStatus, type ParsedPlan } from './plan.js';
 import { readCheckpoints, resolveNextTask, writeCheckpoint } from './checkpoint.js';
@@ -23,12 +26,27 @@ export interface RunObjectiveOptions {
   /** Receives every session event plus the scheduler's pause event. */
   onEvent?: (event: AeosEvent) => void;
   sessionIdFactory?: () => string;
+  /** Compiled policy handed to each spawn (spec §11); enforcement is the caller's guard. */
+  permissionPolicy?: CompiledPolicy;
+  /**
+   * Objective-scope spend caps (spec §11). Overrides `<objectiveDir>/
+   * objective.yaml` when present. Crossing a cap HARD-STOPS the run: the
+   * task's checkpoint returns to `pending` WITHOUT consuming a strike, so
+   * raising the cap and re-starting resumes cleanly.
+   */
+  budget?: BudgetCaps;
   /**
    * Kill switch (spec §18): when this file exists, no further sessions are
    * spawned — the objective pauses before the next task. Runner-level STOP
    * handling (in-flight sessions) shipped with M3.
    */
   stopFile?: string;
+  /**
+   * Co-edit guard repo (ADR-009, spec §20 OQ1): when set and a foreign edit
+   * appears in this tree between a task's start and its successful end, the
+   * objective pauses behind an approval.request — kill-switch semantics.
+   */
+  watchedRepo?: string;
 }
 
 export type ObjectiveOutcome =
@@ -36,6 +54,14 @@ export type ObjectiveOutcome =
   | { status: 'paused'; taskId: string; reason: string };
 
 const planPath = (objectiveDir: string): string => path.join(objectiveDir, 'plan.md');
+
+function budgetCapsFromFile(file: Objective | undefined): BudgetCaps {
+  if (file === undefined) return {};
+  return {
+    ...(file.budgetUsd === undefined ? {} : { usdCap: file.budgetUsd }),
+    ...(file.budgetTokens === undefined ? {} : { tokenCap: file.budgetTokens }),
+  };
+}
 
 async function loadPlan(objectiveDir: string): Promise<ParsedPlan> {
   return parsePlan(await readFile(planPath(objectiveDir), 'utf8'));
@@ -55,6 +81,9 @@ async function savePlan(objectiveDir: string, plan: ParsedPlan): Promise<void> {
  */
 export async function runObjective(opts: RunObjectiveOptions): Promise<ObjectiveOutcome> {
   const maxAttempts = opts.maxAttempts ?? 3;
+  const fileBudget = readObjectiveFile(opts.objectiveDir);
+  const caps = opts.budget ?? budgetCapsFromFile(fileBudget);
+  const meter = new BudgetMeter(caps);
   const backoff = opts.backoff ?? (() => Promise.resolve());
   const emit = opts.onEvent ?? (() => undefined);
   const nextSessionId = opts.sessionIdFactory ?? newEventId;
@@ -127,28 +156,105 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       ...(resumeToken === undefined ? {} : { providerResumeToken: resumeToken }),
     });
 
+    // co-edit baseline: everything already dirty here counts as known state
+    const baselineStatus =
+      opts.watchedRepo !== undefined ? await worktreeStatus(opts.watchedRepo) : undefined;
+
     const profile = await opts.adapter.createProfile(opts.agent);
     const handle = opts.adapter.spawn({
       profile,
       sessionId: nextSessionId(),
       objective: task.title,
       ...(resumeToken === undefined ? {} : { resumeToken }),
+      ...(opts.permissionPolicy === undefined ? {} : { permissionPolicy: opts.permissionPolicy }),
     });
 
     let usd = 0;
     let tokens = 0;
     let terminal: 'completed' | 'failed' | 'none' = 'none';
     let failureReason = 'session ended without a terminal event';
+    let budgetStop: { kind: 'usd' | 'tokens'; cap: number; spent: number } | null = null;
     for await (const event of handle.events) {
-      emit(event);
+      // once over cap: drain silently — a hard-stopped session has no side effects
+      if (budgetStop === null) emit(event);
       if (event.type === 'cost.usage') {
+        const taskTokens = event.payload.inputTokens + event.payload.outputTokens;
         usd += event.payload.usd;
-        tokens += event.payload.inputTokens + event.payload.outputTokens;
+        tokens += taskTokens;
+        const reading = meter.record({ usd: event.payload.usd, tokens: taskTokens });
+        if (reading.exceeded !== null && budgetStop === null) {
+          const kind = reading.exceeded;
+          const cap = kind === 'usd' ? (caps.usdCap ?? 0) : (caps.tokenCap ?? 0);
+          const spent = kind === 'usd' ? reading.totalUsd : reading.totalTokens;
+          budgetStop = { kind, cap, spent };
+          emit(
+            AeosEventSchema.parse({
+              v: 1,
+              id: newEventId(),
+              ts: new Date().toISOString(),
+              source: 'scheduler',
+              agentId: opts.agent.id,
+              taskId: task.id,
+              type: 'budget.exceeded',
+              payload: { scope: 'objective', id: opts.objectiveDir, kind, cap, spent },
+            }),
+          );
+        }
       } else if (event.type === 'session.completed') {
         terminal = 'completed';
       } else if (event.type === 'session.failed') {
         terminal = 'failed';
         failureReason = event.payload.reason;
+      }
+    }
+
+    if (budgetStop !== null) {
+      await writeCheckpoint(opts.objectiveDir, {
+        taskId: task.id,
+        status: 'pending', // NOT a strike: raising the cap resumes cleanly
+        attempts,
+        summary: `hard-stopped: budget ${budgetStop.kind} cap ${String(budgetStop.cap)} reached at ${String(budgetStop.spent)}`,
+        costs: { usd, tokens },
+        ...(handle.resumeToken === undefined ? {} : { providerResumeToken: handle.resumeToken }),
+      });
+      await savePlan(opts.objectiveDir, withTaskStatus(plan, task.id, 'pending'));
+      return {
+        status: 'paused',
+        taskId: task.id,
+        reason: `budget ${budgetStop.kind} cap reached`,
+      };
+    }
+
+    if (terminal === 'completed' && baselineStatus !== undefined) {
+      // co-edit guard (ADR-009): a foreign edit in the watched tree between
+      // task start and task end pauses the objective behind an approval —
+      // kill-switch semantics (no plan mutation, no strike)
+      const changed = diffStatuses(baselineStatus, await worktreeStatus(opts.watchedRepo as string));
+      if (changed.length > 0) {
+        const detail = `co-edit guard: foreign changes in ${opts.watchedRepo}: ${changed.join(', ')}`;
+        emit(
+          AeosEventSchema.parse({
+            v: 1,
+            id: newEventId(),
+            ts: new Date().toISOString(),
+            source: 'scheduler',
+            agentId: opts.agent.id,
+            taskId: task.id,
+            type: 'approval.request',
+            payload: {
+              requestId: newEventId(),
+              action: 'objective.resume',
+              detail,
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            },
+          }),
+        );
+        await savePlan(opts.objectiveDir, plan); // T1 stays as written at spawn
+        return {
+          status: 'paused',
+          taskId: task.id,
+          reason: `co-edit detected (${String(changed[0])})`,
+        };
       }
     }
 

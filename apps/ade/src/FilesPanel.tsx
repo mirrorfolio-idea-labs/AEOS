@@ -34,12 +34,27 @@ export function FilesPanel({ agent, objectiveId }: FilesPanelProps) {
     void fetch(`/v1/memory/index?workspaceId=${agent.workspaceId}&agentId=${agent.id}`)
       .then((r) => r.json())
       .then((envelope: { data: MemoryIndex | null }) => setIndex(envelope.data));
-    if (objectiveId) {
+    if (!objectiveId) return;
+    const load = (): void => {
       void client
         .objectiveStatus(agent.workspaceId, agent.id, objectiveId)
         .then(setPlan)
         .catch(() => setPlan(null));
-    }
+    };
+    load();
+    // keep live while anything is in flight; stop once terminal
+    const poll = setInterval(() => {
+      let terminal = false;
+      setPlan((current) => {
+        terminal =
+          current !== null &&
+          !current.running &&
+          current.tasks.every((t) => t.status === 'completed' || t.status === 'blocked');
+        return current;
+      });
+      if (!terminal) load();
+    }, 500);
+    return () => clearInterval(poll);
   }, [agent, objectiveId]);
 
   const openFile = async (relPath: string) => {

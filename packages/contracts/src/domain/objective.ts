@@ -6,6 +6,7 @@ export const ObjectiveSchema = z.object({
   title: z.string().min(1),
   definitionOfDone: z.string().optional(),
   budgetUsd: z.number().positive().optional(),
+  budgetTokens: z.number().int().positive().optional(),
 });
 export type Objective = z.infer<typeof ObjectiveSchema>;
 

@@ -1,10 +1,16 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import {
   aeosYamlPath,
+  agentDir,
+  attachAuditWriter,
+  attachRedaction,
   attachTranscriptWriter,
   auditDir,
   createEventBus,
   createKernel,
+  listAgents,
+  listWorkspaces,
   openIndexDb,
   reindex,
   writeFileAtomic,
@@ -13,6 +19,7 @@ import {
   type KernelHealth,
   type ReindexReport,
 } from '@aeos/kernel';
+import { isCuratorDue, runCurator } from '@aeos/memory';
 import { createSupervisor, type Supervisor } from '@aeos/runner';
 import type { Module } from '@aeos/kernel';
 import { startApiModule, type ApiModuleConfig, type ApiModuleHandle } from './api-module.js';
@@ -21,6 +28,15 @@ export interface DaemonConfig {
   home: string;
   /** Mount the HTTP API + UI + resume-on-boot (M7–M9). Omit for kernel-only boots (tests). */
   api?: ApiModuleConfig;
+  /** Opt-in memory curator (P2.M4) — dry-run trigger only in v0.2. */
+  curator?: CuratorModuleConfig;
+}
+
+export interface CuratorModuleConfig {
+  idleMs: number;
+  minIntervalMs: number;
+  /** Tick cadence (default 60s; tests shrink it). */
+  tickMs?: number;
 }
 
 /** Wiring exposed for tests and, later, the API layer (M7). */
@@ -54,6 +70,8 @@ export function createDaemon(config: DaemonConfig): Daemon {
   let bus: EventBus | undefined;
   let supervisor: Supervisor | undefined;
   let detachTranscript: (() => void) | undefined;
+  let detachAudit: (() => void) | undefined;
+  let stopCurator: (() => void) | undefined;
   let api: ApiModuleHandle | undefined;
 
   const deps: DaemonDeps = {
@@ -109,16 +127,37 @@ export function createDaemon(config: DaemonConfig): Daemon {
     {
       name: 'event-bus',
       start: async () => {
-        bus = createEventBus();
+        // spec §11 redaction: scrub registered secret values before ANY
+        // subscriber (transcript, audit, SSE, REST) ever sees an event
+        const redactionValues = new Set<string>();
+        if (config.api?.secretStore !== undefined) {
+          for (const ref of await config.api.secretStore.list()) {
+            try {
+              redactionValues.add(await config.api.secretStore.get(ref));
+            } catch {
+              // unreadable refs simply don't register — the store stays locked
+            }
+          }
+        }
+        const redactingBus = attachRedaction(createEventBus(), () => redactionValues);
+        bus = redactingBus;
+        if (config.api !== undefined) {
+          (config.api as ApiModuleConfig).registerSecretValue = (value: string): void => {
+            redactionValues.add(value);
+          };
+        }
         // runner-owned sessions write their own transcript (spec §10) — the
         // daemon must not double-append while a live runner exists
-        detachTranscript = attachTranscriptWriter(bus, home, deps.db, {
+        detachTranscript = attachTranscriptWriter(redactingBus, home, deps.db, {
           skipSession: (sessionId) => supervisor?.hasLiveRunner(sessionId) ?? false,
         });
+        detachAudit = attachAuditWriter(redactingBus, home);
       },
       stop: async () => {
         detachTranscript?.();
         detachTranscript = undefined;
+        detachAudit?.();
+        detachAudit = undefined;
         bus = undefined;
       },
       health: async () => (bus !== undefined ? { ok: true } : { ok: false, detail: 'bus not created' }),
@@ -145,7 +184,13 @@ export function createDaemon(config: DaemonConfig): Daemon {
     {
       name: 'api',
       start: async () => {
-        api = await startApiModule(home, deps.db, deps.bus, config.api as ApiModuleConfig);
+        api = await startApiModule(
+          home,
+          deps.db,
+          deps.bus,
+          config.api as ApiModuleConfig,
+          deps.supervisor,
+        );
         if (api.resumed.length > 0) {
           console.error(`resume-on-boot: ${api.resumed.join(', ')}`);
         }
@@ -159,7 +204,70 @@ export function createDaemon(config: DaemonConfig): Daemon {
     },
   ];
 
-  const kernel = createKernel([...coreModules, ...apiModule]);
+  const curatorModule: Module[] = config.curator === undefined ? [] : [
+    {
+      name: 'curator',
+      start: async () => {
+        const cfg = config.curator as CuratorModuleConfig;
+        const bootTs = Date.now();
+        const lastActivity = new Map<string, number>();
+        const lastRun = new Map<string, number>();
+        const detach = deps.bus.subscribe({}, (event) => {
+          if (event.agentId !== undefined) lastActivity.set(event.agentId, Date.parse(event.ts));
+        });
+        let running = false;
+        const tick = async (): Promise<void> => {
+          if (running) return; // a slow scan must never stack ticks
+          running = true;
+          try {
+            for (const ws of listWorkspaces(home)) {
+              for (const agent of listAgents(home, ws.id)) {
+                try {
+                  const nowMs = Date.now();
+                  if (
+                    !isCuratorDue({
+                      lastActivityMs: lastActivity.get(agent.id) ?? bootTs,
+                      lastRunMs: lastRun.get(agent.id),
+                      nowMs,
+                      idleMs: cfg.idleMs,
+                      minIntervalMs: cfg.minIntervalMs,
+                    })
+                  ) {
+                    continue;
+                  }
+                  const memoryRoot = path.join(agentDir(home, ws.id, agent.id), 'memory');
+                  await runCurator(memoryRoot, {
+                    dryRun: true, // apply mode lands in P2.M4.T2
+                    now: new Date(nowMs),
+                    auditHome: home,
+                    agentRef: `${ws.id}/${agent.id}`,
+                  });
+                  lastRun.set(agent.id, nowMs);
+                } catch (error) {
+                  console.error(`curator: ${ws.id}/${agent.id}:`, error);
+                }
+              }
+            }
+          } finally {
+            running = false;
+          }
+        };
+        const timer = setInterval(() => void tick(), cfg.tickMs ?? 60_000);
+        stopCurator = (): void => {
+          clearInterval(timer);
+          detach();
+        };
+      },
+      stop: async () => {
+        stopCurator?.();
+        stopCurator = undefined;
+      },
+      health: async () =>
+        stopCurator !== undefined ? { ok: true } : { ok: false, detail: 'curator not ticking' },
+    },
+  ];
+
+  const kernel = createKernel([...coreModules, ...apiModule, ...curatorModule]);
 
   return {
     start: () => kernel.start(),

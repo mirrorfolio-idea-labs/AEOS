@@ -1,0 +1,126 @@
+{
+  "$ref": "#/definitions/compiled-policy",
+  "definitions": {
+    "compiled-policy": {
+      "type": "object",
+      "properties": {
+        "effective": {
+          "type": "object",
+          "properties": {
+            "tiers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "allow",
+                  "confirm",
+                  "deny"
+                ]
+              },
+              "propertyNames": {
+                "enum": [
+                  "read_files",
+                  "write_files",
+                  "execute_commands",
+                  "install_packages",
+                  "git_commit",
+                  "git_push",
+                  "deploy",
+                  "secrets_access",
+                  "network_access"
+                ]
+              }
+            },
+            "confirmTimeoutSeconds": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "tiers",
+            "confirmTimeoutSeconds"
+          ],
+          "additionalProperties": false
+        },
+        "native": {
+          "type": "object",
+          "properties": {
+            "claude-code": {
+              "type": "object",
+              "properties": {
+                "argv": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "env": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "argv",
+                "env"
+              ],
+              "additionalProperties": false
+            },
+            "codex": {
+              "type": "object",
+              "properties": {
+                "argv": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "env": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "argv",
+                "env"
+              ],
+              "additionalProperties": false
+            },
+            "opencode": {
+              "type": "object",
+              "properties": {
+                "argv": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "env": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "argv",
+                "env"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "effective",
+        "native"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

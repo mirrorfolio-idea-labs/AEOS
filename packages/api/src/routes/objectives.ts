@@ -4,6 +4,9 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { agentDir, getAgent, writeFileAtomic } from '@aeos/kernel';
 import { parsePlan, readCheckpoints, runObjective } from '@aeos/scheduler';
+import { compilePolicy } from '@aeos/policy';
+import type { CompiledPolicy } from '@aeos/contracts';
+import { guardAdapter } from '../policy-gate.js';
 import { ApiError, ok } from '../envelope.js';
 import type { ApiContext } from '../server.js';
 
@@ -16,6 +19,9 @@ const CreateObjective = ObjectiveRef.extend({
   id: z.string().min(1),
   title: z.string().min(1),
   tasks: z.array(z.object({ id: z.string().min(1), title: z.string().min(1) })).min(1),
+  /** Objective-scope spend caps (spec §11); persisted as objective.yaml. */
+  budgetUsd: z.number().positive().optional(),
+  budgetTokens: z.number().int().positive().optional(),
 });
 
 export const objectiveDirFor = (
@@ -44,19 +50,33 @@ export function startObjectiveRun(
   const agent = getAgent(ctx.home, workspaceId, agentId);
   const dir = objectiveDirFor(ctx.home, workspaceId, agentId, objectiveId);
   if (running.has(dir)) return;
-  const run = runObjective({
-    objectiveDir: dir,
-    agent,
-    adapter: ctx.adapterFor(agent),
-    stopFile: stopFilePath(ctx.home),
-    onEvent: (event) => {
-      ctx.bus?.publish(event);
-      // files are truth for spend too: every cost.usage lands in costs.ndjson
-      if (event.type === 'cost.usage') {
-        void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
-      }
-    },
-  }).finally(() => running.delete(dir));
+  const run = (async () => {
+    let adapter = ctx.adapterFor(agent);
+    let permissionPolicy: CompiledPolicy | undefined;
+    if (ctx.policyFor !== undefined) {
+      const effective = await ctx.policyFor(agent);
+      adapter = guardAdapter(adapter, effective, {
+        ...(ctx.approvals === undefined ? {} : { registry: ctx.approvals }),
+        ...(ctx.injectSecrets === undefined ? {} : { inject: ctx.injectSecrets }),
+      });
+      permissionPolicy = compilePolicy(effective);
+    }
+    return runObjective({
+      objectiveDir: dir,
+      agent,
+      adapter,
+      stopFile: stopFilePath(ctx.home),
+      ...(permissionPolicy === undefined ? {} : { permissionPolicy }),
+      onEvent: (event) => {
+        ctx.bus?.publish(event);
+        // files are truth for spend too: every cost.usage lands in costs.ndjson
+        if (event.type === 'cost.usage') {
+          void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
+        }
+      },
+    });
+  })()
+    .finally(() => running.delete(dir));
   running.set(dir, run);
   run.catch(() => undefined); // surfaced via status; never an unhandled rejection
 }
@@ -110,6 +130,18 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
       const dir = objectiveDirFor(ctx.home, body.workspaceId, body.agentId, body.id);
       await mkdir(path.join(dir, 'checkpoints'), { recursive: true });
       await writeFileAtomic(path.join(dir, 'objective.md'), `# ${body.title}\n`);
+      if (body.budgetUsd !== undefined || body.budgetTokens !== undefined) {
+        const { stringify } = await import('yaml');
+        const { ObjectiveSchema } = await import('@aeos/contracts');
+        const objectiveFile = ObjectiveSchema.parse({
+          id: body.id,
+          agentId: body.agentId,
+          title: body.title,
+          ...(body.budgetUsd === undefined ? {} : { budgetUsd: body.budgetUsd }),
+          ...(body.budgetTokens === undefined ? {} : { budgetTokens: body.budgetTokens }),
+        });
+        await writeFileAtomic(path.join(dir, 'objective.yaml'), stringify(objectiveFile));
+      }
       await writeFileAtomic(
         path.join(dir, 'plan.md'),
         `# ${body.title}\n\n${body.tasks.map((t) => `- [ ] **${t.id}** ${t.title}`).join('\n')}\n`,

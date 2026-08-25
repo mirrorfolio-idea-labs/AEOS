@@ -22,6 +22,10 @@
         "budgetUsd": {
           "type": "number",
           "exclusiveMinimum": 0
+        },
+        "budgetTokens": {
+          "type": "integer",
+          "exclusiveMinimum": 0
         }
       },
       "required": [

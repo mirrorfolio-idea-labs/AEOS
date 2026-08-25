@@ -19,8 +19,24 @@ import {
   type IndexDb,
 } from '@aeos/kernel';
 import { connectRunner, type RunnerClient } from '../protocol/client.js';
+import type { PtyWireMessage } from '../protocol/messages.js';
 import type { RunnerOptions } from '../runner/runner.js';
 import { transitionSession } from './session-state.js';
+
+/** Daemon-side handle over one session's takeover shell (P2.M5). */
+export interface PtyHandle {
+  input(data: string): void;
+  resize(cols: number, rows: number): void;
+  /** Tears the takeover shell down — release returns the session to headless. */
+  release(): void;
+}
+
+export class PtyAttachError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PtyAttachError';
+  }
+}
 
 export interface SupervisorOptions {
   home: string;
@@ -60,6 +76,13 @@ export interface Supervisor {
   /** Boot-time scan: reconnect to surviving runners, mark the rest (spec §10). */
   adoptOrphans(): Promise<AdoptionReport>;
   hasLiveRunner(sessionId: string): boolean;
+  /**
+   * Open a takeover PTY on a live runner and route its output to `onOutput`
+   * (spec §9 human takeover). Release kills the shell — headless resumes.
+   */
+  attachPty(sessionId: string, onOutput: (data: string) => void): Promise<PtyHandle>;
+  /** Owning workspace/agent of a live session, if tracked. */
+  sessionOwner(sessionId: string): { workspaceId: string; agentId: string } | undefined;
   /** Asks the runner to stop its child gracefully. */
   stopSession(sessionId: string, reason: string): void;
   /**
@@ -77,6 +100,7 @@ export function createSupervisor(options: SupervisorOptions): Supervisor {
   const { home, db, bus } = options;
   const runnerMainPath = options.runnerMainPath ?? defaultRunnerMainPath();
   const live = new Map<string, LiveSession>();
+  const ptyForwarders = new Map<string, Set<(data: string) => void>>();
 
   function publish(
     sessionId: string,
@@ -112,8 +136,14 @@ export function createSupervisor(options: SupervisorOptions): Supervisor {
         if (entry !== undefined) entry.lastSeq = seq;
         bus.publish(event); // runner owns the transcript; the bus serves live consumers
       },
+      onPtyMessage: (message: PtyWireMessage) => {
+        if (message.t === 'ptyOutput') {
+          for (const forward of ptyForwarders.get(sessionId) ?? []) forward(message.data);
+        }
+      },
       onDisconnect: () => {
         live.delete(sessionId);
+        ptyForwarders.delete(sessionId);
       },
     });
     live.set(sessionId, { workspaceId, agentId, sessionId, client, lastSeq: fromSeq });
@@ -225,6 +255,36 @@ export function createSupervisor(options: SupervisorOptions): Supervisor {
 
     hasLiveRunner(sessionId: string): boolean {
       return live.has(sessionId);
+    },
+
+    async attachPty(sessionId, onOutput): Promise<PtyHandle> {
+      const entry = live.get(sessionId);
+      if (entry === undefined) throw new PtyAttachError(`no live runner for session ${sessionId}`);
+      await entry.client.openPty(80, 24);
+      let forwarders = ptyForwarders.get(sessionId);
+      if (forwarders === undefined) {
+        forwarders = new Set();
+        ptyForwarders.set(sessionId, forwarders);
+      }
+      forwarders.add(onOutput);
+      return {
+        input: (data) => entry.client.sendPtyInput(data),
+        resize: (cols, rows) => entry.client.resizePty(cols, rows),
+        release: (): void => {
+          forwarders?.delete(onOutput);
+          if (forwarders !== undefined && forwarders.size === 0) {
+            ptyForwarders.delete(sessionId);
+          }
+          entry.client.releasePty(); // release kills the shell — headless resumes
+        },
+      };
+    },
+
+    sessionOwner(sessionId) {
+      const entry = live.get(sessionId);
+      return entry === undefined
+        ? undefined
+        : { workspaceId: entry.workspaceId, agentId: entry.agentId };
     },
 
     stopSession(sessionId: string, reason: string): void {

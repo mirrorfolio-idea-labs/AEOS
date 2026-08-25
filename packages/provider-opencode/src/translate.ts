@@ -2,10 +2,12 @@ import { AeosEventSchema, newEventId, type AeosEvent } from '@aeos/contracts';
 import { z } from 'zod';
 
 /**
- * Translator for `opencode run --format json` event lines (the same shapes
- * OpenCode's SSE `/event` bus emits). Stateful only for session-id/cost
- * capture and the skipped counter; ids/clock injectable for byte-stable
- * goldens — the same pattern as provider-claude.
+ * Translator for `opencode run --format json` event lines. Two wire shapes
+ * are supported: the recorded ≤1.17 bus shapes (`message.part.updated`,
+ * `message.updated`, `session.idle`, `session.error`) and the ≥1.18
+ * step-based run shapes (`step_start`, `text`, `step_finish`). Stateful only
+ * for session-id/cost capture and the skipped counter; ids/clock injectable
+ * for byte-stable goldens — the same pattern as provider-claude.
  */
 export interface TranslateOptions {
   sessionId: string;
@@ -84,6 +86,37 @@ const SessionErrorLine = z
       .object({
         sessionID: z.string().optional(),
         error: z.unknown().optional(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+const StepStartLine = z.object({ type: z.literal('step_start'), sessionID: z.string() }).passthrough();
+
+const StepTextLine = z
+  .object({
+    type: z.literal('text'),
+    sessionID: z.string(),
+    part: z.object({ type: z.literal('text'), text: z.string() }).passthrough(),
+  })
+  .passthrough();
+
+const StepFinishLine = z
+  .object({
+    type: z.literal('step_finish'),
+    sessionID: z.string(),
+    part: z
+      .object({
+        reason: z.string().optional(),
+        cost: z.number().nonnegative().optional(),
+        tokens: z
+          .object({
+            input: z.number().int().nonnegative().optional(),
+            output: z.number().int().nonnegative().optional(),
+            cache: z.object({ read: z.number().int().nonnegative().optional() }).passthrough().optional(),
+          })
+          .passthrough()
+          .optional(),
       })
       .passthrough(),
   })
@@ -200,6 +233,39 @@ export class OpencodeStreamTranslator {
         ...(sid === undefined ? [] : this.opened(sid)),
         this.event('session.failed', { reason: errorReason(error.data.properties.error) }),
       ];
+    }
+
+    const stepStart = StepStartLine.safeParse(raw);
+    if (stepStart.success) return this.opened(stepStart.data.sessionID);
+
+    const stepText = StepTextLine.safeParse(raw);
+    if (stepText.success) {
+      return [
+        ...this.opened(stepText.data.sessionID),
+        this.event('item.message', { role: 'assistant', text: stepText.data.part.text }),
+      ];
+    }
+
+    const stepFinish = StepFinishLine.safeParse(raw);
+    if (stepFinish.success) {
+      const part = stepFinish.data.part;
+      const events = this.opened(stepFinish.data.sessionID);
+      if (part.cost !== undefined) {
+        this.costUsd = (this.costUsd ?? 0) + part.cost;
+        events.push(
+          this.event('cost.usage', {
+            profileId: this.opts.profileId,
+            usd: part.cost,
+            inputTokens: part.tokens?.input ?? 0,
+            outputTokens: part.tokens?.output ?? 0,
+            ...(part.tokens?.cache?.read === undefined ? {} : { cacheReadTokens: part.tokens.cache.read }),
+          }),
+        );
+      }
+      // `run` ends when the model stops; a stop-reason finish is the
+      // terminal marker the ≤1.17 shape carried as session.idle.
+      if (part.reason === 'stop') events.push(this.event('session.completed', {}));
+      return events;
     }
 
     this.skippedLines += 1;

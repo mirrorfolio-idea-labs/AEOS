@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { FolderOpen, KeyRound, Play, TerminalSquare } from 'lucide-react';
+import { FolderOpen, KeyRound, Play, ShieldCheck, TerminalSquare } from 'lucide-react';
 import type { AeosEvent, AgentConfig } from '@aeos/contracts';
 import type { ObjectiveStatus } from '@aeos/sdk';
 import { client } from './api.js';
 import { cn } from './lib/utils.js';
+import { ApprovalsPanel } from './ApprovalsPanel.js';
 import { Badge } from './components/ui/badge.js';
 import { Button } from './components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card.js';
@@ -11,6 +12,7 @@ import { Input } from './components/ui/input.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.js';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table.js';
 import { FilesPanel } from './FilesPanel.js';
+import { TerminalPanel } from './TerminalPanel.js';
 
 interface AgentViewProps {
   agent: AgentConfig;
@@ -38,6 +40,17 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
   const [nextProfile, setNextProfile] = useState('');
   const consoleRef = useRef<HTMLDivElement>(null);
   const streaming = useRef(false);
+  // live approvals badge (spec §11 notification hook v0): SSE-driven count
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+  // P2.M5 human takeover: the latest live session, attachable via PTY
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void client
+      .listApprovals()
+      .then((pending) => setPendingApprovals(pending.length))
+      .catch(() => undefined);
+  }, [agent.id]);
 
   useEffect(() => {
     consoleRef.current?.scrollTo({ top: consoleRef.current.scrollHeight });
@@ -53,6 +66,19 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
           setEvents((previous) => [...previous.slice(-499), event]);
           if (event.type === 'cost.usage') {
             setCostUsd((previous) => previous + (event.payload as { usd: number }).usd);
+          } else if (event.type === 'approval.request') {
+            setPendingApprovals((previous) => previous + 1);
+          } else if (event.type === 'approval.resolved') {
+            setPendingApprovals((previous) => Math.max(0, previous - 1));
+          } else if (event.type === 'session.created' && event.sessionId !== undefined) {
+            setActiveSessionId(event.sessionId);
+          } else if (
+            (event.type === 'session.completed' ||
+              event.type === 'session.failed' ||
+              event.type === 'session.orphaned') &&
+            event.sessionId !== undefined
+          ) {
+            setActiveSessionId((current) => (current === event.sessionId ? null : current));
           }
         }
       } catch {
@@ -114,6 +140,13 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
           ? 'text-red-400'
           : 'text-indigo-300';
 
+  const refreshApprovalCount = (): void => {
+    void client
+      .listApprovals()
+      .then((pending) => setPendingApprovals(pending.length))
+      .catch(() => undefined);
+  };
+
   return (
     <Tabs defaultValue="objective" className="flex h-full flex-col">
       <header className="flex items-center gap-3 border-b px-5 py-3">
@@ -153,8 +186,19 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
           <TabsTrigger value="objective" data-testid="tab-objective">
             <TerminalSquare className="mr-1.5 h-3.5 w-3.5" /> Sessions
           </TabsTrigger>
+          <TabsTrigger value="approvals" data-testid="tab-approvals" className="relative">
+            <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Approvals
+            {pendingApprovals > 0 && (
+              <Badge variant="destructive" className="ml-1.5 px-1.5" data-testid="approvals-count">
+                {pendingApprovals}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="files" data-testid="tab-files">
             <FolderOpen className="mr-1.5 h-3.5 w-3.5" /> Access agent files
+          </TabsTrigger>
+          <TabsTrigger value="terminal" data-testid="tab-terminal">
+            Takeover
           </TabsTrigger>
         </TabsList>
       </header>
@@ -261,8 +305,23 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
           </Card>
         </TabsContent>
 
+        <TabsContent value="approvals" className="mt-0">
+          <ApprovalsPanel onChanged={refreshApprovalCount} />
+        </TabsContent>
+
         <TabsContent value="files" className="mt-0">
           <FilesPanel agent={agent} objectiveId={objectiveId} />
+        </TabsContent>
+
+        <TabsContent value="terminal" className="mt-0 h-full">
+          {activeSessionId === null ? (
+            <p className="p-4 text-sm text-muted-foreground" data-testid="terminal-empty">
+              No live session to attach to. Takeover becomes available while an
+              objective is running.
+            </p>
+          ) : (
+            <TerminalPanel sessionId={activeSessionId} onReleased={() => setActiveSessionId(null)} />
+          )}
         </TabsContent>
       </div>
     </Tabs>

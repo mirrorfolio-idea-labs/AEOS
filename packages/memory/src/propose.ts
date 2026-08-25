@@ -73,15 +73,20 @@ export async function listProposals(root: string): Promise<MemoryProposal[]> {
  * error recorded in the result) — a failed proposal never half-writes
  * because the store ops themselves are atomic and budget-checked upfront.
  */
-export async function applyProposals(root: string): Promise<ApplyResult[]> {
+export async function applyProposals(
+  root: string,
+  onEvent?: (event: { path: string; bytes: number; op: string }) => void,
+): Promise<ApplyResult[]> {
   const results: ApplyResult[] = [];
   for (const proposal of await listProposals(root)) {
     try {
+      let bytes = 0;
       if (proposal.op === 'write') {
         await writeMemoryFile(root, proposal.path, proposal.content, {
           title: proposal.title,
           hook: proposal.hook,
         });
+        bytes = proposal.content.length;
       } else if (proposal.op === 'archive') {
         await archiveMemoryFile(root, proposal.path);
       } else {
@@ -89,7 +94,9 @@ export async function applyProposals(root: string): Promise<ApplyResult[]> {
           title: proposal.title,
           hook: proposal.hook,
         });
+        bytes = proposal.content.length;
       }
+      onEvent?.({ path: proposal.path, bytes, op: proposal.op });
       await rm(proposalPath(root, proposal.id));
       results.push({ id: proposal.id, status: 'applied' });
     } catch (error: unknown) {
