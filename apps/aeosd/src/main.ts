@@ -13,7 +13,7 @@ function resolveHome(): string {
   return process.env['AEOS_HOME'] ?? path.join(os.homedir(), '.aeos');
 }
 
-const KNOWN_PROVIDERS = new Set(['fake', 'claude-code', 'opencode']);
+const KNOWN_PROVIDERS = new Set(['fake', 'claude-code', 'opencode', 'codex']);
 
 async function main(): Promise<number> {
   const command = process.argv[2] ?? 'run';
@@ -34,7 +34,7 @@ async function main(): Promise<number> {
         : { token: process.env['AEOS_API_TOKEN'] }),
       ...(providerOverride === undefined
         ? {}
-        : { providerOverride: providerOverride as 'fake' | 'claude-code' | 'opencode' }),
+        : { providerOverride: providerOverride as 'fake' | 'claude-code' | 'opencode' | 'codex' }),
       uiDir,
       ...(process.env['AEOS_FAKE_PACE_MS'] === undefined
         ? {}

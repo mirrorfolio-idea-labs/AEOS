@@ -1,0 +1,7 @@
+{"type":"thread.started","thread_id":"01a03a3e-7369-7e41-8264-f6da2ba7fe38"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"Running the requested shell command now."}}
+{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"/bin/bash -lc 'echo fixture-marker-42'","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"/bin/bash -lc 'echo fixture-marker-42'","aggregated_output":"fixture-marker-42\n","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"```text\nfixture-marker-42\n```"}}
+{"type":"turn.completed","usage":{"input_tokens":34922,"cached_input_tokens":27136,"cache_write_input_tokens":0,"output_tokens":117,"reasoning_output_tokens":17}}

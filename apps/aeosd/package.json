@@ -15,18 +15,19 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
+    "@aeos/api": "workspace:*",
     "@aeos/contracts": "workspace:*",
     "@aeos/kernel": "workspace:*",
-    "@aeos/runner": "workspace:*",
-    "yaml": "^2.6.1",
-    "@aeos/api": "workspace:*",
+    "@aeos/memory": "workspace:*",
     "@aeos/policy": "workspace:*",
-    "@aeos/secrets": "workspace:*",
     "@aeos/provider-claude": "workspace:*",
+    "@aeos/provider-codex": "workspace:*",
     "@aeos/provider-core": "workspace:*",
     "@aeos/provider-opencode": "workspace:*",
+    "@aeos/runner": "workspace:*",
+    "@aeos/secrets": "workspace:*",
     "@fastify/static": "^8.0.3",
-    "@aeos/memory": "workspace:*"
+    "yaml": "^2.6.1"
   },
   "devDependencies": {
     "@types/node": "^22",

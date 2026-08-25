@@ -178,6 +178,20 @@ to clients + `costs.ndjson` → task completes → checkpoint written →
 scheduler advances. A crash at any point resumes at the same task on
 restart — nothing is ever replayed from a transcript.
 
+### Harness adapters
+
+Every adapter is hermetic by default and passes the same conformance
+suite. This table is enforced by tests (`packages/provider-core`) — it
+cannot drift from the code silently.
+
+<!-- adapters:matrix -->
+| Adapter | resume | structuredOutput | mcp | sandbox | costReporting | USD costs |
+|---|---|---|---|---|---|---|
+| `claude-code` | true | true | true | true | true | usd |
+| `codex` | true | true | false | true | true | tokens |
+| `opencode` | true | true | true | false | true | usd |
+| `fake` | true | true | false | false | true | usd |
+
 ---
 
 ## Repository
