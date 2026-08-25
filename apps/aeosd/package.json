@@ -21,6 +21,7 @@
     "yaml": "^2.6.1",
     "@aeos/api": "workspace:*",
     "@aeos/policy": "workspace:*",
+    "@aeos/secrets": "workspace:*",
     "@aeos/provider-claude": "workspace:*",
     "@aeos/provider-core": "workspace:*",
     "@aeos/provider-opencode": "workspace:*",

@@ -7,6 +7,7 @@ import { ClaudeAdapter, type SecretResolver } from '@aeos/provider-claude';
 import { OpencodeAdapter } from '@aeos/provider-opencode';
 import { createApprovalsRegistry } from '@aeos/policy';
 import { loadPolicyStack } from '@aeos/policy';
+import type { SecretStore } from '@aeos/secrets';
 import {
   createApiServer,
   listenApi,
@@ -27,6 +28,11 @@ export interface ApiModuleConfig {
   approvalTimeoutMs?: number;
   /** Env snapshot (main.ts owns process.env) — used by the v0 secret resolver. */
   env: Readonly<Record<string, string | undefined>>;
+  /**
+   * Store-backed secret refs (P2.M3): `env:` refs keep resolving from
+   * `env`; anything else is looked up in the store when one is attached.
+   */
+  secretStore?: SecretStore;
 }
 
 export interface ApiModuleHandle {
@@ -64,11 +70,14 @@ export async function startApiModule(
 ): Promise<ApiModuleHandle> {
   const secrets: SecretResolver = {
     resolve: (secretRef: string) => {
-      const value = secretRef.startsWith('env:') ? config.env[secretRef.slice(4)] : undefined;
-      if (value === undefined || value.length === 0) {
-        return Promise.reject(new Error(`secret "${secretRef}" is not available in the daemon env`));
+      const envValue = secretRef.startsWith('env:')
+        ? config.env[secretRef.slice(4)]
+        : undefined;
+      if (envValue !== undefined && envValue.length > 0) return Promise.resolve(envValue);
+      if (!secretRef.startsWith('env:') && config.secretStore !== undefined) {
+        return config.secretStore.get(secretRef);
       }
-      return Promise.resolve(value);
+      return Promise.reject(new Error(`secret "${secretRef}" is not available in the daemon env`));
     },
   };
   const subscriptionHomeFor = (slot: string): string => path.join(home, 'subscriptions', slot);
