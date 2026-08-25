@@ -234,7 +234,7 @@ only for PTY) + spec §20 OQ1 (human edits agent worktree — resolve by ADR her
 - [x] **T3** Co-edit detection ADR + guard (dirty-worktree check → pause + notify). *Accept: human edit in agent worktree pauses the task with an `approval.request`.*
 **Exit gate:** mid-session human takeover and clean handback demonstrated.
 
-### M6 — Codex adapter  `[ ]`
+### M6 — Codex adapter  `[x]`
 **Context brief:** Spec §9. Hermetic profile (`CODEX_HOME` + generated
 `config.toml`); translate `thread/turn/item` and SSE into the canonical
 taxonomy; resume support; passes the M4(P1) conformance suite.
