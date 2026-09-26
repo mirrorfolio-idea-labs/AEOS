@@ -69,12 +69,12 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 deploy targets `[~]` | 1/3 (+2 `[~]`) | `aeos service install` (systemd user unit / LaunchAgent, `KillMode=process` so runners survive restarts); `docker compose` image + quickstart CI job; token gate scoped to `/v1` (constant-time, `/healthz`, token file) + ADE sign-in; `docs/deploy.md` TLS recipes. Reboot + VM TLS sign-off manual (guide) — 2026-09-26 |
 | M4 TCP + Kubernetes `[x]` | 2/2 | TLS-PSK runner transport (mutual auth, per-session 0600 key, endpoint in `runnerSocket` — contracts unchanged); re-adoption suite over unix + TCP, TLS wire fuzz; Helm chart (single-writer Deployment, PVC, kept token, hardened pod) + `helm-lint` on PRs + `nightly-k8s` kind golden path — 2026-09-26 |
 
-### P5 — v1.0 public release `[~]` — 4/18 tasks
+### P5 — v1.0 public release `[~]` — 7/18 tasks (+1 awaiting a human)
 
 | Milestone | Tasks | Focus | Gate |
 |---|---|---|---|
 | M1 OSS readiness `[x]` | 4/4 | LICENSE ADR ✓, health files ✓, license audit ✓, history hygiene ✓ | done 2026-07-18 (early, per spine exception) |
-| M2 docs site + onboarding | 0/4 | site from `docs/`, quickstarts, demo assets | parallel from P2 |
+| M2 docs site + onboarding `[~]` | 3/4 (+1 `[~]`) | Starlight site generated from `docs/` (links rewritten, ADR index generated, built-site link+anchor check, Pages deploy on main); quickstart + first-agent tutorial executed by CI; reproducible screenshots + asciicast (`demo:assets`) | blind newcomer test manual |
 | M3 release engineering | 0/3 | changesets, signed CI-only artifacts + SBOM, compat policy | after M1–M2 |
 | M4 public beta | 0/3 | repo flip, triage workflow, feedback grooming | requires P4 exit |
 | M5 GA launch | 0/4 | blocker burn-down, v1.0.0, comms, post-launch week | = v1 |
