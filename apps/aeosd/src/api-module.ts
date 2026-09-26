@@ -152,7 +152,13 @@ export async function startApiModule(
       return new FakeAdapter({
         providerSessionId: `ses_${agent.id}`,
         events,
-        respond: fakePlanner,
+        respond: (prompt) => {
+          // e2e seam (P3 exit gate): record every session brief so a test can
+          // prove what the next session actually saw
+          const promptLog = config.env['AEOS_FAKE_PROMPT_LOG'];
+          if (promptLog !== undefined) fs.appendFileSync(promptLog, `${JSON.stringify(prompt)}\n`);
+          return fakePlanner(prompt);
+        },
         ...(config.fakePaceMs === undefined ? {} : { paceMs: config.fakePaceMs }),
       });
     }

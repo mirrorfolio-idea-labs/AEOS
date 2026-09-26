@@ -283,6 +283,8 @@ export class AeosClient {
     repo?: string;
     /** Verification commands overriding the repo binding's (P3.M3); `[]` disables. */
     verify?: string[];
+    /** Post-run retrospective: queue proposals (default), accept them at once, or skip (P3.M4). */
+    retrospective?: 'propose' | 'apply' | 'off';
   }): Promise<{ id: string }> {
     return this.request('POST', '/v1/objectives', input);
   }

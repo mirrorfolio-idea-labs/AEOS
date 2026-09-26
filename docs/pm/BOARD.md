@@ -1,7 +1,8 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-08-26 (`3c6063d`), **P1 complete (`v0.1.0`
-> tagged); P2 underway — M1–M6 done, M7 next.**
+> **Generated view** — as of 2026-09-26, **P1 complete (`v0.1.0` tagged);
+> P2 complete (v0.2.0 release PR #120 awaits Gate 3); P3 complete — exit gate
+> green, v0.3.0 to follow via Gate 2 → Gate 3.**
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -11,8 +12,8 @@
 
 | | |
 |---|---|
-| **Now** | P2 underway: **M1–M6 complete** — policy/approvals, budgets/audit, secrets, curator, PTY takeover + co-edit guard, Codex adapter (2026-08-25/26; three-harness conformance parity). S10 closed at the M6 exit gate. |
-| **Next** | P2.M7 managed harness binaries (pin/verify, version-gated capabilities) — unblocked, no new dependencies. M4/M10 native-host live smokes remain open, non-blocking. |
+| **Now** | P3 autonomy complete on code (M1–M5 + unattended exit-gate e2e): classed planner, cost-aware router, verify gating, retrospective → memory, durable wakeups, delegation. |
+| **Next** | Promote P3 to `staging` (Gate 2), prepare the v0.3.0 release PR (Gate 3, Kabeer). Then P4 (Docker sandbox, plugin API, deploy targets, TCP/Helm). |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -49,7 +50,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M10 agent runtime `[x]` | 4/4 | status (events + herdr screen manifests), race-free wait, attention inbox, webhook/ntfy/slack push; fixed resume tokens being dropped under policy — added and done 2026-09-26 |
 | M9 repos + worktrees + brief `[x]` | 3/3 | repo bindings, worktree per objective with agent-authored task commits, session brief with memory snapshot, review pane (herdr-reviewr idea) — added and done 2026-09-26 |
 
-### P3 — Autonomy (v0.3) `[~]` — 11/11 tasks (exit gate pending)
+### P3 — Autonomy (v0.3) `[x]` — 11/11 tasks — **exit gate green 2026-09-26; v0.3.0 awaits Gate 3**
 
 | Milestone | Tasks | Focus |
 |---|---|---|
@@ -89,7 +90,7 @@ GitHub issue
 
 ## Active sprint
 
-[S15](sprints/S15.md) — P3 autonomy (2026-09-26); M1–M5 are done; the P3 exit gate (unattended demo e2e) is next.
+[S15](sprints/S15.md) — P3 autonomy (2026-09-26); M1–M5 done; the P3 exit gate (unattended demo e2e) is green.
 P2 is closed: S14 plus the Gate 2 promotion PR #119, with v0.2.0 awaiting Gate 3.
 
 ## Blockers
@@ -116,3 +117,4 @@ None.
 | D14 | 2026-08-25 | R5 scan: T2's checkbox flip missed its own commit (2a018fe) and landed retroactively in b00fb2d (self-documented there) — one-time violation of the same-commit rule | **Logged, no action**: ID↔checkbox invariant verified clean across all 107 tasks |
 | D15 | 2026-09-26 | BOARD P2 table carried stale duplicate rows (M6 `0/2`, M7 twice) and a `19/25` count; ROADMAP owns 24 P2 tasks (T2 of M6 retired) | **Fixed same day**: duplicates dropped, count → 19/24 |
 | D16 | 2026-09-26 | Stray-branch sweep: `chore/aeos-m4-smoke-harness`, `feat/aeos-p1-m1-contracts`, `feat/aeos-p1-m3-runner`, `feat/p2-m6-codex` carry zero commits beyond `develop` (all merged via PRs) | **Logged**: no feature to rescue; remote deletion left to Kabeer (agent delete blocked by permission policy) |
+| D17 | 2026-09-26 | BOARD header + Now/Next rows still read "as of 2026-08-26 … P2 underway, M7 next" through P2 exit and P3.M1–M4 (R3 miss, same class as D13) | **Fixed same day** at the P3 exit commit: header and Now/Next regenerated |
