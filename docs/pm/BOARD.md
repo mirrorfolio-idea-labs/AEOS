@@ -34,7 +34,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[~]` — 28/31 tasks
+### P2 — Safety + polish (v0.2) `[x]` — 31/31 tasks — **exit gate green 2026-09-26; v0.2.0 awaits Gate 3**
 
 | Milestone | Tasks | Focus |
 |---|---|---|
@@ -45,7 +45,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M5 PTY attach + co-edit guard `[x]` | 3/3 | runner PTY (minimal-env shell), WS attach gated to allow-tier + xterm Takeover tab, ADR-009 detect-and-pause guard (unwired by design until worktrees) — done 2026-08-25 (deps approved mid-session; third overnight continuation) |
 | M6 Codex adapter `[x]` | 2/2 | recorded-fixture translation (codex-cli 0.149.1), resume, conformance parity; capability matrix test-enforced incl. README — done 2026-08-26 |
 | M7 managed binaries `[x]` | 2/2 | pinned npm-integrity installs sealed by tree hash, PATH never overrides a pin, typed version gates; exit gate green: `pinned-harnesses` CI job (PR #114) — 2026-09-26 |
-| M8 Tauri wrapper | 0/3 | desktop shell, notifications, CI artifacts |
+| M8 Tauri wrapper `[x]` | 3/3 | Tauri 2 shell: cold-starts/reuses `aeosd` and stops only an owned daemon (window close or SIGTERM); SSE → native notifications opening the agent's approvals view; `aeos://agent/<ws>/<id>/<tab>` deep links; `desktop` CI builds deb/AppImage + dmg (unsigned until P5.M3) — 2026-09-26 |
 | M10 agent runtime `[x]` | 4/4 | status (events + herdr screen manifests), race-free wait, attention inbox, webhook/ntfy/slack push; fixed resume tokens being dropped under policy — added and done 2026-09-26 |
 | M9 repos + worktrees + brief `[x]` | 3/3 | repo bindings, worktree per objective with agent-authored task commits, session brief with memory snapshot, review pane (herdr-reviewr idea) — added and done 2026-09-26 |
 
@@ -89,8 +89,8 @@ GitHub issue
 
 ## Active sprint
 
-[S13](sprints/S13.md) — P2.M10 herdr-derived agent runtime (2026-09-26);
-next is P2.M8 Tauri → v0.2.
+[S14](sprints/S14.md) — P2.M8 Tauri + the P2 exit gate (2026-09-26); the v0.2 release PR is
+prepared for Kabeer. Next is P3 autonomy.
 
 ## Blockers
 
