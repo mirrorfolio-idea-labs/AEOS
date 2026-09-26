@@ -385,12 +385,12 @@ auth + TLS via reverse proxy).
 - [~] **T3** Remote posture: token auth enforced when binding non-loopback + reverse-proxy TLS guide. *Accept: unauthenticated non-loopback request rejected; guide verified on a VM.* *(Non-loopback rejection proven in `api.test.ts` + ADE sign-in in Playwright T10; VM verification of `docs/deploy.md` TLS recipe is manual — guide in `guides/`.)*
 **Exit gate:** each target's quickstart passes on a clean machine/VM.
 
-### M4 — TCP runner transport + Kubernetes  `[ ]`
+### M4 — TCP runner transport + Kubernetes  `[x]`
 **Context brief:** Spec §16. Runner protocol already transport-abstracted;
 add authenticated TCP; kernel as Deployment, runners as Jobs/Pods, `AEOS_HOME`
 on PVC; contracts unchanged.
-- [ ] **T1** TCP transport with mutual auth for the framed runner protocol. *Accept: P1.M3 fuzz + re-adoption suites pass over TCP.*
-- [ ] **T2** K8s manifests/Helm chart. *Accept: golden path green on a `kind` cluster in CI (nightly).*
+- [x] **T1** TCP transport with mutual auth for the framed runner protocol. *Accept: P1.M3 fuzz + re-adoption suites pass over TCP.*
+- [x] **T2** K8s manifests/Helm chart. *Accept: golden path green on a `kind` cluster in CI (nightly).*
 **Exit gate = P4 exit gate** (top of this section).
 
 ## Phase P5 — v1.0 public open-source release  `[~]`
