@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AgentConfig } from '@aeos/contracts';
-import type { ObjectiveStatus } from '@aeos/sdk';
+import type { MemoryProposalView, ObjectiveStatus } from '@aeos/sdk';
+import { Button } from './components/ui/button.js';
 import { client } from './api.js';
 import { Badge } from './components/ui/badge.js';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card.js';
@@ -29,6 +30,23 @@ export function FilesPanel({ agent, objectiveId }: FilesPanelProps) {
   const [index, setIndex] = useState<MemoryIndex | null>(null);
   const [fileContent, setFileContent] = useState<{ path: string; content: string } | null>(null);
   const [plan, setPlan] = useState<ObjectiveStatus | null>(null);
+  // P3.M4: retrospective / curator proposals awaiting the operator
+  const [proposals, setProposals] = useState<MemoryProposalView[]>([]);
+  const loadProposals = (): void => {
+    void client
+      .memoryProposals(agent.workspaceId, agent.id)
+      .then(setProposals)
+      .catch(() => setProposals([]));
+  };
+  const decide = async (id: string, accept: boolean): Promise<void> => {
+    if (accept) await client.applyMemoryProposals(agent.workspaceId, agent.id, [id]);
+    else await client.rejectMemoryProposal(agent.workspaceId, agent.id, id);
+    loadProposals();
+    const response = await fetch(`/v1/memory/index?workspaceId=${agent.workspaceId}&agentId=${agent.id}`);
+    setIndex(((await response.json()) as { data: MemoryIndex | null }).data);
+  };
+
+  useEffect(loadProposals, [agent]);
 
   useEffect(() => {
     void fetch(`/v1/memory/index?workspaceId=${agent.workspaceId}&agentId=${agent.id}`)
@@ -71,6 +89,36 @@ export function FilesPanel({ agent, objectiveId }: FilesPanelProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      {proposals.length > 0 && (
+        <Card data-testid="memory-proposals">
+          <CardHeader>
+            <CardTitle>Proposed lessons &amp; preferences</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-xs text-muted-foreground">
+              Learned from finished objectives. Accepted items reach the agent&apos;s next session.
+            </p>
+            {proposals.map((p) => (
+              <div key={p.id} className="rounded-md border p-3" data-testid={`proposal-${p.id}`}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs">{p.path}</span>
+                  <span className="flex gap-1.5">
+                    <Button size="sm" onClick={() => void decide(p.id, true)} data-testid={`proposal-accept-${p.id}`}>
+                      Accept
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => void decide(p.id, false)}>
+                      Reject
+                    </Button>
+                  </span>
+                </div>
+                {p.content !== undefined && (
+                  <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-muted-foreground">{p.content}</pre>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Memory</CardTitle>

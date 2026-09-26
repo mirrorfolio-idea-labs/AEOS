@@ -52,6 +52,9 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos agent wait <id> --workspace <ws> [--until blocked,done] [--timeout-ms 30000] [--after-seq <n>]
   aeos agent seen|unread|settle|unsettle <id> --workspace <ws>
   aeos inbox               # every agent, attention-sorted (blocked first)
+  aeos memory proposals --workspace <ws> --agent <agent>        # queued lessons/preferences
+  aeos memory accept [<id>] --workspace <ws> --agent <agent>    # all, or one
+  aeos memory reject <id> --workspace <ws> --agent <agent>
   aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main] [--verify "pnpm test" ...]
   aeos repo unbind <id> --workspace <ws> --agent <agent>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
@@ -198,6 +201,26 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     ) {
       const item = await client.setAttention(need(parsed, 'workspace'), id, action);
       io.out(`${item.agentId}: ${item.settled ? 'settled' : item.unseen ? 'unseen' : 'seen'}`);
+      return 0;
+    }
+    if (group === 'memory' && (action === 'proposals' || action === 'accept' || action === 'reject')) {
+      const workspaceId = need(parsed, 'workspace');
+      const agentId = need(parsed, 'agent');
+      if (action === 'proposals') {
+        for (const p of await client.memoryProposals(workspaceId, agentId)) {
+          io.out(`${p.id}  ${p.op} ${p.path}${p.hook === undefined ? '' : `  — ${p.hook}`}`);
+        }
+        return 0;
+      }
+      if (action === 'reject') {
+        if (id === undefined) throw new Error('usage: aeos memory reject <id> …');
+        await client.rejectMemoryProposal(workspaceId, agentId, id);
+        io.out(`rejected ${id}`);
+        return 0;
+      }
+      for (const r of await client.applyMemoryProposals(workspaceId, agentId, id === undefined ? undefined : [id])) {
+        io.out(`${r.id}: ${r.status}${r.error === undefined ? '' : ` (${r.error})`}`);
+      }
       return 0;
     }
     if (group === 'inbox') {

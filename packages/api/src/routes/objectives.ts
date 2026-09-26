@@ -12,6 +12,7 @@ import {
   interleaveVerify,
   parsePlan,
   renderVerifyFailure,
+  runRetrospective,
   runVerification,
   readCheckpoints,
   renderPlanMarkdown,
@@ -20,6 +21,7 @@ import {
   type ObjectiveWorktree,
 } from '@aeos/scheduler';
 import { compilePolicy, readObjectiveFile } from '@aeos/policy';
+import { applyProposals, initMemoryLayout } from '@aeos/memory';
 import {
   AeosEventSchema,
   ObjectiveSchema,
@@ -70,6 +72,8 @@ const CreateObjective = ObjectiveRef.extend({
   repo: z.string().min(1).optional(),
   /** Verification commands overriding the repo binding's (P3.M3). */
   verify: z.array(z.string().min(1)).optional(),
+  /** Retrospective mode (P3.M4): propose (default) | apply | off. */
+  retrospective: z.enum(['propose', 'apply', 'off']).optional(),
 }).refine((body) => body.tasks.length > 0 || body.autoPlan, {
   message: 'give at least one task, or set autoPlan: true to have the planner write the plan',
 });
@@ -348,7 +352,7 @@ export function startObjectiveRun(
     });
     if (planned !== 'ready') return planned;
 
-    return runObjective({
+    const outcome = await runObjective({
       objectiveDir: dir,
       agent,
       adapter,
@@ -411,6 +415,35 @@ export function startObjectiveRun(
       },
       onEvent,
     });
+    // P3.M4 retrospective: plan vs actuals → memory proposals (never blocks the outcome)
+    if (objective?.retrospective !== 'off') {
+      try {
+        const memoryRoot = path.join(agentDir(ctx.home, workspaceId, agentId), 'memory');
+        await initMemoryLayout(memoryRoot);
+        const proposals = await runRetrospective({ objectiveDir: dir, objectiveId, objectiveTitle: title }, memoryRoot);
+        if (objective?.retrospective === 'apply' && proposals.length > 0) {
+          await applyProposals(
+            memoryRoot,
+            (written) =>
+              onEvent(
+                AeosEventSchema.parse({
+                  v: 1,
+                  id: newEventId(),
+                  ts: new Date().toISOString(),
+                  source: 'retrospective',
+                  agentId,
+                  type: 'memory.written',
+                  payload: { path: written.path, bytes: written.bytes },
+                }),
+              ),
+            { ids: proposals.map((p) => p.id) },
+          );
+        }
+      } catch {
+        // a retrospective failure must never turn a finished objective into an error
+      }
+    }
+    return outcome;
   })()
     .then(
       (outcome) => {
@@ -503,6 +536,7 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
         ...(body.definitionOfDone === undefined ? {} : { definitionOfDone: body.definitionOfDone }),
         ...(body.repo === undefined ? {} : { repo: body.repo }),
         ...(body.verify === undefined ? {} : { verify: body.verify }),
+        ...(body.retrospective === undefined ? {} : { retrospective: body.retrospective }),
         ...(body.budgetUsd === undefined ? {} : { budgetUsd: body.budgetUsd }),
         ...(body.budgetTokens === undefined ? {} : { budgetTokens: body.budgetTokens }),
       });

@@ -448,6 +448,9 @@ importers:
       '@aeos/kernel':
         specifier: workspace:*
         version: link:../kernel
+      '@aeos/memory':
+        specifier: workspace:*
+        version: link:../memory
       '@aeos/policy':
         specifier: workspace:*
         version: link:../policy
