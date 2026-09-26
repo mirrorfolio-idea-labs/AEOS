@@ -269,6 +269,29 @@
         }
       }
     },
+    "/v1/objectives/{id}/routes": {
+      "get": {
+        "tags": [
+          "objectives"
+        ],
+        "description": "Router decisions + realized cost per task attempt (routes.ndjson, P3.M2).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/v1/objectives/{id}/plan/approve": {
       "post": {
         "tags": [

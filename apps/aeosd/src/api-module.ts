@@ -4,6 +4,7 @@ import { agentDir, getAgent, type EventBus, type IndexDb } from '@aeos/kernel';
 import type { Supervisor } from '@aeos/runner';
 import { CredentialProfileSchema, type AgentConfig, type CredentialProfile } from '@aeos/contracts';
 import { PLANNING_MARKER } from '@aeos/scheduler';
+import { loadPricingIndex } from '@aeos/router';
 import {
   FakeAdapter,
   buildFixtureEvents,
@@ -125,8 +126,12 @@ export async function startApiModule(
   // P2.M7 managed harness binaries: pins resolve to verified installs only
   const binaries = createBinaryManager({ root: path.join(home, 'binaries') });
 
-  const adapterFor = (agent: AgentConfig): HarnessAdapter => {
-    const provider = config.providerOverride ?? agent.harness.provider;
+  const adapterFor = (
+    agent: AgentConfig,
+    opts?: { provider?: 'claude-code' | 'codex' | 'opencode' },
+  ): HarnessAdapter => {
+    // E2E override > router's per-class choice (P3.M2) > the agent's harness
+    const provider = config.providerOverride ?? opts?.provider ?? agent.harness.provider;
     if (provider === 'fake') {
       const events = buildFixtureEvents({ profileId: agent.credentialProfileId });
       // e2e seam: a scripted tool output lets tests plant markers (e.g. the
@@ -188,9 +193,13 @@ export async function startApiModule(
     return gated(new ClaudeAdapter(common), provider);
   };
 
+  // daily OpenRouter refresh; AEOS_PRICING_OFFLINE=1 pins the cached/static table
+  const pricing = () =>
+    loadPricingIndex({ home, offline: config.env['AEOS_PRICING_OFFLINE'] === '1' || config.providerOverride === 'fake' });
   const app = await createApiServer({
     home,
     adapterFor,
+    pricing,
     credentialFor: (agent) => credentialFor(config, agent),
     bus,
     // spec §11: layered policy files + shared approvals inbox, daemon-enforced
@@ -239,6 +248,7 @@ export async function startApiModule(
   const ctx: ApiContext = {
     home,
     adapterFor,
+    pricing,
     credentialFor: (agent) => credentialFor(config, agent),
     bus,
     db,

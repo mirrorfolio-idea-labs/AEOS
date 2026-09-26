@@ -5,6 +5,7 @@ import { openIndexDb, type EventBus, type IndexDb } from '@aeos/kernel';
 import type { AgentConfig, CredentialProfile, EffectivePolicy } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
 import type { ApprovalsRegistry } from '@aeos/policy';
+import type { LoadedPricing } from '@aeos/router';
 import { ApiError, sendError } from './envelope.js';
 import { registerWorkspaceRoutes } from './routes/workspaces.js';
 import { registerAgentRoutes } from './routes/agents.js';
@@ -38,8 +39,17 @@ export type PtyBridge = (
 export interface ApiServerOptions {
   /** AEOS_HOME — the file tree is truth; the API is a view over it. */
   home: string;
-  /** Adapter factory per agent — the daemon wires real providers; tests wire the fake. */
-  adapterFor: (agent: AgentConfig) => HarnessAdapter;
+  /**
+   * Adapter factory per agent — the daemon wires real providers; tests wire
+   * the fake. `provider` is the router's choice for a task class (P3.M2);
+   * absent means the agent's own harness.
+   */
+  adapterFor: (agent: AgentConfig, opts?: { provider?: 'claude-code' | 'codex' | 'opencode' }) => HarnessAdapter;
+  /**
+   * Pricing index for token-derived USD (P3.M2). Defaults to the cached or
+   * static index without touching the network; the daemon refreshes daily.
+   */
+  pricing?: () => Promise<LoadedPricing>;
   /** Resolves an agent's credential profile id to the full profile. */
   credentialFor: (agent: AgentConfig) => CredentialProfile;
   /** Live event bus (kernel). Optional — without it, /v1/events serves backfill only. */

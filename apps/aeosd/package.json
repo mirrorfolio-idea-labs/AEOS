@@ -24,6 +24,7 @@
     "@aeos/provider-codex": "workspace:*",
     "@aeos/provider-core": "workspace:*",
     "@aeos/provider-opencode": "workspace:*",
+    "@aeos/router": "workspace:*",
     "@aeos/runner": "workspace:*",
     "@aeos/scheduler": "workspace:*",
     "@aeos/secrets": "workspace:*",

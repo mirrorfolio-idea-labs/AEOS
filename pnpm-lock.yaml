@@ -132,6 +132,9 @@ importers:
       '@aeos/provider-opencode':
         specifier: workspace:*
         version: link:../../packages/provider-opencode
+      '@aeos/router':
+        specifier: workspace:*
+        version: link:../../packages/router
       '@aeos/runner':
         specifier: workspace:*
         version: link:../../packages/runner
@@ -206,6 +209,9 @@ importers:
       '@aeos/provider-core':
         specifier: workspace:*
         version: link:../provider-core
+      '@aeos/router':
+        specifier: workspace:*
+        version: link:../router
       '@aeos/runner':
         specifier: workspace:*
         version: link:../runner
@@ -376,6 +382,28 @@ importers:
       '@aeos/provider-core':
         specifier: workspace:*
         version: link:../provider-core
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
+  packages/router:
+    dependencies:
+      '@aeos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@aeos/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      yaml:
+        specifier: ^2.6.1
+        version: 2.9.0
       zod:
         specifier: ^3.23.8
         version: 3.25.76

@@ -59,6 +59,19 @@ export interface RunObjectiveOptions {
    * sha is recorded as the checkpoint's `commit`.
    */
   commitTask?: (task: PlanTask) => Promise<string | undefined>;
+  /**
+   * Per-task execution choice (P3.M2 router): which adapter (provider)
+   * and model run this task. Defaults to `adapter` with the harness model.
+   */
+  selectExecution?: (task: PlanTask) => Promise<{ adapter: HarnessAdapter; model?: string | undefined }>;
+  /** Realized outcome + spend of every task attempt (route/cost records). */
+  onTaskSettled?: (task: PlanTask, result: TaskSettlement) => void | Promise<void>;
+}
+
+export interface TaskSettlement {
+  status: 'completed' | 'failed' | 'paused';
+  usd: number;
+  tokens: { input: number; output: number };
 }
 
 export type ObjectiveOutcome =
@@ -172,18 +185,22 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
     const baselineStatus =
       opts.watchedRepo !== undefined ? await worktreeStatus(opts.watchedRepo) : undefined;
 
-    const profile = await opts.adapter.createProfile(opts.agent);
-    const handle = opts.adapter.spawn({
+    const execution = (await opts.selectExecution?.(task)) ?? { adapter: opts.adapter };
+    const profile = await execution.adapter.createProfile(opts.agent);
+    const handle = execution.adapter.spawn({
       profile,
       sessionId: nextSessionId(),
       objective: opts.composePrompt === undefined ? task.title : await opts.composePrompt(task, plan),
       ...(opts.workdir === undefined ? {} : { workdir: opts.workdir }),
+      ...(execution.model === undefined ? {} : { model: execution.model }),
       ...(resumeToken === undefined ? {} : { resumeToken }),
       ...(opts.permissionPolicy === undefined ? {} : { permissionPolicy: opts.permissionPolicy }),
     });
 
     let usd = 0;
     let tokens = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
     let terminal: 'completed' | 'failed' | 'none' = 'none';
     let failureReason = 'session ended without a terminal event';
     let budgetStop: { kind: 'usd' | 'tokens'; cap: number; spent: number } | null = null;
@@ -194,6 +211,8 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
         const taskTokens = event.payload.inputTokens + event.payload.outputTokens;
         usd += event.payload.usd;
         tokens += taskTokens;
+        inputTokens += event.payload.inputTokens;
+        outputTokens += event.payload.outputTokens;
         const reading = meter.record({ usd: event.payload.usd, tokens: taskTokens });
         if (reading.exceeded !== null && budgetStop === null) {
           const kind = reading.exceeded;
@@ -221,7 +240,11 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       }
     }
 
+    const settle = (status: TaskSettlement['status']): Promise<void> | void =>
+      opts.onTaskSettled?.(task, { status, usd, tokens: { input: inputTokens, output: outputTokens } });
+
     if (budgetStop !== null) {
+      await settle('paused');
       await writeCheckpoint(opts.objectiveDir, {
         taskId: task.id,
         status: 'pending', // NOT a strike: raising the cap resumes cleanly
@@ -262,6 +285,7 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
             },
           }),
         );
+        await settle('paused');
         await savePlan(opts.objectiveDir, plan); // T1 stays as written at spawn
         return {
           status: 'paused',
@@ -272,6 +296,7 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
     }
 
     if (terminal === 'completed') {
+      await settle('completed');
       const commit = await opts.commitTask?.(task);
       await writeCheckpoint(opts.objectiveDir, {
         taskId: task.id,
@@ -288,6 +313,7 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       continue;
     }
 
+    await settle('failed');
     const nowAttempts = attempts + 1;
     const exhausted = nowAttempts >= maxAttempts;
     await writeCheckpoint(opts.objectiveDir, {

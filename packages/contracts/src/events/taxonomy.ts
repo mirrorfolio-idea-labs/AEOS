@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { EnvelopeBaseSchema } from '../envelope.js';
 import { SessionStateSchema } from '../domain/session.js';
 import { TierSchema } from '../domain/policy.js';
+import { TaskClassSchema } from '../domain/objective.js';
 
 const ev = <T extends string, P extends z.ZodTypeAny>(type: T, payload: P) =>
   EnvelopeBaseSchema.extend({ type: z.literal(type), payload });
@@ -63,6 +64,19 @@ export const AeosEventSchema = z.discriminatedUnion('type', [
     }),
   ),
   ev('memory.written', z.object({ path: z.string(), bytes: z.number().int().nonnegative() })),
+  ev(
+    'route.decided',
+    z.object({
+      taskClass: TaskClassSchema,
+      provider: z.string(),
+      model: z.string().optional(),
+      thinking: z.string().optional(),
+      /** Decision inputs (audit): which layer set provider and model. */
+      providerSource: z.string(),
+      modelSource: z.string(),
+      reason: z.string(),
+    }),
+  ),
   ev(
     'agent.status_changed',
     z.object({
