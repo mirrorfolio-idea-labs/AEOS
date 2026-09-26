@@ -22,6 +22,7 @@
     "@aeos/memory": "workspace:*",
     "@aeos/policy": "workspace:*",
     "@aeos/provider-core": "workspace:*",
+    "cron-parser": "^5.10.1",
     "yaml": "^2.6.1",
     "zod": "^3.23.8"
   },

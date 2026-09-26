@@ -55,6 +55,9 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos memory proposals --workspace <ws> --agent <agent>        # queued lessons/preferences
   aeos memory accept [<id>] --workspace <ws> --agent <agent>    # all, or one
   aeos memory reject <id> --workspace <ws> --agent <agent>
+  aeos job add <id> --cron "0 3 * * *" --workspace <ws> --agent <agent> --objective <obj>   # UTC
+  aeos job add <id> --idle-ms 600000 [--min-interval-ms 3600000] --curator
+  aeos job list | aeos job rm <id>
   aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main] [--verify "pnpm test" ...]
   aeos repo unbind <id> --workspace <ws> --agent <agent>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
@@ -221,6 +224,43 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       for (const r of await client.applyMemoryProposals(workspaceId, agentId, id === undefined ? undefined : [id])) {
         io.out(`${r.id}: ${r.status}${r.error === undefined ? '' : ` (${r.error})`}`);
       }
+      return 0;
+    }
+    if (group === 'job' && action === 'list') {
+      for (const job of await client.listJobs()) {
+        const when = job.kind === 'cron' ? `cron "${job.cron ?? ''}"` : `idle ${String(job.idleMs)}ms`;
+        const what = job.action.type === 'curator' ? 'curator' : `start ${job.action.workspaceId}/${job.action.agentId}/${job.action.objectiveId}`;
+        io.out(
+          `${job.id}  ${when}  → ${what}${job.enabled ? '' : ' (disabled)'}  last=${job.lastRunAt ?? 'never'}${job.lastError === undefined ? '' : `  error: ${job.lastError}`}`,
+        );
+      }
+      return 0;
+    }
+    if (group === 'job' && action === 'rm' && id !== undefined) {
+      await client.deleteJob(id);
+      io.out(`job ${id} deleted`);
+      return 0;
+    }
+    if (group === 'job' && action === 'add' && id !== undefined) {
+      const cron = parsed.flags.get('cron')?.[0];
+      const idleMs = parsed.flags.get('idle-ms')?.[0];
+      if ((cron === undefined) === (idleMs === undefined)) throw new Error('aeos job add needs exactly one of --cron or --idle-ms');
+      const minInterval = parsed.flags.get('min-interval-ms')?.[0];
+      const job = await client.saveJob({
+        id,
+        ...(cron === undefined ? { kind: 'idle' as const, idleMs: Number(idleMs) } : { kind: 'cron' as const, cron }),
+        ...(minInterval === undefined ? {} : { minIntervalMs: Number(minInterval) }),
+        action:
+          parsed.flags.has('curator')
+            ? { type: 'curator' }
+            : {
+                type: 'start-objective',
+                workspaceId: need(parsed, 'workspace'),
+                agentId: need(parsed, 'agent'),
+                objectiveId: need(parsed, 'objective'),
+              },
+      });
+      io.out(`job ${job.id} saved (${job.kind})`);
       return 0;
     }
     if (group === 'inbox') {
