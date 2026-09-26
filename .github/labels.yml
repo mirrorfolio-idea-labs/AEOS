@@ -2,49 +2,49 @@
 # Edit here, never in the GitHub UI (the sync would revert it).
 
 # ── type ──
-- { name: bug, color: d73a4a, description: "Something is broken" }
-- { name: enhancement, color: a2eeef, description: "New feature or improvement" }
-- { name: docs, color: 0075ca, description: "Documentation" }
-- { name: question, color: d876e3, description: "A question, not a change" }
-- { name: security, color: b60205, description: "Security-relevant (report vulnerabilities privately — SECURITY.md)" }
+- { name: bug, color: "d73a4a", description: "Something is broken" }
+- { name: enhancement, color: "a2eeef", description: "New feature or improvement" }
+- { name: docs, color: "0075ca", description: "Documentation" }
+- { name: question, color: "d876e3", description: "A question, not a change" }
+- { name: security, color: "b60205", description: "Security-relevant (report vulnerabilities privately — SECURITY.md)" }
 
 # ── priority (see CONTRIBUTING: Triage) ──
-- { name: P0, color: b60205, description: "Data loss, security hole, or AEOS unusable — drop everything" }
-- { name: P1, color: e99695, description: "Major feature broken, no workaround" }
-- { name: P2, color: fbca04, description: "Broken with a workaround, or an important gap" }
-- { name: P3, color: c2e0c6, description: "Minor, cosmetic, nice to have" }
+- { name: P0, color: "b60205", description: "Data loss, security hole, or AEOS unusable — drop everything" }
+- { name: P1, color: "e99695", description: "Major feature broken, no workaround" }
+- { name: P2, color: "fbca04", description: "Broken with a workaround, or an important gap" }
+- { name: P3, color: "c2e0c6", description: "Minor, cosmetic, nice to have" }
 
 # ── status ──
-- { name: needs-triage, color: ededed, description: "New — a maintainer has not looked yet" }
-- { name: needs-repro, color: f9d0c4, description: "Waiting for steps to reproduce" }
-- { name: accepted, color: 0e8a16, description: "Triaged and wanted — PRs welcome" }
-- { name: blocked, color: 5319e7, description: "Waiting on something else (linked)" }
+- { name: needs-triage, color: "ededed", description: "New — a maintainer has not looked yet" }
+- { name: needs-repro, color: "f9d0c4", description: "Waiting for steps to reproduce" }
+- { name: accepted, color: "0e8a16", description: "Triaged and wanted — PRs welcome" }
+- { name: blocked, color: "5319e7", description: "Waiting on something else (linked)" }
 
 # ── contributor on-ramp ──
-- { name: good first issue, color: 7057ff, description: "Scoped for a first contribution — pointers inside" }
-- { name: help wanted, color: 008672, description: "Maintainers would love a PR" }
+- { name: good first issue, color: "7057ff", description: "Scoped for a first contribution — pointers inside" }
+- { name: help wanted, color: "008672", description: "Maintainers would love a PR" }
 
 # ── ROADMAP tracking (one issue per task, titled [AEOS-P<p>.M<m>.T<t>]) ──
-- { name: task, color: 1d76db, description: "A ROADMAP build task" }
-- { name: "phase:P2", color: c5def5, description: "Phase P2 — safety + polish" }
-- { name: "phase:P3", color: c5def5, description: "Phase P3 — autonomy" }
-- { name: "phase:P4", color: c5def5, description: "Phase P4 — scale + community" }
-- { name: "phase:P5", color: c5def5, description: "Phase P5 — v1.0 release" }
-- { name: post-v1, color: ededed, description: "Tracked backlog, deliberately after v1" }
+- { name: task, color: "1d76db", description: "A ROADMAP build task" }
+- { name: "phase:P2", color: "c5def5", description: "Phase P2 — safety + polish" }
+- { name: "phase:P3", color: "c5def5", description: "Phase P3 — autonomy" }
+- { name: "phase:P4", color: "c5def5", description: "Phase P4 — scale + community" }
+- { name: "phase:P5", color: "c5def5", description: "Phase P5 — v1.0 release" }
+- { name: post-v1, color: "ededed", description: "Tracked backlog, deliberately after v1" }
 
 # ── area (existing convention: area:<name>) ──
-- { name: "area:kernel", color: bfdadc, description: "Kernel, event bus, files-as-truth, index" }
-- { name: "area:runner", color: bfdadc, description: "Runner processes, protocol, PTY" }
-- { name: "area:scheduler", color: bfdadc, description: "Plans, planner, router, wakeups" }
-- { name: "area:memory", color: bfdadc, description: "Memory, curator, retrospective" }
-- { name: "area:testing", color: bfdadc, description: "Verification, test infrastructure" }
-- { name: "area:policy", color: bfdadc, description: "Policy tiers, approvals, budgets" }
-- { name: "area:security", color: bfdadc, description: "Secrets, sandbox tiers, auth" }
-- { name: "area:api", color: bfdadc, description: "HTTP API, SDK" }
-- { name: "area:cli", color: bfdadc, description: "The aeos CLI" }
-- { name: "area:ui", color: bfdadc, description: "The web UI (ADE) and desktop shell" }
-- { name: "area:provider", color: bfdadc, description: "Harness adapters, pinned binaries" }
-- { name: "area:plugins", color: bfdadc, description: "Plugin API, host, create-aeos-plugin" }
-- { name: "area:deploy", color: bfdadc, description: "Service, compose, Helm, TCP transport" }
-- { name: "area:docs", color: bfdadc, description: "Docs site and guides" }
-- { name: "area:release", color: bfdadc, description: "Release engineering, launch" }
+- { name: "area:kernel", color: "bfdadc", description: "Kernel, event bus, files-as-truth, index" }
+- { name: "area:runner", color: "bfdadc", description: "Runner processes, protocol, PTY" }
+- { name: "area:scheduler", color: "bfdadc", description: "Plans, planner, router, wakeups" }
+- { name: "area:memory", color: "bfdadc", description: "Memory, curator, retrospective" }
+- { name: "area:testing", color: "bfdadc", description: "Verification, test infrastructure" }
+- { name: "area:policy", color: "bfdadc", description: "Policy tiers, approvals, budgets" }
+- { name: "area:security", color: "bfdadc", description: "Secrets, sandbox tiers, auth" }
+- { name: "area:api", color: "bfdadc", description: "HTTP API, SDK" }
+- { name: "area:cli", color: "bfdadc", description: "The aeos CLI" }
+- { name: "area:ui", color: "bfdadc", description: "The web UI (ADE) and desktop shell" }
+- { name: "area:provider", color: "bfdadc", description: "Harness adapters, pinned binaries" }
+- { name: "area:plugins", color: "bfdadc", description: "Plugin API, host, create-aeos-plugin" }
+- { name: "area:deploy", color: "bfdadc", description: "Service, compose, Helm, TCP transport" }
+- { name: "area:docs", color: "bfdadc", description: "Docs site and guides" }
+- { name: "area:release", color: "bfdadc", description: "Release engineering, launch" }
