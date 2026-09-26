@@ -1,5 +1,8 @@
+import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
+import { ScreenStateDetector, loadManifest } from '@aeos/runner';
 import type { ApiContext } from '../server.js';
+import { statusTrackerFor } from '../status.js';
 
 /**
  * `GET /v1/sessions/:id/attach` (WebSocket only — spec §14): pipes bytes
@@ -34,12 +37,35 @@ export function registerAttachRoute(app: FastifyInstance, ctx: ApiContext): void
       }
     }
 
+    // P2.M10 screen-state detection (herdr manifests): a human running the
+    // harness interactively in the takeover shell still drives the agent's
+    // attention status — permission prompt → blocked, prompt box → done.
+    const manifest = loadManifest(agent.harness.provider, path.join(ctx.home, 'agent-detection'));
+    const tracker = statusTrackerFor(ctx.home, ctx.bus);
+    const detector =
+      manifest === undefined
+        ? undefined
+        : new ScreenStateDetector({
+            manifest,
+            onChange: (change) => {
+              if (change.state === 'unknown') return;
+              tracker.set({ workspaceId: agent.workspaceId, id: agent.id }, change.state === 'idle' ? 'done' : change.state, {
+                via: 'screen',
+                sessionId: id,
+                rule: change.rule,
+                reason: `screen rule ${change.rule ?? '?'}`,
+              });
+            },
+          });
+
     let bridge;
     try {
       bridge = await ctx.attachPty(id, (data) => {
+        detector?.write(data);
         if (socket.readyState === socket.OPEN) socket.send(data);
       });
     } catch {
+      detector?.dispose();
       return closeWith(1011, 'no live runner for session');
     }
 
@@ -55,6 +81,7 @@ export function registerAttachRoute(app: FastifyInstance, ctx: ApiContext): void
       }
       if (control?.type === 'resize' && typeof control.cols === 'number' && typeof control.rows === 'number') {
         bridge.resize(control.cols, control.rows);
+        detector?.resize(control.cols, control.rows);
         return;
       }
       if (control?.type === 'release') {
@@ -64,6 +91,9 @@ export function registerAttachRoute(app: FastifyInstance, ctx: ApiContext): void
       }
       bridge.input(text);
     });
-    socket.on('close', () => bridge.release());
+    socket.on('close', () => {
+      bridge.release();
+      detector?.dispose();
+    });
   });
 }

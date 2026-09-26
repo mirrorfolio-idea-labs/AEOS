@@ -128,6 +128,7 @@ export class FakeAdapter implements HarnessAdapter {
       mcp: false,
       sandbox: false,
       costReporting: true,
+      costUsd: true,
     };
   }
 

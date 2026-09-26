@@ -36,6 +36,10 @@
             "version": {
               "type": "string"
             },
+            "binaryPath": {
+              "type": "string",
+              "minLength": 1
+            },
             "featureToggles": {
               "type": "object",
               "properties": {
@@ -84,6 +88,31 @@
           "type": "object",
           "additionalProperties": {
             "type": "string"
+          }
+        },
+        "repos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "baseRef": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "path"
+            ],
+            "additionalProperties": false
           }
         }
       },

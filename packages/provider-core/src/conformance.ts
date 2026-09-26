@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AeosEventSchema, type AgentConfig } from '@aeos/contracts';
-import type { HarnessAdapter } from './adapter.js';
+import type { CapabilityMatrix, HarnessAdapter } from './adapter.js';
 
 export interface ConformanceSubject {
   /** Fresh adapter per test — conformance must not depend on shared state. */
@@ -9,6 +9,8 @@ export interface ConformanceSubject {
   agent: AgentConfig;
   /** Raw provider output samples `translate` must be pure and total on. */
   rawCorpus: readonly unknown[];
+  /** The adapter's documented capabilities — reality must equal the claim. */
+  capabilityClaims: CapabilityMatrix;
 }
 
 const FORBIDDEN_PROFILE_REFS = ['$HOME', '~/'];
@@ -16,14 +18,16 @@ const FORBIDDEN_PROFILE_REFS = ['$HOME', '~/'];
 /**
  * The bar every HarnessAdapter must clear (spec §9). Providers register
  * themselves by calling this from their own test suite — the capability
- * matrix and behavior are asserted here, never hand-maintained in docs.
+ * matrix and behavior are asserted here against docs/RELEASE-documented
+ * claims, never hand-maintained in docs.
  */
 export function describeAdapterConformance(name: string, subject: ConformanceSubject): void {
-  const { makeAdapter, agent, rawCorpus } = subject;
+  const { makeAdapter, agent, rawCorpus, capabilityClaims } = subject;
 
   describe(`adapter conformance: ${name}`, () => {
-    it('declares a full capability matrix', () => {
+    it('capabilities match its documented claims exactly (P2.M6.T3)', () => {
       const caps = makeAdapter().capabilities();
+      expect(caps).toEqual(capabilityClaims);
       for (const key of ['resume', 'structuredOutput', 'mcp', 'sandbox', 'costReporting'] as const) {
         expect(typeof caps[key], `capability ${key}`).toBe('boolean');
       }

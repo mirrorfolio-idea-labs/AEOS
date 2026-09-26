@@ -7,6 +7,11 @@ export interface CapabilityMatrix {
   mcp: boolean;
   sandbox: boolean;
   costReporting: boolean;
+  /**
+   * Whether `cost.usage.usd` carries real provider-reported pricing.
+   * `false` = token counts only (e.g. Codex reports no USD); defaults true.
+   */
+  costUsd?: boolean;
   maxContextTokens?: number;
 }
 
@@ -26,6 +31,11 @@ export interface SpawnOptions {
   /** AEOS session ULID — stamped onto every emitted event's `sessionId`. */
   sessionId: string;
   objective: string;
+  /**
+   * Working directory for the harness process — the objective's git
+   * worktree (spec §10). Defaults to the profile root when absent.
+   */
+  workdir?: string;
   /** Provider-native resume token from a previous session (capability `resume`). */
   resumeToken?: string;
   /**

@@ -5,6 +5,8 @@ export const ObjectiveSchema = z.object({
   agentId: z.string().min(1),
   title: z.string().min(1),
   definitionOfDone: z.string().optional(),
+  /** Repo binding id (AgentConfig.repos) — the objective runs in its own worktree of it. */
+  repo: z.string().optional(),
   budgetUsd: z.number().positive().optional(),
   budgetTokens: z.number().int().positive().optional(),
 });

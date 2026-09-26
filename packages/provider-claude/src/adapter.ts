@@ -24,13 +24,15 @@ export type RunChild = (
   profile: HarnessProfile,
   argv: readonly string[],
   signal: AbortSignal,
+  /** Process cwd — the objective worktree when set (spec §10). */
+  workdir?: string,
 ) => AsyncIterable<string>;
 
-const defaultRunChild: RunChild = async function* (profile, argv, signal) {
+const defaultRunChild: RunChild = async function* (profile, argv, signal, workdir) {
   const [command, ...rest] = argv;
   if (!command) throw new Error('empty argv');
   const child = spawnProcess(command, rest, {
-    cwd: profile.rootDir,
+    cwd: workdir ?? profile.rootDir,
     env: { PATH: process.env['PATH'] ?? '', ...profile.env },
     stdio: ['ignore', 'pipe', 'ignore'],
     signal,
@@ -51,6 +53,11 @@ export interface ClaudeAdapterOptions {
   /** Slot → persistent login home for subscription accounts (see profile.ts). */
   subscriptionHomeFor?: (slot: string) => string;
   runChild?: RunChild;
+  /**
+   * argv prefix resolver (P2.M7): pinned managed binary, BYO path or PATH
+   * name. Called per spawn so verification/gating errors fail that spawn.
+   */
+  resolveCommand?: () => readonly string[];
 }
 
 class ClaudeSessionHandle implements SessionHandle {
@@ -67,7 +74,7 @@ class ClaudeSessionHandle implements SessionHandle {
     const stream = async function* (this: ClaudeSessionHandle): AsyncGenerator<AeosEvent> {
       let lines: AsyncIterable<string>;
       try {
-        lines = runChild(opts.profile, argv, signal);
+        lines = runChild(opts.profile, argv, signal, opts.workdir);
         for await (const line of lines) {
           if (signal.aborted) return;
           let parsed: unknown;
@@ -120,6 +127,7 @@ export class ClaudeAdapter implements HarnessAdapter {
       mcp: true,
       sandbox: true,
       costReporting: true,
+      costUsd: true,
     };
   }
 
@@ -137,7 +145,7 @@ export class ClaudeAdapter implements HarnessAdapter {
 
   buildArgv(opts: SpawnOptions): string[] {
     return [
-      'claude',
+      ...(this.opts.resolveCommand?.() ?? ['claude']),
       '-p',
       opts.objective,
       '--output-format',

@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"01a03a3e-7369-7e41-8264-f6da2ba7fe38"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"fixture-marker-42"}}
+{"type":"turn.completed","usage":{"input_tokens":23061,"cached_input_tokens":3840,"cache_write_input_tokens":0,"output_tokens":23,"reasoning_output_tokens":13}}

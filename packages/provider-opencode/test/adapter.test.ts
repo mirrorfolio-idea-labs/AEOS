@@ -12,6 +12,7 @@ import {
 } from '@aeos/contracts';
 import { type HarnessProfile } from '@aeos/provider-core';
 import { describeAdapterConformance } from '@aeos/provider-core/conformance';
+import { ADAPTER_MATRIX } from '@aeos/provider-core';
 import { OpencodeAdapter } from '../src/adapter.js';
 import type { SecretResolver } from '../src/profile.js';
 
@@ -54,6 +55,7 @@ function makeAdapter(fixture = 'basic-session.ndjson'): OpencodeAdapter {
 }
 
 describeAdapterConformance('opencode (fixture-driven)', {
+  capabilityClaims: ADAPTER_MATRIX.opencode,
   makeAdapter,
   agent,
   rawCorpus: JSON.parse(

@@ -3,9 +3,18 @@ import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { agentDir, getAgent, writeFileAtomic } from '@aeos/kernel';
-import { parsePlan, readCheckpoints, runObjective } from '@aeos/scheduler';
-import { compilePolicy } from '@aeos/policy';
-import type { CompiledPolicy } from '@aeos/contracts';
+import {
+  commitTaskWork,
+  ensureObjectiveWorktree,
+  parsePlan,
+  readCheckpoints,
+  runObjective,
+  type ObjectiveWorktree,
+} from '@aeos/scheduler';
+import { compilePolicy, readObjectiveFile } from '@aeos/policy';
+import { ObjectiveSchema, type AgentConfig, type CompiledPolicy } from '@aeos/contracts';
+import { composeSessionBrief, taskNotesPath } from '../brief.js';
+import { statusTrackerFor } from '../status.js';
 import { guardAdapter } from '../policy-gate.js';
 import { ApiError, ok } from '../envelope.js';
 import type { ApiContext } from '../server.js';
@@ -22,7 +31,39 @@ const CreateObjective = ObjectiveRef.extend({
   /** Objective-scope spend caps (spec §11); persisted as objective.yaml. */
   budgetUsd: z.number().positive().optional(),
   budgetTokens: z.number().int().positive().optional(),
+  definitionOfDone: z.string().min(1).optional(),
+  /** Repo binding id — the objective runs in its own worktree of that repo (spec §10). */
+  repo: z.string().min(1).optional(),
 });
+
+/** Objective title of record: objective.yaml when present, else objective.md's heading. */
+async function objectiveTitle(dir: string, fallback: string): Promise<string> {
+  const file = readObjectiveFile(dir);
+  if (file !== undefined) return file.title;
+  const md = await readFile(path.join(dir, 'objective.md'), 'utf8').catch(() => '');
+  return /^#\s+(.+)$/m.exec(md)?.[1]?.trim() ?? fallback;
+}
+
+/** The worktree an objective runs in, created on first run (idempotent). */
+export async function objectiveWorktree(
+  ctx: Pick<ApiContext, 'home'>,
+  agent: AgentConfig,
+  objectiveId: string,
+): Promise<ObjectiveWorktree | undefined> {
+  const dir = objectiveDirFor(ctx.home, agent.workspaceId, agent.id, objectiveId);
+  const repoId = readObjectiveFile(dir)?.repo;
+  if (repoId === undefined) return undefined;
+  const repo = agent.repos?.find((r) => r.id === repoId);
+  if (repo === undefined) {
+    throw new ApiError(409, `objective "${objectiveId}" targets repo "${repoId}", which agent "${agent.id}" no longer binds`);
+  }
+  return ensureObjectiveWorktree({
+    repo,
+    agentDir: agentDir(ctx.home, agent.workspaceId, agent.id),
+    agentId: agent.id,
+    objectiveId,
+  });
+}
 
 export const objectiveDirFor = (
   home: string,
@@ -50,6 +91,10 @@ export function startObjectiveRun(
   const agent = getAgent(ctx.home, workspaceId, agentId);
   const dir = objectiveDirFor(ctx.home, workspaceId, agentId, objectiveId);
   if (running.has(dir)) return;
+  // P2.M10 attention status: every run event folds into the agent's status
+  const tracker = statusTrackerFor(ctx.home, ctx.bus);
+  const ref = { workspaceId, id: agentId };
+  tracker.set(ref, 'working', { via: 'events', reason: `objective ${objectiveId} started` });
   const run = (async () => {
     let adapter = ctx.adapterFor(agent);
     let permissionPolicy: CompiledPolicy | undefined;
@@ -61,14 +106,39 @@ export function startObjectiveRun(
       });
       permissionPolicy = compilePolicy(effective);
     }
+    const worktree = await objectiveWorktree(ctx, agent, objectiveId);
+    const objective = readObjectiveFile(dir);
+    const title = await objectiveTitle(dir, objectiveId);
     return runObjective({
       objectiveDir: dir,
       agent,
       adapter,
       stopFile: stopFilePath(ctx.home),
+      composePrompt: async (task, plan) =>
+        composeSessionBrief({
+          taskNotes: await readFile(taskNotesPath(dir, task.id), 'utf8').catch(() => undefined),
+          agent,
+          objectiveTitle: title,
+          objective,
+          task,
+          plan,
+          memoryRoot: path.join(agentDir(ctx.home, workspaceId, agentId), 'memory'),
+          worktree,
+        }),
+      ...(worktree === undefined
+        ? {}
+        : {
+            workdir: worktree.dir,
+            commitTask: (task) =>
+              commitTaskWork(worktree.dir, `${task.id}: ${task.title}\n\nAEOS objective ${objectiveId}`, {
+                name: agent.name,
+                email: `${agent.id}@agents.aeos.local`,
+              }),
+          }),
       ...(permissionPolicy === undefined ? {} : { permissionPolicy }),
       onEvent: (event) => {
         ctx.bus?.publish(event);
+        tracker.observe(ref, event);
         // files are truth for spend too: every cost.usage lands in costs.ndjson
         if (event.type === 'cost.usage') {
           void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
@@ -76,6 +146,23 @@ export function startObjectiveRun(
       },
     });
   })()
+    .then(
+      (outcome) => {
+        if (outcome.status === 'completed') {
+          tracker.set(ref, 'done', { via: 'events', reason: `objective ${objectiveId} completed` });
+        } else {
+          tracker.set(ref, 'blocked', { via: 'events', reason: `objective ${objectiveId} paused: ${outcome.reason}` });
+        }
+        return outcome;
+      },
+      (error: unknown) => {
+        tracker.set(ref, 'blocked', {
+          via: 'events',
+          reason: `objective ${objectiveId} errored: ${error instanceof Error ? error.message : String(error)}`,
+        });
+        throw error;
+      },
+    )
     .finally(() => running.delete(dir));
   running.set(dir, run);
   run.catch(() => undefined); // surfaced via status; never an unhandled rejection
@@ -126,22 +213,27 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
     schema: { description: 'Create an objective with its plan.md.', tags: ['objectives'] },
     handler: async (request, reply) => {
       const body = CreateObjective.parse(request.body);
-      getAgent(ctx.home, body.workspaceId, body.agentId); // 404 via RegistryError if missing
+      const agent = getAgent(ctx.home, body.workspaceId, body.agentId); // 404 via RegistryError if missing
+      if (body.repo !== undefined && agent.repos?.some((r) => r.id === body.repo) !== true) {
+        throw new ApiError(400, `agent "${agent.id}" has no repo binding "${body.repo}"`);
+      }
       const dir = objectiveDirFor(ctx.home, body.workspaceId, body.agentId, body.id);
       await mkdir(path.join(dir, 'checkpoints'), { recursive: true });
-      await writeFileAtomic(path.join(dir, 'objective.md'), `# ${body.title}\n`);
-      if (body.budgetUsd !== undefined || body.budgetTokens !== undefined) {
-        const { stringify } = await import('yaml');
-        const { ObjectiveSchema } = await import('@aeos/contracts');
-        const objectiveFile = ObjectiveSchema.parse({
-          id: body.id,
-          agentId: body.agentId,
-          title: body.title,
-          ...(body.budgetUsd === undefined ? {} : { budgetUsd: body.budgetUsd }),
-          ...(body.budgetTokens === undefined ? {} : { budgetTokens: body.budgetTokens }),
-        });
-        await writeFileAtomic(path.join(dir, 'objective.yaml'), stringify(objectiveFile));
-      }
+      await writeFileAtomic(
+        path.join(dir, 'objective.md'),
+        `# ${body.title}\n${body.definitionOfDone === undefined ? '' : `\n## Definition of done\n\n${body.definitionOfDone}\n`}`,
+      );
+      const { stringify } = await import('yaml');
+      const objectiveFile = ObjectiveSchema.parse({
+        id: body.id,
+        agentId: body.agentId,
+        title: body.title,
+        ...(body.definitionOfDone === undefined ? {} : { definitionOfDone: body.definitionOfDone }),
+        ...(body.repo === undefined ? {} : { repo: body.repo }),
+        ...(body.budgetUsd === undefined ? {} : { budgetUsd: body.budgetUsd }),
+        ...(body.budgetTokens === undefined ? {} : { budgetTokens: body.budgetTokens }),
+      });
+      await writeFileAtomic(path.join(dir, 'objective.yaml'), stringify(objectiveFile));
       await writeFileAtomic(
         path.join(dir, 'plan.md'),
         `# ${body.title}\n\n${body.tasks.map((t) => `- [ ] **${t.id}** ${t.title}`).join('\n')}\n`,

@@ -170,7 +170,7 @@ credential profiles reuse the M4 model including multi-account slots.
 - [x] **T3** Conformance: OpenCode adapter passes the provider-core suite. *Accept: conformance green in CI alongside claude + fake.*
 **Exit gate:** the same fixture objective completes on the fake, Claude, and OpenCode adapters.
 
-## Phase P2 — Safety + polish (v0.2)  `[~]`
+## Phase P2 — Safety + polish (v0.2)  `[x]`
 
 **Exit gate for the phase:** a new agent runs under least-privilege policy with
 daemon-enforced budget caps, every action audited, secrets never leaking into
@@ -178,6 +178,22 @@ transcripts, on any of three harnesses (Claude/Codex/OpenCode), with human PTY
 takeover available — demonstrated by the P2 integration suite; `v0.2` tagged.
 Detailed plans per milestone are written just-in-time at each predecessor's
 exit (same rule as P1).
+
+> **Phase status (2026-09-26): PASSED on code.** M1–M10 are all `[x]`. M9
+> and M10 were added on 2026-09-26: worktrees and session brief, and the
+> herdr-derived runtime. The exit gate is `apps/aeosd/test/p2-exit.e2e.test.ts`,
+> which runs a NEW agent on the real daemon under the default posture. It
+> checks, in one run:
+> - an approval park and resume;
+> - PTY takeover refused below allow-tier;
+> - work isolated in a worktree;
+> - a daemon-enforced budget hard stop with no strike consumed;
+> - approvals, tool traffic and budget stops present in the audit log;
+> - a secret canary absent from audit, SSE and REST;
+> - the three-harness matrix.
+>
+> `v0.2.0` is tagged by Kabeer after he merges the staging→main release PR
+> (Gate 3).
 
 ### M1 — Policy engine + approvals inbox  `[x]`
 **Context brief:** Spec §11. Permission tiers (`read_files … network_access`)
@@ -234,32 +250,57 @@ only for PTY) + spec §20 OQ1 (human edits agent worktree — resolve by ADR her
 - [x] **T3** Co-edit detection ADR + guard (dirty-worktree check → pause + notify). *Accept: human edit in agent worktree pauses the task with an `approval.request`.*
 **Exit gate:** mid-session human takeover and clean handback demonstrated.
 
-### M6 — Codex adapter  `[ ]`
+### M6 — Codex adapter  `[x]`
 **Context brief:** Spec §9. Hermetic profile (`CODEX_HOME` + generated
 `config.toml`); translate `thread/turn/item` and SSE into the canonical
 taxonomy; resume support; passes the M4(P1) conformance suite.
-- [ ] **T1** Codex adapter (profile, spawn, translate, resume). *Accept: recorded-fixture translation byte-identical; conformance green.*
+- [x] **T1** Codex adapter (profile, spawn, translate, resume). *Accept: recorded-fixture translation byte-identical; conformance green.*
 > **T2 moved** (2026-07-19 scope change): the OpenCode adapter was pulled
 > forward to **P1.M10** — Kabeer needs a second harness in v0.1. The task ID
 > `AEOS-P2.M6.T2` is retired, never reused.
-- [ ] **T3** Cross-harness capability matrix + docs. *Accept: matrix asserted by conformance tests, not hand-maintained.*
+- [x] **T3** Cross-harness capability matrix + docs. *Accept: matrix asserted by conformance tests, not hand-maintained.*
 **Exit gate:** the same fixture objective completes on all adapters (fake, Claude, OpenCode from P1.M10, Codex).
 
-### M7 — Managed harness binaries  `[ ]`
+### M7 — Managed harness binaries  `[x]`
 **Context brief:** Spec §9 (Conductor pattern). Pin + manage harness versions
 per agent with checksum verification; BYO-binary fallback; capability gating
 by version (spec §17.2 mitigation).
-- [ ] **T1** Binary manager (fetch, pin, verify, per-agent version selection). *Accept: tampered binary rejected; pinned version used over PATH.*
-- [ ] **T2** BYO fallback + version-gated capabilities. *Accept: feature requiring version X is refused under pinned version < X with a typed error.*
+- [x] **T1** Binary manager (fetch, pin, verify, per-agent version selection). *Accept: tampered binary rejected; pinned version used over PATH.*
+- [x] **T2** BYO fallback + version-gated capabilities. *Accept: feature requiring version X is refused under pinned version < X with a typed error.*
 **Exit gate:** conformance suite runs in CI against pinned versions.
 
-### M8 — Tauri desktop wrapper  `[ ]`
+### M8 — Tauri desktop wrapper  `[x]`
 **Context brief:** Spec §14 (D4). Thin Tauri shell around the served web UI;
 deep links + native notifications; no UI logic forked into the shell.
-- [ ] **T1** Tauri shell loading the daemon-served UI (daemon lifecycle handled). *Accept: app cold-starts daemon if absent; quits cleanly.*
-- [ ] **T2** Native notifications (approvals, budget stops) + deep links. *Accept: approval notification opens the inbox view.*
-- [ ] **T3** macOS + Linux build artifacts in CI. *Accept: installable artifacts produced by CI.*
+- [x] **T1** Tauri shell loading the daemon-served UI (daemon lifecycle handled). *Accept: app cold-starts daemon if absent; quits cleanly.*
+- [x] **T2** Native notifications (approvals, budget stops) + deep links. *Accept: approval notification opens the inbox view.*
+- [x] **T3** macOS + Linux build artifacts in CI. *Accept: installable artifacts produced by CI.*
 **Exit gate = P2 exit gate** (top of this section).
+
+### M9 — Repository bindings, worktrees + session brief  `[x]`
+**Context brief:** Spec §7 (repository bindings), §10 (one git worktree per
+agent, repo and objective; agents never touch the user's checkout), §8 rule 2
+(the frozen memory snapshot is injected at session start). Added 2026-09-26:
+the gap was found during the P2.M7 sweep. Until this milestone, harnesses ran
+in their profile dir and received only the bare task title. The review pane
+adapts herdr-reviewr (MIT).
+- [x] **T1** Repo bindings plus one worktree per (agent, repo, objective) on `aeos/<agent>/<objective>`; every completed task is committed with the agent as author (`checkpoint.commit`). *Accept: the objective runs in its worktree, the user's checkout is untouched, and each task yields an agent-authored commit.*
+- [x] **T2** Session brief: the task first, then its notes, objective and definition of done, plan position, the worktree, and the memory snapshot. *Accept: the brief is byte-stable for identical inputs and contains the memory snapshot.*
+- [x] **T3** Review pane: worktree diff by scope (whole objective, last task, uncommitted) in API, SDK, CLI and ADE; line comments go back to the agent as an `R<n>` task. *Accept: a Playwright round-trip covering bind → run → diff → comment → send creates the R1 task.*
+**Exit gate:** the fake-harness objective completes inside a worktree through the UI, and a review round-trip is green in CI (Playwright T6).
+
+### M10 — Agent runtime: status, wait, inbox, notifications  `[x]`
+**Context brief:** Added 2026-09-26 at Kabeer's request to adopt what is
+usable from [herdr](https://github.com/herdrdev/herdr), "the runtime your
+coding agents live on". herdr's detection manifests are Apache-2.0 and were
+copied with attribution. The ideas from herdr-agent-inbox and herdr-reviewr
+(both MIT) and herdr-remote (AGPL) were reimplemented, with no code copied.
+See `THIRD_PARTY_NOTICES.md`.
+- [x] **T1** Agent attention status (`idle | working | blocked | done | unknown`), derived from each run's canonical events and, for PTY takeovers, from herdr screen manifests evaluated over a headless xterm. Emitted as the new `agent.status_changed` event. *Accept: approval → blocked, run end → done, and a Claude permission prompt on a takeover screen → blocked via rule `bash_permission_prompt`.*
+- [x] **T2** Race-free wait primitive: `GET /v1/agents/:id/wait?until=&afterSeq=`, `aeos agent wait`, SDK `waitForAgent`. *Accept: a wait resolves on the matching transition after `afterSeq`, and a timeout returns `matched:false`.*
+- [x] **T3** Attention inbox: `/v1/inbox` ordered blocked → finished-unseen → working → idle → settled, with seen / unread / settle triage, where new activity lifts a settle; ADE sidebar inbox and status dots. *Accept: ordering fixture plus a Playwright round-trip (blocked → approve → finished → settle).*
+- [x] **T4** Attention push: `<home>/notifications.yaml` webhooks in json, ntfy or slack format. *Accept: a blocked agent produces exactly one ntfy POST with a high-priority title.*
+**Exit gate:** Playwright T7 green in CI, and the full bar green.
 
 ## Phase P3 — Autonomy (v0.3)  `[ ]`
 

@@ -178,6 +178,74 @@ to clients + `costs.ndjson` → task completes → checkpoint written →
 scheduler advances. A crash at any point resumes at the same task on
 restart — nothing is ever replayed from a transcript.
 
+### Harness adapters
+
+Every adapter is hermetic by default and passes the same conformance
+suite. This table is enforced by tests (`packages/provider-core`) — it
+cannot drift from the code silently.
+
+<!-- adapters:matrix -->
+| Adapter | resume | structuredOutput | mcp | sandbox | costReporting | USD costs |
+|---|---|---|---|---|---|---|
+| `claude-code` | true | true | true | true | true | usd |
+| `codex` | true | true | false | true | true | tokens |
+| `opencode` | true | true | true | false | true | usd |
+| `fake` | true | true | false | false | true | usd |
+
+**Managed harness binaries.** Pin a harness per agent
+(`aeos agent create … --harness-version 0.149.1`) and AEOS runs exactly that
+release. It is fetched from the npm registry, checked against the integrity
+pinned in `packages/provider-core/src/binaries/pins.ts`, sealed with a tree
+hash, and re-verified before it is used. A tampered install is refused, and
+a pin never falls back to whatever is on `PATH`. Without a pin, AEOS uses
+`--binary-path` (bring your own) and then `PATH`. Capabilities are gated by
+version, so asking for a feature that an older pinned release lacks fails
+with a typed `capability_version_unsupported` error.
+
+```bash
+aeos harness pins                      # releases of record
+aeos harness install codex@0.149.1     # fetch + integrity check + seal
+aeos harness verify codex@0.149.1      # re-hash against the seal
+```
+
+**Repositories and worktrees.** Agents never edit your checkout. Bind a
+repository and every objective that targets it gets its own git worktree
+under the agent's directory, on branch `aeos/<agent>/<objective>`. Each task
+the agent completes becomes one commit authored by that agent. Review the
+work in the ADE's Review tab or from the CLI, and send line comments back
+to the agent as a follow-up task.
+
+```bash
+aeos repo bind app --workspace ws --agent dev --path ~/code/app
+aeos objective create feat-x --workspace ws --agent dev --repo app \
+  --title "Add export" --done "CSV export works with tests" --task "T1: implement" --task "T2: tests"
+aeos objective run feat-x --workspace ws --agent dev
+aeos objective diff feat-x --workspace ws --agent dev --scope branch
+aeos objective review feat-x --workspace ws --agent dev --comment "src/export.ts:40: handle empty rows"
+```
+
+**Who needs you (agent runtime).** Every agent has a live attention status:
+`working`, `blocked` (an approval, a budget stop, or a permission prompt on a
+takeover screen), `done` or `idle`. The ADE sidebar orders agents by
+attention (blocked first, then finished-but-unseen), and you can mark items
+seen or unread, or settle them. Scripts can wait on an agent without racing
+it. To get a push to your phone, drop a `notifications.yaml` in `AEOS_HOME`.
+Screen-state detection uses [herdr](https://github.com/herdrdev/herdr)'s
+detection manifests (Apache-2.0, see `THIRD_PARTY_NOTICES.md`).
+
+```bash
+aeos inbox                                         # ! blocked  * finished-unseen  ~ working
+aeos agent wait dev --workspace ws --until blocked,done --timeout-ms 600000
+printf 'webhooks:\n  - url: https://ntfy.sh/my-aeos\n    format: ntfy\n' > ~/.aeos/notifications.yaml
+```
+
+**Desktop app.** `apps/desktop` is a thin Tauri 2 shell. It starts `aeosd`
+if the daemon isn't already running and opens the ADE. Native notifications
+appear when an agent needs you, and clicking one opens that agent's
+approvals. `aeos://agent/<workspace>/<agent>/approvals` links work too. The
+`desktop` CI workflow builds Linux (deb, AppImage) and macOS (dmg)
+installers.
+
 ---
 
 ## Repository
