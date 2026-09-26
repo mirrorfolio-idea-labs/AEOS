@@ -13,6 +13,19 @@ import type { Objective, PlanTask } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
 import { parsePlan, serializePlan, withTaskStatus, type ParsedPlan } from './plan.js';
 import { readCheckpoints, resolveNextTask, writeCheckpoint } from './checkpoint.js';
+import type { VerifyResult } from './verify.js';
+
+const CODE_CLASSES = new Set(['implement', 'refactor', 'rename']);
+
+/** The code task a verify task checks: the nearest earlier implement/refactor/rename. */
+function verifiedTaskFor(plan: ParsedPlan, verifyTask: PlanTask): PlanTask | undefined {
+  const index = plan.tasks.findIndex((t) => t.id === verifyTask.id);
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const candidate = plan.tasks[i] as PlanTask;
+    if (CODE_CLASSES.has(candidate.taskClass)) return candidate;
+  }
+  return index > 0 ? plan.tasks[index - 1] : undefined;
+}
 
 export interface RunObjectiveOptions {
   /** Directory holding `plan.md` and `checkpoints/`. */
@@ -59,6 +72,43 @@ export interface RunObjectiveOptions {
    * sha is recorded as the checkpoint's `commit`.
    */
   commitTask?: (task: PlanTask) => Promise<string | undefined>;
+  /**
+   * Per-task execution choice (P3.M2 router): which adapter (provider)
+   * and model run this task. Defaults to `adapter` with the harness model.
+   */
+  selectExecution?: (
+    task: PlanTask,
+  ) => Promise<{ adapter: HarnessAdapter; model?: string | undefined; agent?: AgentConfig | undefined }>;
+  /**
+   * Runs a `verify` task (P3.M3) — daemon-side commands, not a harness
+   * session. Pass/flaky completes it; fail takes a strike and re-opens the
+   * code task it verifies with the failure notes; `fatal` blocks at once.
+   */
+  runVerify?: (task: PlanTask) => Promise<VerifyResult>;
+  /** Called with the re-opened code task so its next session sees the failure. */
+  onVerifyFailed?: (target: PlanTask, verifyTask: PlanTask, result: VerifyResult) => Promise<void>;
+  /** Realized outcome + spend of every task attempt (route/cost records). */
+  onTaskSettled?: (task: PlanTask, result: TaskSettlement) => void | Promise<void>;
+  /**
+   * A task's harness session is about to start / has ended (spec §7): lets
+   * the host register the session (session.yaml + index) so its events
+   * route to a transcript, then record the final state.
+   */
+  onSessionStarted?: (session: SessionInfo) => void | Promise<void>;
+  onSessionEnded?: (session: SessionInfo & { state: 'completed' | 'failed' | 'paused'; providerSessionId?: string }) => void | Promise<void>;
+}
+
+export interface SessionInfo {
+  sessionId: string;
+  /** The agent the session runs as (the delegate, for a delegated task). */
+  agent: AgentConfig;
+  task: PlanTask;
+}
+
+export interface TaskSettlement {
+  status: 'completed' | 'failed' | 'paused';
+  usd: number;
+  tokens: { input: number; output: number };
 }
 
 export type ObjectiveOutcome =
@@ -168,22 +218,84 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       ...(resumeToken === undefined ? {} : { providerResumeToken: resumeToken }),
     });
 
+    if (task.taskClass === 'verify' && opts.runVerify !== undefined) {
+      const result = await opts.runVerify(task);
+      const verification = { outcome: result.outcome, commands: result.commands };
+      if (result.fatal !== undefined) {
+        await writeCheckpoint(opts.objectiveDir, {
+          taskId: task.id,
+          status: 'blocked',
+          attempts,
+          summary: `verification cannot run: ${result.fatal}`,
+          costs: { usd: 0, tokens: 0 },
+          verification,
+        });
+        continue; // resolveNextTask now reports it blocked → pause + approval.request
+      }
+      if (result.outcome !== 'fail') {
+        await writeCheckpoint(opts.objectiveDir, {
+          taskId: task.id,
+          status: 'completed',
+          attempts: attempts + 1,
+          summary: result.outcome === 'flaky' ? 'verification passed on retry (flaky)' : 'verification passed',
+          costs: { usd: 0, tokens: 0 },
+          verification,
+        });
+        await savePlan(opts.objectiveDir, withTaskStatus(plan, task.id, 'completed'));
+        continue;
+      }
+      const strikes = attempts + 1;
+      const exhausted = strikes >= maxAttempts;
+      await writeCheckpoint(opts.objectiveDir, {
+        taskId: task.id,
+        status: exhausted ? 'blocked' : 'pending',
+        attempts: strikes,
+        summary: `verification failed (strike ${String(strikes)} of ${String(maxAttempts)})`,
+        costs: { usd: 0, tokens: 0 },
+        verification,
+      });
+      const target = verifiedTaskFor(plan, task);
+      if (!exhausted && target !== undefined) {
+        // re-open the code task: a fresh session (no resume token) with the failure as notes
+        await opts.onVerifyFailed?.(target, task, result);
+        await writeCheckpoint(opts.objectiveDir, {
+          taskId: target.id,
+          status: 'pending',
+          attempts: 0,
+          summary: `re-opened by ${task.id} verification failure`,
+          costs: { usd: 0, tokens: 0 },
+        });
+        plan = withTaskStatus(plan, target.id, 'pending');
+      }
+      await savePlan(opts.objectiveDir, withTaskStatus(plan, task.id, exhausted ? 'blocked' : 'pending'));
+      if (!exhausted) await backoff(strikes);
+      continue;
+    }
+
     // co-edit baseline: everything already dirty here counts as known state
     const baselineStatus =
       opts.watchedRepo !== undefined ? await worktreeStatus(opts.watchedRepo) : undefined;
 
-    const profile = await opts.adapter.createProfile(opts.agent);
-    const handle = opts.adapter.spawn({
+    const execution = (await opts.selectExecution?.(task)) ?? { adapter: opts.adapter };
+    // delegation (P3.M5): a task may run as another agent — its profile, not ours
+    const runAs = execution.agent ?? opts.agent;
+    const profile = await execution.adapter.createProfile(runAs);
+    const sessionId = nextSessionId();
+    await opts.onSessionStarted?.({ sessionId, agent: runAs, task });
+    const handle = execution.adapter.spawn({
       profile,
-      sessionId: nextSessionId(),
+      sessionId,
       objective: opts.composePrompt === undefined ? task.title : await opts.composePrompt(task, plan),
       ...(opts.workdir === undefined ? {} : { workdir: opts.workdir }),
+      ...(execution.model === undefined ? {} : { model: execution.model }),
       ...(resumeToken === undefined ? {} : { resumeToken }),
       ...(opts.permissionPolicy === undefined ? {} : { permissionPolicy: opts.permissionPolicy }),
     });
 
     let usd = 0;
     let tokens = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
     let terminal: 'completed' | 'failed' | 'none' = 'none';
     let failureReason = 'session ended without a terminal event';
     let budgetStop: { kind: 'usd' | 'tokens'; cap: number; spent: number } | null = null;
@@ -194,6 +306,8 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
         const taskTokens = event.payload.inputTokens + event.payload.outputTokens;
         usd += event.payload.usd;
         tokens += taskTokens;
+        inputTokens += event.payload.inputTokens;
+        outputTokens += event.payload.outputTokens;
         const reading = meter.record({ usd: event.payload.usd, tokens: taskTokens });
         if (reading.exceeded !== null && budgetStop === null) {
           const kind = reading.exceeded;
@@ -221,7 +335,19 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       }
     }
 
+    await opts.onSessionEnded?.({
+      sessionId,
+      agent: runAs,
+      task,
+      state: budgetStop !== null ? 'paused' : terminal === 'completed' ? 'completed' : 'failed',
+      ...(handle.providerSessionId === undefined ? {} : { providerSessionId: handle.providerSessionId }),
+    });
+
+    const settle = (status: TaskSettlement['status']): Promise<void> | void =>
+      opts.onTaskSettled?.(task, { status, usd, tokens: { input: inputTokens, output: outputTokens } });
+
     if (budgetStop !== null) {
+      await settle('paused');
       await writeCheckpoint(opts.objectiveDir, {
         taskId: task.id,
         status: 'pending', // NOT a strike: raising the cap resumes cleanly
@@ -262,6 +388,7 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
             },
           }),
         );
+        await settle('paused');
         await savePlan(opts.objectiveDir, plan); // T1 stays as written at spawn
         return {
           status: 'paused',
@@ -272,6 +399,7 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
     }
 
     if (terminal === 'completed') {
+      await settle('completed');
       const commit = await opts.commitTask?.(task);
       await writeCheckpoint(opts.objectiveDir, {
         taskId: task.id,
@@ -288,6 +416,7 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       continue;
     }
 
+    await settle('failed');
     const nowAttempts = attempts + 1;
     const exhausted = nowAttempts >= maxAttempts;
     await writeCheckpoint(opts.objectiveDir, {

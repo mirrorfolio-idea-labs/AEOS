@@ -28,6 +28,52 @@
         "providerResumeToken": {
           "type": "string"
         },
+        "verification": {
+          "type": "object",
+          "properties": {
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "fail",
+                "flaky"
+              ]
+            },
+            "commands": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "type": "string"
+                  },
+                  "exitCode": {
+                    "type": "integer"
+                  },
+                  "attempts": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "outputTail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "command",
+                  "exitCode",
+                  "attempts",
+                  "outputTail"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "outcome",
+            "commands"
+          ],
+          "additionalProperties": false
+        },
         "summary": {
           "type": "string",
           "minLength": 1

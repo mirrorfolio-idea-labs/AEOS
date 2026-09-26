@@ -3,6 +3,7 @@ import readline from 'node:readline';
 import type { AeosEvent, AgentConfig, CredentialProfile } from '@aeos/contracts';
 import type {
   CapabilityMatrix,
+  CommandContext,
   HarnessAdapter,
   HarnessProfile,
   SessionHandle,
@@ -51,7 +52,7 @@ export interface OpencodeAdapterOptions {
    * argv prefix resolver (P2.M7): pinned managed binary, BYO path or PATH
    * name. Called per spawn so verification/gating errors fail that spawn.
    */
-  resolveCommand?: () => readonly string[];
+  resolveCommand?: (ctx: CommandContext) => readonly string[];
 }
 
 class OpencodeSessionHandle implements SessionHandle {
@@ -137,12 +138,13 @@ export class OpencodeAdapter implements HarnessAdapter {
 
   buildArgv(opts: SpawnOptions): string[] {
     return [
-      ...(this.opts.resolveCommand?.() ?? ['opencode']),
+      ...(this.opts.resolveCommand?.({ sessionId: opts.sessionId, workdir: opts.workdir ?? opts.profile.rootDir, profile: opts.profile }) ?? ['opencode']),
       'run',
       opts.objective,
       '--format',
       'json',
       ...opts.profile.argv,
+      ...(opts.model === undefined ? [] : ['--model', opts.model]),
       ...(opts.resumeToken === undefined ? [] : ['--session', opts.resumeToken]),
     ];
   }

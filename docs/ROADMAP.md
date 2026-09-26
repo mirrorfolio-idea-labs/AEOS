@@ -302,95 +302,95 @@ See `THIRD_PARTY_NOTICES.md`.
 - [x] **T4** Attention push: `<home>/notifications.yaml` webhooks in json, ntfy or slack format. *Accept: a blocked agent produces exactly one ntfy POST with a high-priority title.*
 **Exit gate:** Playwright T7 green in CI, and the full bar green.
 
-## Phase P3 — Autonomy (v0.3)  `[ ]`
+## Phase P3 — Autonomy (v0.3)  `[x]`
 
 **Exit gate for the phase:** unattended demo — objective in, plan generated
 with task classes, tasks routed to different models by class, verification
 gates progression, retrospective updates memory that provably feeds the next
 session's snapshot; `v0.3` tagged.
 
-### M1 — Planner task classes  `[ ]`
+### M1 — Planner task classes  `[x]`
 **Context brief:** Spec §12–§13. Planning is a frontier-routed model call
 producing a plan file (M6(P1) grammar) whose tasks carry a class
 (`plan, architect, implement, refactor, review, security_review, summarize, docs, rename`).
-- [ ] **T1** `taskClass` in PlanTask contract + schema regen. *Accept: schema drift test green; old plans without class still parse (default `implement`).*
-- [ ] **T2** Planner flow (objective → generated plan) with policy-gated approval. *Accept: provider-fake objective yields a valid classed plan; approval gate honored.*
+- [x] **T1** `taskClass` in PlanTask contract + schema regen. *Accept: schema drift test green; old plans without class still parse (default `implement`).*
+- [x] **T2** Planner flow (objective → generated plan) with policy-gated approval. *Accept: provider-fake objective yields a valid classed plan; approval gate honored.*
 **Exit gate:** generated plan executes end-to-end on provider-fake.
 
-### M2 — Cost-aware model router  `[ ]`
+### M2 — Cost-aware model router  `[x]`
 **Context brief:** Spec §13. Pricing/capability index (OpenRouter `/models` +
 static tables for subscription harnesses, daily refresh, offline cache);
 routing policy class → (provider, model, thinking budget) with per-workspace
 overrides; decisions + realized costs logged per task.
-- [ ] **T1** Pricing index with refresh + offline fallback. *Accept: index survives network-down (stale-but-served); refresh test with recorded API fixture.*
-- [ ] **T2** Routing policy engine + overrides. *Accept: fixture matrix (class × policy) routes as documented.*
-- [ ] **T3** Decision + realized-cost logging. *Accept: every routed task has a queryable route/cost record; audit shows decision inputs.*
+- [x] **T1** Pricing index with refresh + offline fallback. *Accept: index survives network-down (stale-but-served); refresh test with recorded API fixture.*
+- [x] **T2** Routing policy engine + overrides. *Accept: fixture matrix (class × policy) routes as documented.*
+- [x] **T3** Decision + realized-cost logging. *Accept: every routed task has a queryable route/cost record; audit shows decision inputs.*
 **Exit gate:** integration test proves plan tasks of different classes hit different (fake) providers per policy.
 
-### M3 — Verification task type  `[ ]`
+### M3 — Verification task type  `[x]`
 **Context brief:** Spec §12. Verification (tests/lint/build) is a first-class
 task type whose result gates progression and feeds checkpoint status.
-- [ ] **T1** Verification runner (command classes, result parsing, typed outcomes). *Accept: pass/fail/flaky outcomes distinguished in checkpoints.*
-- [ ] **T2** Planner emits verification tasks after each implement task. *Accept: generated plans interleave verify tasks; failed verify triggers 3-strike backoff.*
+- [x] **T1** Verification runner (command classes, result parsing, typed outcomes). *Accept: pass/fail/flaky outcomes distinguished in checkpoints.*
+- [x] **T2** Planner emits verification tasks after each implement task. *Accept: generated plans interleave verify tasks; failed verify triggers 3-strike backoff.*
 **Exit gate:** induced verification failure blocks the plan exactly as specced.
 
-### M4 — Retrospective / self-learning loop  `[ ]`
+### M4 — Retrospective / self-learning loop  `[x]`
 **Context brief:** Spec §8.5. Post-objective retrospective diffs plan vs
 actuals (corrections, failures, re-dos) and writes `lessons/` +
 `preferences/` proposals via `memory.propose`; preferences feed every future
 frozen snapshot.
-- [ ] **T1** Retrospective job generating proposals from checkpoint/transcript diffs. *Accept: fixture objective produces the expected lesson files.*
-- [ ] **T2** Snapshot pipeline includes accepted preferences. *Accept: next-session snapshot provably contains the new preference (byte-level test).*
+- [x] **T1** Retrospective job generating proposals from checkpoint/transcript diffs. *Accept: fixture objective produces the expected lesson files.*
+- [x] **T2** Snapshot pipeline includes accepted preferences. *Accept: next-session snapshot provably contains the new preference (byte-level test).*
 **Exit gate:** two-objective fixture shows objective 2 benefiting from objective 1's lessons.
 
-### M5 — Scheduler wakeups + delegation  `[ ]`
+### M5 — Scheduler wakeups + delegation  `[x]`
 **Context brief:** Spec §12. Cron-like + idle-triggered durable jobs (curator
 already consumes this); delegation: a task may name another agent or a spawned
 specialist sub-session, coordinating via plan file + git only.
-- [ ] **T1** Wakeup scheduler (cron + idle) with durable job persistence across daemon restarts. *Accept: job scheduled, daemon killed, job fires after restart.*
-- [ ] **T2** Delegation: assign task → spawn/target other agent → integrate via plan+git. *Accept: multi-agent fixture objective completes with one delegated task.*
-**Exit gate = P3 exit gate** (top of this section).
+- [x] **T1** Wakeup scheduler (cron + idle) with durable job persistence across daemon restarts. *Accept: job scheduled, daemon killed, job fires after restart.*
+- [x] **T2** Delegation: assign task → spawn/target other agent → integrate via plan+git. *Accept: multi-agent fixture objective completes with one delegated task.*
+**Exit gate = P3 exit gate** (top of this section) — green 2026-09-26: `apps/aeosd/test/p3-exit.e2e.test.ts` (real daemon, unattended). `v0.3` tag is Gate 3 (Kabeer).
 
-## Phase P4 — Scale + community (v0.4)  `[ ]`
+## Phase P4 — Scale + community (v0.4)  `[~]`
 
 **Exit gate for the phase:** every deploy target has a tested quickstart; a
 third-party plugin can be built and installed without touching core; `v0.4`
 tagged. (Multi-user RBAC is **post-v1** per spec §14 — see backlog.)
 
-### M1 — Docker sandbox tier  `[ ]`
+### M1 — Docker sandbox tier  `[x]`
 **Context brief:** Spec §10. `container` tier: runner + harness in a
 per-project container with mounted worktree; sibling containers via mounted
 docker socket or rootless nesting; harness-native sandboxes compose inside.
-- [ ] **T1** Container runner image + spawn/adopt path. *Accept: golden-path objective completes fully inside a container.*
-- [ ] **T2** Tier selection per agent/action-class in policy. *Accept: policy fixture switches tiers; escape-canary test (host file outside worktree untouchable) green.*
+- [x] **T1** Container runner image + spawn/adopt path. *Accept: golden-path objective completes fully inside a container.*
+- [x] **T2** Tier selection per agent/action-class in policy. *Accept: policy fixture switches tiers; escape-canary test (host file outside worktree untouchable) green.*
 **Exit gate:** container golden path + escape canary in CI.
 
-### M2 — Public plugin API  `[ ]`
+### M2 — Public plugin API  `[x]`
 **Context brief:** Spec §15. Plugin = npm package with manifest (contributes:
 `provider|memory-backend|planner|scheduler-job|policy|ui-panel|deploy-target`,
 contract version, entry point); loaded by composition root; UI panels as
 federated modules; `contracts` is the ABI; conformance suites keep third
 parties honest.
-- [ ] **T1** Manifest schema + loader + contract-version gating; core plugins consume the public mechanism. *Accept: version-mismatched plugin refused with typed error.*
-- [ ] **T2** Third-party install flow (npm/tarball) + sandbox of plugin failures. *Accept: crashing plugin cannot take down the daemon.*
-- [ ] **T3** Plugin author guide + `create-aeos-plugin` template repo. *Accept: template builds a working example provider passing conformance.*
+- [x] **T1** Manifest schema + loader + contract-version gating; core plugins consume the public mechanism. *Accept: version-mismatched plugin refused with typed error.*
+- [x] **T2** Third-party install flow (npm/tarball) + sandbox of plugin failures. *Accept: crashing plugin cannot take down the daemon.*
+- [x] **T3** Plugin author guide + `create-aeos-plugin` template repo. *Accept: template builds a working example provider passing conformance.*
 **Exit gate:** example third-party plugin installed from a tarball passes conformance.
 
-### M3 — Deploy targets  `[ ]`
+### M3 — Deploy targets  `[~]`
 **Context brief:** Spec §16. Same code, different placement: user service
 (systemd/launchd), docker compose (AEOS_HOME volume), remote posture (token
 auth + TLS via reverse proxy).
-- [ ] **T1** `aeos service install` (systemd user unit / launchd). *Accept: survives logout/reboot per platform test.*
-- [ ] **T2** `docker compose up` target. *Accept: compose quickstart green in CI.*
-- [ ] **T3** Remote posture: token auth enforced when binding non-loopback + reverse-proxy TLS guide. *Accept: unauthenticated non-loopback request rejected; guide verified on a VM.*
+- [~] **T1** `aeos service install` (systemd user unit / launchd). *Accept: survives logout/reboot per platform test.* *(Code + unit/`systemd-analyze` tests done; real logout/reboot sign-off is manual — guide in `guides/`.)*
+- [x] **T2** `docker compose up` target. *Accept: compose quickstart green in CI.*
+- [x] **T3** Remote posture: token auth enforced when binding non-loopback + reverse-proxy TLS guide. *Accept: unauthenticated non-loopback request rejected; guide verified on a VM.* *(Non-loopback rejection proven in `api.test.ts` + ADE sign-in in Playwright T10; the `docs/deploy.md` TLS recipe was verified on a clean Linux host (a fresh cloud container, not a VM) by `scripts/release/verify-remote-tls.sh`. That run covered both Caddy and nginx over verified TLS: open `/healthz` and UI shell, 401 on `/v1` without or with a wrong token, unbuffered SSE, WebSocket attach through the proxy, and a refused tokenless `0.0.0.0` bind — 19/19, 2026-09-26. ACME issuance itself is the proxy's job and was substituted by a local CA and self-signed certs.)*
 **Exit gate:** each target's quickstart passes on a clean machine/VM.
 
-### M4 — TCP runner transport + Kubernetes  `[ ]`
+### M4 — TCP runner transport + Kubernetes  `[x]`
 **Context brief:** Spec §16. Runner protocol already transport-abstracted;
 add authenticated TCP; kernel as Deployment, runners as Jobs/Pods, `AEOS_HOME`
 on PVC; contracts unchanged.
-- [ ] **T1** TCP transport with mutual auth for the framed runner protocol. *Accept: P1.M3 fuzz + re-adoption suites pass over TCP.*
-- [ ] **T2** K8s manifests/Helm chart. *Accept: golden path green on a `kind` cluster in CI (nightly).*
+- [x] **T1** TCP transport with mutual auth for the framed runner protocol. *Accept: P1.M3 fuzz + re-adoption suites pass over TCP.*
+- [x] **T2** K8s manifests/Helm chart. *Accept: golden path green on a `kind` cluster in CI (nightly).*
 **Exit gate = P4 exit gate** (top of this section).
 
 ## Phase P5 — v1.0 public open-source release  `[~]`
@@ -411,37 +411,37 @@ and history hygiene before anything is public.
 - [x] **T4** History/secret hygiene: gitleaks scan over full history; strip private artifacts; branch protection + required CI on `main`. *Accept: gitleaks clean; protection rules active.*
 **Exit gate:** repo could be flipped public today with zero legal/security exposure.
 
-### M2 — Docs site + onboarding  `[ ]`
+### M2 — Docs site + onboarding  `[~]`
 **Context brief:** Public-facing docs generated from this repo (`docs/` stays
 the source of truth; the site renders it — no forked content).
-- [ ] **T1** Docs site scaffold (Starlight/VitePress) + CI deploy to Pages. *Accept: site builds from `docs/` in CI; broken-link check green.*
-- [ ] **T2** Quickstarts per deploy target + first-agent tutorial. *Accept: tech-writer-blind test — a newcomer succeeds using only the site.*
-- [ ] **T3** Architecture section rendered from the spec + ADR index. *Accept: spec renders with working section anchors; ADRs listed automatically.*
-- [ ] **T4** Demo assets: asciinema of the golden path, UI screenshots/video. *Accept: README embeds them; assets reproducible via a script.*
+- [x] **T1** Docs site scaffold (Starlight/VitePress) + CI deploy to Pages. *Accept: site builds from `docs/` in CI; broken-link check green.*
+- [~] **T2** Quickstarts per deploy target + first-agent tutorial. *Accept: tech-writer-blind test — a newcomer succeeds using only the site.* *(Content done — quickstart, per-target deploy guide, first-agent tutorial whose commands CI executes; the blind newcomer test is a human step — guide in `guides/`.)*
+- [x] **T3** Architecture section rendered from the spec + ADR index. *Accept: spec renders with working section anchors; ADRs listed automatically.*
+- [x] **T4** Demo assets: asciinema of the golden path, UI screenshots/video. *Accept: README embeds them; assets reproducible via a script.*
 **Exit gate:** documented quickstart verified by someone who didn't write it.
 
-### M3 — Release engineering  `[ ]`
+### M3 — Release engineering  `[~]`
 **Context brief:** Everything ships from CI, nothing from laptops. Changesets
 for versioning/changelogs; semver + contracts-compatibility policy documented;
 signed artifacts + SBOM.
-- [ ] **T1** Changesets (or equivalent) wired: version bumps + changelog generation in CI. *Accept: dry-run release PR produced automatically from a changeset.*
-- [ ] **T2** Release pipeline: tag → build npm packages + daemon binaries + Tauri installers, signed, with SBOM. *Accept: `v1.0.0-rc.1` produced entirely by CI from a tag.*
-- [ ] **T3** Versioning/compat policy doc (semver, contracts ABI stability, support window). *Accept: policy published on the docs site; contracts package documents its guarantees.*
+- [x] **T1** Changesets (or equivalent) wired: version bumps + changelog generation in CI. *Accept: dry-run release PR produced automatically from a changeset.*
+- [~] **T2** Release pipeline: tag → build npm packages + daemon binaries + Tauri installers, signed, with SBOM. *Accept: `v1.0.0-rc.1` produced entirely by CI from a tag.* *(Pipeline built, actionlint-clean, bundle proven self-contained locally; runs as a dry run on its own PRs. The rc tag is Gate 3 — guide in `guides/`.)*
+- [x] **T3** Versioning/compat policy doc (semver, contracts ABI stability, support window). *Accept: policy published on the docs site; contracts package documents its guarantees.*
 **Exit gate:** an RC is cut, installed from artifacts, and passes the golden path.
 
-### M4 — Public beta (repo goes public)  `[ ]`
+### M4 — Public beta (repo goes public)  `[~]`
 **Context brief:** Soft launch to gather signal before GA. Requires P4 exit +
 M1–M3 of this phase.
-- [ ] **T1** Flip repo public; enable Issues/Discussions; publish beta announcement to a limited circle. *Accept: repo public with M1 protections verified post-flip.*
-- [ ] **T2** Triage workflow: labels, response SLA, ≥10 seeded `good-first-issue`s. *Accept: labels + docs live; response SLA stated in CONTRIBUTING.*
+- [x] **T1** Flip repo public; enable Issues/Discussions; publish beta announcement to a limited circle. *Accept: repo public with M1 protections verified post-flip.* *(Verified 2026-09-26: repo public with Issues + Discussions on; `main` protected with required `ci`; community profile 100%; gitleaks over all 155 commits clean — its one hit, a ULID test fixture, is allowlisted by fingerprint in `.gitleaksignore`. The limited-circle beta announcement is Kabeer's.)*
+- [x] **T2** Triage workflow: labels, response SLA, ≥10 seeded `good-first-issue`s. *Accept: labels + docs live; response SLA stated in CONTRIBUTING.*
 - [ ] **T3** Feedback intake loop: beta findings groomed into this ROADMAP weekly. *Accept: at least one grooming pass recorded in the PM sprint log.*
 **Exit gate:** two weeks of beta with all P0/P1 bugs fixed, or ≥2 external PRs merged — whichever comes first.
 
-### M5 — v1.0 GA launch  `[ ]`
+### M5 — v1.0 GA launch  `[~]`
 **Context brief:** The release itself, then the first week of consequences.
 - [ ] **T1** Release-blocker burn-down. *Accept: zero known P0/P1 issues at cut time.*
-- [ ] **T2** `v1.0.0`: tag, artifacts, changelog, v0.x upgrade notes. *Accept: upgrade from v0.4 verified; artifacts installable.*
-- [ ] **T3** Launch comms: README final polish, blog post, Show HN + X + Reddit posts, awesome-list submissions. *Accept: announcement live and linked from README.*
+- [~] **T2** `v1.0.0`: tag, artifacts, changelog, v0.x upgrade notes. *Accept: upgrade from v0.4 verified; artifacts installable.* *(Upgrade test built — `scripts/release/upgrade-test.mjs`, run by `release.yml` against the previous tag + staging; verified from v0.1.0 and the v0.2 candidate. v1.0.0 notes drafted. The tag itself is Gate 3.)*
+- [~] **T3** Launch comms: README final polish, blog post, Show HN + X + Reddit posts, awesome-list submissions. *Accept: announcement live and linked from README.* *(Launch kit drafted in `notes/launch/` with the evidence for every claim; publishing is Kabeer's.)*
 - [ ] **T4** Post-launch week: issue triage per SLA, hotfix policy exercised (or dry-run). *Accept: retro written into the PM system; hotfix path proven.*
 **Exit gate = P5 exit gate = v1 shipped.**
 

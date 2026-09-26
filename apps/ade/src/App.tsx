@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AgentConfig, Workspace } from '@aeos/contracts';
-import { client } from './api.js';
+import { AeosApiError } from '@aeos/sdk';
+import { apiFetch, client, saveToken } from './api.js';
 import { Sidebar } from './Sidebar.js';
 import { AgentView } from './AgentView.js';
 
@@ -17,18 +18,77 @@ export function readDeepLink(search: string): { workspaceId: string; agentId: st
   return { workspaceId: agent.slice(0, slash), agentId: agent.slice(slash + 1), tab: params.get('tab') ?? undefined };
 }
 
+/**
+ * Remote daemons require the API token (P4.M3.T3). Shown when the API
+ * answers 401; the token is kept in this browser only.
+ */
+function TokenGate({ rejected }: { rejected: boolean }) {
+  const [value, setValue] = useState('');
+  return (
+    <div className="flex h-screen items-center justify-center p-6">
+      <form
+        aria-label="Sign in to AEOS"
+        className="flex w-full max-w-sm flex-col gap-3 rounded-lg border p-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (value.trim().length === 0) return;
+          saveToken(value.trim());
+          window.location.reload();
+        }}
+      >
+        <h1 className="text-lg font-semibold">Connect to this AEOS daemon</h1>
+        <p className="text-sm text-muted-foreground">
+          This daemon requires its API token (the value of <code>AEOS_API_TOKEN</code>). It is stored in this browser only.
+        </p>
+        {rejected ? <p className="text-sm text-destructive">That token was not accepted.</p> : null}
+        <input
+          aria-label="API token"
+          type="password"
+          autoComplete="current-password"
+          className="rounded-md border bg-background px-3 py-2 text-sm"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+        />
+        <button type="submit" className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">
+          Connect
+        </button>
+      </form>
+    </div>
+  );
+}
+
+const hadStoredToken = (): boolean => {
+  try {
+    return window.localStorage.getItem('aeos.apiToken') !== null;
+  } catch {
+    return false;
+  }
+};
+
 export function App() {
+  const [auth, setAuth] = useState<'ok' | 'needed' | 'rejected'>('ok');
   const [deepLink] = useState(() => readDeepLink(window.location.search));
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [agents, setAgents] = useState<Map<string, AgentConfig[]>>(new Map());
   const [selected, setSelected] = useState<AgentConfig | null>(null);
 
   const refresh = useCallback(async () => {
-    const list = await client.listWorkspaces();
+    let list: Workspace[];
+    try {
+      list = await client.listWorkspaces();
+    } catch (error) {
+      if (error instanceof AeosApiError && error.status === 401) {
+        const hadToken = hadStoredToken();
+        if (hadToken) saveToken(undefined); // a stale token: drop it, ask again
+        setAuth(hadToken ? 'rejected' : 'needed');
+        return;
+      }
+      throw error;
+    }
     setWorkspaces(list);
     const byWorkspace = new Map<string, AgentConfig[]>();
     for (const workspace of list) {
-      const response = await fetch(`/v1/agents?workspaceId=${workspace.id}`);
+      const response = await apiFetch(`/v1/agents?workspaceId=${workspace.id}`);
       const envelope = (await response.json()) as { data: AgentConfig[] | null };
       byWorkspace.set(workspace.id, envelope.data ?? []);
     }
@@ -47,6 +107,8 @@ export function App() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  if (auth !== 'ok') return <TokenGate rejected={auth === 'rejected'} />;
 
   return (
     <div className="flex h-screen">

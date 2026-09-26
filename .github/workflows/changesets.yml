@@ -1,0 +1,46 @@
+name: changesets
+# P5.M3.T1: every changeset merged into develop updates one "Version
+# Packages" PR (version bumps + CHANGELOGs, all AEOS packages in lockstep).
+# One-time repo setting: Settings → Actions → General → "Allow GitHub Actions
+# to create and approve pull requests".
+on:
+  push:
+    branches: [develop]
+permissions:
+  contents: write
+  pull-requests: write
+concurrency: changesets-${{ github.ref }}
+jobs:
+  version-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: changesets/action@v1
+        id: changesets
+        # Opening the PR needs the repo setting above. Without it the action
+        # still versions and pushes changeset-release/<branch>, then fails on
+        # the PR call; the next step tells those two failures apart.
+        continue-on-error: true
+        with:
+          version: pnpm changeset:version
+          commit: 'chore(release): version packages'
+          title: 'chore(release): version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: tolerate only a refused PR creation
+        if: steps.changesets.outcome == 'failure'
+        env:
+          BRANCH: changeset-release/${{ github.ref_name }}
+        run: |
+          # versioning succeeded iff the release branch was just pushed on top of this commit
+          if git fetch -q origin "$BRANCH" && [ "$(git rev-parse FETCH_HEAD^)" = "$GITHUB_SHA" ]; then
+            echo "::warning title=Version PR not opened::$BRANCH is pushed with the version bump, but GitHub Actions may not create pull requests here. Enable Settings → Actions → General → 'Allow GitHub Actions to create and approve pull requests', or open $BRANCH → ${{ github.ref_name }} by hand."
+          else
+            echo "::error::changesets versioning failed (no $BRANCH commit on top of $GITHUB_SHA) — see the previous step"
+            exit 1
+          fi

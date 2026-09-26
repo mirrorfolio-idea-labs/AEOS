@@ -26,11 +26,19 @@
           "type": "object",
           "properties": {
             "provider": {
-              "type": "string",
-              "enum": [
-                "claude-code",
-                "codex",
-                "opencode"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "claude-code",
+                    "codex",
+                    "opencode"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^plugin:[a-z0-9][a-z0-9-]{0,62}$"
+                }
               ]
             },
             "version": {
@@ -106,6 +114,13 @@
               "baseRef": {
                 "type": "string",
                 "minLength": 1
+              },
+              "verify": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
               }
             },
             "required": [

@@ -148,12 +148,23 @@ describe('P2.M3 exit gate — canary-leak across all sinks', () => {
     }
     await new Promise((r) => setTimeout(r, 300)); // let writers flush
 
-    // Sink 1 — transcripts: objective-scoped fake sessions carry no
-    // session.yaml/transcript yet (documented v0 deferral, BOARD); the
-    // redaction wrapper sits upstream of every future transcript writer,
-    // and the kernel unit tests pin scrub-before-subscribe semantics.
+    // Sink 1 — transcripts: every objective task session has a session
+    // record and a transcript (spec §7), written downstream of redaction
     const sessionsRoot = path.join(home, 'workspaces', 'ws1', 'agents', 'dev', 'sessions');
-    await expect(readdir(sessionsRoot)).rejects.toThrow();
+    const sessionIds = await readdir(sessionsRoot);
+    expect(sessionIds.length).toBeGreaterThan(0);
+    const transcripts: string[] = [];
+    for (const sessionId of sessionIds) {
+      const record = await readFile(path.join(sessionsRoot, sessionId, 'session.yaml'), 'utf8');
+      expect(record).toContain(`objectiveId: ${objectiveId}`);
+      expect(record).toContain('state: completed');
+      transcripts.push(await readFile(path.join(sessionsRoot, sessionId, 'transcript.ndjson'), 'utf8'));
+    }
+    const transcript = transcripts.join('');
+    expect(transcript).toContain(CONTROL);
+    expect(transcript).toContain('session.completed');
+    expect(transcript).not.toContain(CANARY);
+    expect(daemon.lastStderr()).not.toContain('TranscriptRoutingError');
 
     // Sink 2 — audit log (tool results are an audited class)
     const auditDir = path.join(home, 'audit');

@@ -2,17 +2,50 @@ import { appendFile, mkdir, readdir, readFile, rm, stat } from 'node:fs/promises
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { agentDir, getAgent, writeFileAtomic } from '@aeos/kernel';
+import { agentDir, getAgent, indexSession, writeFileAtomic, writeSessionYaml } from '@aeos/kernel';
+import { rename } from 'node:fs/promises';
 import {
   commitTaskWork,
+  composePlanningPrompt,
   ensureObjectiveWorktree,
+  generatePlan,
+  interleaveVerify,
   parsePlan,
+  renderVerifyFailure,
+  runRetrospective,
+  runVerification,
   readCheckpoints,
+  renderPlanMarkdown,
   runObjective,
+  type ObjectiveOutcome,
   type ObjectiveWorktree,
 } from '@aeos/scheduler';
-import { compilePolicy, readObjectiveFile } from '@aeos/policy';
-import { ObjectiveSchema, type AgentConfig, type CompiledPolicy } from '@aeos/contracts';
+import { compilePolicy, readObjectiveFile, sandboxFor, type SandboxChoice } from '@aeos/policy';
+import { applyProposals, initMemoryLayout } from '@aeos/memory';
+import {
+  AeosEventSchema,
+  ObjectiveSchema,
+  newEventId,
+  type AeosEvent,
+  type AgentConfig,
+  type SessionRecord,
+  type CompiledPolicy,
+  type EffectivePolicy,
+  type PlanTask,
+  PERMISSION_TIERS,
+} from '@aeos/contracts';
+import type { HarnessAdapter } from '@aeos/provider-core';
+import {
+  appendRouteRecord,
+  estimateUsd,
+  loadPricingIndex,
+  loadRoutingPolicy,
+  readRouteRecords,
+  routeTask,
+  type LoadedPricing,
+  type RouteDecision,
+  type RoutedProvider,
+} from '@aeos/router';
 import { composeSessionBrief, taskNotesPath } from '../brief.js';
 import { statusTrackerFor } from '../status.js';
 import { guardAdapter } from '../policy-gate.js';
@@ -27,14 +60,33 @@ const ObjectiveRef = z.object({
 const CreateObjective = ObjectiveRef.extend({
   id: z.string().min(1),
   title: z.string().min(1),
-  tasks: z.array(z.object({ id: z.string().min(1), title: z.string().min(1) })).min(1),
+  tasks: z.array(z.object({ id: z.string().min(1), title: z.string().min(1) })).default([]),
+  /**
+   * No hand-written tasks: the planner (a model call, spec §12) proposes a
+   * classed plan on first start, gated by the `run_plan` policy tier.
+   */
+  autoPlan: z.boolean().default(false),
   /** Objective-scope spend caps (spec §11); persisted as objective.yaml. */
   budgetUsd: z.number().positive().optional(),
   budgetTokens: z.number().int().positive().optional(),
   definitionOfDone: z.string().min(1).optional(),
   /** Repo binding id — the objective runs in its own worktree of that repo (spec §10). */
   repo: z.string().min(1).optional(),
+  /** Verification commands overriding the repo binding's (P3.M3). */
+  verify: z.array(z.string().min(1)).optional(),
+  /** Retrospective mode (P3.M4): propose (default) | apply | off. */
+  retrospective: z.enum(['propose', 'apply', 'off']).optional(),
+}).refine((body) => body.tasks.length > 0 || body.autoPlan, {
+  message: 'give at least one task, or set autoPlan: true to have the planner write the plan',
 });
+
+export const proposedPlanPath = (dir: string): string => path.join(dir, 'plan.proposed.md');
+const PLAN_PENDING_NOTE = '_No tasks yet — the planner proposes them when this objective starts._';
+
+/** Promote a proposed plan to the plan of record (human or policy approval). */
+async function promoteProposedPlan(dir: string): Promise<void> {
+  await rename(proposedPlanPath(dir), path.join(dir, 'plan.md'));
+}
 
 /** Objective title of record: objective.yaml when present, else objective.md's heading. */
 async function objectiveTitle(dir: string, fallback: string): Promise<string> {
@@ -42,6 +94,13 @@ async function objectiveTitle(dir: string, fallback: string): Promise<string> {
   if (file !== undefined) return file.title;
   const md = await readFile(path.join(dir, 'objective.md'), 'utf8').catch(() => '');
   return /^#\s+(.+)$/m.exec(md)?.[1]?.trim() ?? fallback;
+}
+
+/** Verification commands of record: objective override, else the repo binding's. */
+export function verifyCommandsFor(agent: AgentConfig, objective: { repo?: string | undefined; verify?: string[] | undefined } | undefined): string[] {
+  if (objective?.verify !== undefined) return objective.verify;
+  if (objective?.repo === undefined) return [];
+  return agent.repos?.find((r) => r.id === objective.repo)?.verify ?? [];
 }
 
 /** The worktree an objective runs in, created on first run (idempotent). */
@@ -77,6 +136,173 @@ const running = new Map<string, Promise<unknown>>();
 
 export const stopFilePath = (home: string): string => path.join(home, 'STOP');
 
+/** How many objective runs are in flight (wakeup idle detection, P3.M5). */
+export const runningObjectiveCount = (): number => running.size;
+
+interface PlanPhaseInput {
+  ctx: ApiContext;
+  agent: AgentConfig;
+  dir: string;
+  objectiveId: string;
+  title: string;
+  definitionOfDone: string | undefined;
+  worktree: ObjectiveWorktree | undefined;
+  /** Verification commands — when present the plan gets verify tasks (P3.M3.T2). */
+  verifyCommands: string[];
+  /** UNGUARDED adapter factory — planning applies its own read-only policy. */
+  rawAdapterFor: (provider: RoutedProvider) => HarnessAdapter;
+  routePlan: RouteDecision;
+  effective: EffectivePolicy | undefined;
+  onEvent: (event: AeosEvent) => void;
+}
+
+/**
+ * Planning is read-only by construction: whatever the agent's posture, the
+ * planning session may read files and nothing else — tool calls beyond that
+ * are denied (not parked), so a plan never waits on a tool approval.
+ */
+export function planningPolicy(effective: EffectivePolicy | undefined): EffectivePolicy {
+  const tiers = Object.fromEntries(
+    PERMISSION_TIERS.map((tier) => [tier, tier === 'read_files' ? 'allow' : 'deny']),
+  ) as EffectivePolicy['tiers'];
+  return { tiers, confirmTimeoutSeconds: effective?.confirmTimeoutSeconds ?? 300 };
+}
+
+/**
+ * Register (or update) a session this route spawned — session.yaml + the
+ * index row, under the agent it runs as — so its events route to a
+ * transcript (spec §7). Planner and task sessions both go through here.
+ */
+async function recordSession(ctx: ApiContext, agent: AgentConfig, record: Omit<SessionRecord, 'agentId'>): Promise<void> {
+  await mkdir(path.join(agentDir(ctx.home, agent.workspaceId, agent.id), 'sessions', record.id), { recursive: true });
+  writeSessionYaml(ctx.home, agent.workspaceId, agent.id, record.id, { ...record, agentId: agent.id });
+  indexSession(ctx.db, { ...record, agentId: agent.id }, Date.now());
+}
+
+const routeEvent = (agentId: string, taskId: string, decision: RouteDecision, sandbox?: SandboxChoice): AeosEvent =>
+  AeosEventSchema.parse({
+    v: 1,
+    id: newEventId(),
+    ts: new Date().toISOString(),
+    source: 'router',
+    agentId,
+    taskId,
+    type: 'route.decided',
+    payload: {
+      taskClass: decision.taskClass,
+      provider: decision.provider,
+      ...(decision.model === undefined ? {} : { model: decision.model }),
+      ...(decision.thinking === undefined ? {} : { thinking: decision.thinking }),
+      providerSource: decision.providerSource,
+      modelSource: decision.modelSource,
+      reason: decision.reason,
+      ...(sandbox === undefined ? {} : { sandbox: sandbox.tier }),
+    },
+  });
+
+/**
+ * Plan approvals are objective-level (task `plan`), not events of a harness
+ * session — they carry no sessionId, so no transcript routing is implied.
+ */
+const planEvent = (
+  type: 'approval.request' | 'approval.resolved',
+  agentId: string,
+  payload: Record<string, unknown>,
+): AeosEvent =>
+  AeosEventSchema.parse({
+    v: 1,
+    id: newEventId(),
+    ts: new Date().toISOString(),
+    source: 'planner',
+    agentId,
+    taskId: 'plan',
+    type,
+    payload,
+  });
+
+/**
+ * P3.M1.T2 — objective → plan with a policy-gated approval (spec §12).
+ * A plan with tasks is `ready`. Otherwise the planner proposes one
+ * (`plan.proposed.md`, reused if a proposal already waits) and `run_plan`
+ * decides: allow → promote and run; deny → stay proposal-only; confirm →
+ * an approval in the shared inbox (7-day window — a plan is worth waiting
+ * for; a human can also promote it later via `/plan/approve`).
+ */
+async function planIfNeeded(input: PlanPhaseInput): Promise<'ready' | ObjectiveOutcome> {
+  const { ctx, agent, dir, objectiveId, onEvent } = input;
+  const plan = parsePlan(await readFile(path.join(dir, 'plan.md'), 'utf8'));
+  if (plan.tasks.length > 0) return 'ready';
+
+  const sessionId = `planner-${objectiveId}`;
+  let proposed = await readFile(proposedPlanPath(dir), 'utf8').catch(() => undefined);
+  if (proposed === undefined) {
+    const readOnly = planningPolicy(input.effective);
+    onEvent(routeEvent(agent.id, 'plan', input.routePlan));
+    // the planner's session is a session like any other: record + transcript (spec §7)
+    const plannerSession = newEventId();
+    await recordSession(ctx, agent, { id: plannerSession, objectiveId, state: 'running' });
+    const generated = await generatePlan({
+      adapter: guardAdapter(input.rawAdapterFor(input.routePlan.provider), readOnly),
+      model: input.routePlan.model,
+      agent,
+      sessionId: plannerSession,
+      prompt: composePlanningPrompt({
+        objectiveTitle: input.title,
+        definitionOfDone: input.definitionOfDone,
+        worktree: input.worktree?.dir,
+      }),
+      workdir: input.worktree?.dir,
+      permissionPolicy: compilePolicy(readOnly),
+      onEvent,
+    }).catch(async (error: unknown) => {
+      await recordSession(ctx, agent, { id: plannerSession, objectiveId, state: 'failed' });
+      throw error;
+    });
+    await recordSession(ctx, agent, { id: plannerSession, objectiveId, state: 'completed' });
+    const tasks = input.verifyCommands.length > 0 && input.worktree !== undefined ? interleaveVerify(generated.tasks) : generated.tasks;
+    proposed = renderPlanMarkdown(input.title, tasks, `_Proposed by the planner for objective \`${objectiveId}\`._`);
+    await writeFileAtomic(proposedPlanPath(dir), proposed);
+  }
+  const tasks = parsePlan(proposed).tasks;
+  const summary = tasks.map((t) => `${t.id} [${t.taskClass}] ${t.title}`).join('; ');
+  const mode = input.effective?.tiers.run_plan ?? 'allow'; // no policy wired = trusted local mode
+  if (mode === 'allow') {
+    await promoteProposedPlan(dir);
+    return 'ready';
+  }
+  if (mode === 'deny' || ctx.approvals === undefined) {
+    return {
+      status: 'paused',
+      taskId: 'plan',
+      reason:
+        mode === 'deny'
+          ? 'run_plan denied by policy — review plan.proposed.md and approve it manually'
+          : 'plan awaits approval (no approvals inbox wired)',
+    };
+  }
+  const request = ctx.approvals.request({
+    sessionId,
+    tier: 'run_plan',
+    detail: `plan for ${objectiveId}: ${summary}`.slice(0, 500),
+    expiresAtMs: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  });
+  onEvent(
+    planEvent('approval.request', agent.id, {
+      requestId: request.requestId,
+      action: 'run_plan',
+      detail: `plan for ${objectiveId}: ${summary}`.slice(0, 500),
+      expiresAt: request.expiresAt,
+    }),
+  );
+  const outcome = await request.outcome;
+  onEvent(planEvent('approval.resolved', agent.id, { requestId: request.requestId, decision: outcome.decision, by: outcome.by }));
+  if (outcome.decision !== 'approved') {
+    return { status: 'paused', taskId: 'plan', reason: `plan ${outcome.decision} — edit plan.proposed.md and approve, or restart to re-request` };
+  }
+  await promoteProposedPlan(dir);
+  return 'ready';
+}
+
 /**
  * Start (or resume) one objective through the sequential scheduler —
  * shared by the route and the daemon's resume-on-boot scan. Idempotent
@@ -96,20 +322,90 @@ export function startObjectiveRun(
   const ref = { workspaceId, id: agentId };
   tracker.set(ref, 'working', { via: 'events', reason: `objective ${objectiveId} started` });
   const run = (async () => {
-    let adapter = ctx.adapterFor(agent);
     let permissionPolicy: CompiledPolicy | undefined;
+    let effective: EffectivePolicy | undefined;
     if (ctx.policyFor !== undefined) {
-      const effective = await ctx.policyFor(agent);
-      adapter = guardAdapter(adapter, effective, {
-        ...(ctx.approvals === undefined ? {} : { registry: ctx.approvals }),
-        ...(ctx.injectSecrets === undefined ? {} : { inject: ctx.injectSecrets }),
-      });
+      effective = await ctx.policyFor(agent);
       permissionPolicy = compilePolicy(effective);
     }
+    // P3.M2 router: one (policy-guarded) adapter per provider the plan routes to
+    const rawAdapterFor = (provider: RoutedProvider): HarnessAdapter =>
+      provider === agent.harness.provider ? ctx.adapterFor(agent) : ctx.adapterFor(agent, { provider });
+    const guarded = new Map<string, HarnessAdapter>();
+    /**
+     * One policy-guarded adapter per (executing agent, provider). A delegated
+     * task (P3.M5) runs under the DELEGATE's harness, credentials and policy.
+     */
+    const policyOf = async (runAs: AgentConfig): Promise<EffectivePolicy | undefined> =>
+      runAs.id === agent.id ? effective : await ctx.policyFor?.(runAs);
+    const adapterFor = async (
+      provider: RoutedProvider,
+      runAs: AgentConfig = agent,
+      sandbox?: SandboxChoice,
+    ): Promise<HarnessAdapter> => {
+      const contained = sandbox !== undefined && sandbox.tier === 'container';
+      const key = `${runAs.id}:${provider}:${contained ? `container:${sandbox.image}:${sandbox.network}` : 'none'}`;
+      let cached = guarded.get(key);
+      if (cached === undefined) {
+        const opts = {
+          ...(provider === runAs.harness.provider ? {} : { provider }),
+          ...(contained ? { sandbox } : {}),
+        };
+        const raw = Object.keys(opts).length === 0 ? ctx.adapterFor(runAs) : ctx.adapterFor(runAs, opts);
+        const policy = await policyOf(runAs);
+        cached =
+          policy === undefined
+            ? raw
+            : guardAdapter(raw, policy, {
+                ...(ctx.approvals === undefined ? {} : { registry: ctx.approvals }),
+                ...(ctx.injectSecrets === undefined ? {} : { inject: ctx.injectSecrets }),
+              });
+        guarded.set(key, cached);
+      }
+      return cached;
+    };
+    const delegateFor = (task: PlanTask): AgentConfig => {
+      if (task.agent === undefined || task.agent === agent.id) return agent;
+      try {
+        return getAgent(ctx.home, workspaceId, task.agent);
+      } catch {
+        throw new ApiError(409, `task ${task.id} delegates to "${task.agent}", which is not an agent in workspace ${workspaceId}`);
+      }
+    };
+    const adapter = await adapterFor(agent.harness.provider);
+    const routing = loadRoutingPolicy(ctx.home, workspaceId);
+    const pricing: LoadedPricing = await (ctx.pricing?.() ?? loadPricingIndex({ home: ctx.home, offline: true }));
+    const decisions = new Map<string, { decision: RouteDecision; adapter: HarnessAdapter }>();
     const worktree = await objectiveWorktree(ctx, agent, objectiveId);
     const objective = readObjectiveFile(dir);
     const title = await objectiveTitle(dir, objectiveId);
-    return runObjective({
+    const onEvent = (event: AeosEvent): void => {
+      ctx.bus?.publish(event);
+      tracker.observe(ref, event);
+      // files are truth for spend too: every cost.usage lands in costs.ndjson
+      if (event.type === 'cost.usage') {
+        void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
+      }
+    };
+
+    // P3.M1 planning phase: an objective with no tasks gets a planner-written plan
+    const planned = await planIfNeeded({
+      ctx,
+      agent,
+      dir,
+      objectiveId,
+      title,
+      definitionOfDone: objective?.definitionOfDone,
+      worktree,
+      verifyCommands: verifyCommandsFor(agent, objective),
+      rawAdapterFor,
+      routePlan: routeTask(agent, 'plan', routing),
+      effective,
+      onEvent,
+    });
+    if (planned !== 'ready') return planned;
+
+    const outcome = await runObjective({
       objectiveDir: dir,
       agent,
       adapter,
@@ -129,22 +425,91 @@ export function startObjectiveRun(
         ? {}
         : {
             workdir: worktree.dir,
-            commitTask: (task) =>
-              commitTaskWork(worktree.dir, `${task.id}: ${task.title}\n\nAEOS objective ${objectiveId}`, {
-                name: agent.name,
-                email: `${agent.id}@agents.aeos.local`,
-              }),
+            commitTask: (task) => {
+              const author = delegateFor(task);
+              return commitTaskWork(
+                worktree.dir,
+                `${task.id}: ${task.title}\n\nAEOS objective ${objectiveId}${author.id === agent.id ? '' : ` (delegated by ${agent.id})`}`,
+                { name: author.name, email: `${author.id}@agents.aeos.local` },
+              );
+            },
           }),
       ...(permissionPolicy === undefined ? {} : { permissionPolicy }),
-      onEvent: (event) => {
-        ctx.bus?.publish(event);
-        tracker.observe(ref, event);
-        // files are truth for spend too: every cost.usage lands in costs.ndjson
-        if (event.type === 'cost.usage') {
-          void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
-        }
+      runVerify: (task) =>
+        worktree === undefined
+          ? Promise.resolve({
+              outcome: 'fail' as const,
+              commands: [],
+              fatal: `verify task ${task.id} needs a repo worktree (create the objective with a repo binding)`,
+            })
+          : runVerification({ cwd: worktree.dir, commands: verifyCommandsFor(agent, objective) }),
+      onVerifyFailed: async (target, verifyTask, result) => {
+        await mkdir(path.join(dir, 'tasks'), { recursive: true });
+        const previous = await readFile(taskNotesPath(dir, target.id), 'utf8').catch(() => '');
+        await writeFileAtomic(taskNotesPath(dir, target.id), `${renderVerifyFailure(verifyTask.id, result)}\n${previous}`);
       },
+      selectExecution: async (task) => {
+        const runAs = delegateFor(task);
+        const decision = routeTask(runAs, task.taskClass, runAs.id === agent.id ? routing : loadRoutingPolicy(ctx.home, workspaceId));
+        // P4.M1: the executing agent's policy picks the sandbox tier per task class
+        const runAsPolicy = await policyOf(runAs);
+        const sandbox = runAsPolicy === undefined ? undefined : sandboxFor(runAsPolicy, task.taskClass);
+        const chosen = await adapterFor(decision.provider, runAs, sandbox);
+        decisions.set(task.id, { decision, adapter: chosen });
+        onEvent({ ...routeEvent(runAs.id, task.id, decision, sandbox) });
+        return { adapter: chosen, model: decision.model, ...(runAs.id === agent.id ? {} : { agent: runAs }) };
+      },
+      // spec §7: every task session gets a session record (session.yaml +
+      // index row) under the agent it runs as, so its events route to a
+      // transcript like any other session's
+      onSessionStarted: ({ sessionId, agent: runAs }) => recordSession(ctx, runAs, { id: sessionId, objectiveId, state: 'running' }),
+      onSessionEnded: ({ sessionId, agent: runAs, state, providerSessionId }) =>
+        recordSession(ctx, runAs, { id: sessionId, objectiveId, state, ...(providerSessionId === undefined ? {} : { providerSessionId }) }),
+      onTaskSettled: (task, result) => {
+        const routed = decisions.get(task.id);
+        if (routed === undefined) return;
+        const reportsUsd = routed.adapter.capabilities().costUsd !== false;
+        const derived = reportsUsd ? undefined : estimateUsd(pricing, routed.decision.model, result.tokens);
+        appendRouteRecord(dir, {
+          ts: new Date().toISOString(),
+          taskId: task.id,
+          decision: routed.decision,
+          pricingSource: pricing.source,
+          pricingStale: pricing.stale,
+          realized: { ...result, ...(derived === undefined ? {} : { derivedUsd: derived }) },
+        });
+      },
+      onEvent,
     });
+    // P3.M4 retrospective: plan vs actuals → memory proposals (never blocks the outcome)
+    if (objective?.retrospective !== 'off') {
+      try {
+        const memoryRoot = path.join(agentDir(ctx.home, workspaceId, agentId), 'memory');
+        await initMemoryLayout(memoryRoot);
+        const proposals = await runRetrospective({ objectiveDir: dir, objectiveId, objectiveTitle: title }, memoryRoot);
+        if (objective?.retrospective === 'apply' && proposals.length > 0) {
+          await applyProposals(
+            memoryRoot,
+            (written) =>
+              onEvent(
+                AeosEventSchema.parse({
+                  v: 1,
+                  id: newEventId(),
+                  ts: new Date().toISOString(),
+                  source: 'retrospective',
+                  agentId,
+                  type: 'memory.written',
+                  payload: { path: written.path, bytes: written.bytes },
+                }),
+              ),
+            { ids: proposals.map((p) => p.id) },
+          );
+        }
+      } catch {
+        // a retrospective failure must never turn a finished objective into an error
+      }
+    }
+    return outcome;
   })()
     .then(
       (outcome) => {
@@ -156,6 +521,8 @@ export function startObjectiveRun(
         return outcome;
       },
       (error: unknown) => {
+        // an errored run must never be silent for the operator
+        console.error(`objective ${workspaceId}/${agent.id}/${objectiveId} errored: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`);
         tracker.set(ref, 'blocked', {
           via: 'events',
           reason: `objective ${objectiveId} errored: ${error instanceof Error ? error.message : String(error)}`,
@@ -192,9 +559,15 @@ export async function resumeIncompleteObjectives(ctx: ApiContext): Promise<strin
           const plan = parsePlan(
             await readFile(path.join(objectivesRoot, objectiveId, 'plan.md'), 'utf8'),
           );
-          const incomplete = plan.tasks.some(
-            (task) => task.status !== 'completed' && task.status !== 'blocked',
-          );
+          // a planner proposal left waiting across a restart re-requests its approval
+          const awaitingPlan =
+            plan.tasks.length === 0 &&
+            (await stat(proposedPlanPath(path.join(objectivesRoot, objectiveId))).then(
+              () => true,
+              () => false,
+            ));
+          const incomplete =
+            awaitingPlan || plan.tasks.some((task) => task.status !== 'completed' && task.status !== 'blocked');
           if (incomplete) {
             startObjectiveRun(ctx, workspace.id, agent.id, objectiveId);
             resumed.push(`${workspace.id}/${agent.id}/${objectiveId}`);
@@ -230,14 +603,19 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
         title: body.title,
         ...(body.definitionOfDone === undefined ? {} : { definitionOfDone: body.definitionOfDone }),
         ...(body.repo === undefined ? {} : { repo: body.repo }),
+        ...(body.verify === undefined ? {} : { verify: body.verify }),
+        ...(body.retrospective === undefined ? {} : { retrospective: body.retrospective }),
         ...(body.budgetUsd === undefined ? {} : { budgetUsd: body.budgetUsd }),
         ...(body.budgetTokens === undefined ? {} : { budgetTokens: body.budgetTokens }),
       });
       await writeFileAtomic(path.join(dir, 'objective.yaml'), stringify(objectiveFile));
       await writeFileAtomic(
         path.join(dir, 'plan.md'),
-        `# ${body.title}\n\n${body.tasks.map((t) => `- [ ] **${t.id}** ${t.title}`).join('\n')}\n`,
+        body.tasks.length === 0
+          ? `# ${body.title}\n\n${PLAN_PENDING_NOTE}\n`
+          : `# ${body.title}\n\n${body.tasks.map((t) => `- [ ] **${t.id}** ${t.title}`).join('\n')}\n`,
       );
+      await rm(proposedPlanPath(dir), { force: true });
       reply.status(201);
       return ok({ id: body.id, dir });
     },
@@ -300,6 +678,37 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
     },
   });
 
+  app.get<{ Params: { id: string } }>('/v1/objectives/:id/routes', {
+    schema: {
+      description: 'Router decisions + realized cost per task attempt (routes.ndjson, P3.M2).',
+      tags: ['objectives'],
+    },
+    handler: (request) => {
+      const { workspaceId, agentId } = ObjectiveRef.parse(request.query);
+      getAgent(ctx.home, workspaceId, agentId);
+      return ok(readRouteRecords(objectiveDirFor(ctx.home, workspaceId, agentId, request.params.id)));
+    },
+  });
+
+  app.post<{ Params: { id: string } }>('/v1/objectives/:id/plan/approve', {
+    schema: {
+      description:
+        'Human approval of a planner-proposed plan (plan.proposed.md → plan.md), then start. Works after a denial or expiry too.',
+      tags: ['objectives'],
+    },
+    handler: async (request) => {
+      const { workspaceId, agentId } = ObjectiveRef.parse(request.query);
+      getAgent(ctx.home, workspaceId, agentId);
+      const dir = objectiveDirFor(ctx.home, workspaceId, agentId, request.params.id);
+      const proposed = await readFile(proposedPlanPath(dir), 'utf8').catch(() => undefined);
+      if (proposed === undefined) throw new ApiError(404, `objective "${request.params.id}" has no proposed plan`);
+      if (running.has(dir)) throw new ApiError(409, 'objective is running — answer its pending run_plan approval instead');
+      await promoteProposedPlan(dir);
+      startObjectiveRun(ctx, workspaceId, agentId, request.params.id);
+      return ok({ approved: true, tasks: parsePlan(proposed).tasks });
+    },
+  });
+
   app.get<{ Params: { id: string } }>('/v1/objectives/:id', {
     schema: {
       description: 'Objective status derived from plan.md + checkpoints (files are truth).',
@@ -308,6 +717,9 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
     handler: async (request) => {
       const { workspaceId, agentId } = ObjectiveRef.parse(request.query);
       const dir = objectiveDirFor(ctx.home, workspaceId, agentId, request.params.id);
+      // snapshot BEFORE reading files: `running: false` then guarantees the
+      // files read below are final (a stale `true` only costs a re-poll)
+      const isRunning = running.has(dir);
       let planRaw: string;
       try {
         planRaw = await readFile(path.join(dir, 'plan.md'), 'utf8');
@@ -316,10 +728,12 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
       }
       const plan = parsePlan(planRaw);
       const checkpoints = await readCheckpoints(dir);
+      const proposed = await readFile(proposedPlanPath(dir), 'utf8').catch(() => undefined);
       return ok({
-        running: running.has(dir),
+        running: isRunning,
         tasks: plan.tasks,
         checkpoints: [...checkpoints.values()],
+        ...(proposed === undefined ? {} : { proposedTasks: parsePlan(proposed).tasks }),
       });
     },
   });

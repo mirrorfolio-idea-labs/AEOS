@@ -53,3 +53,70 @@ jobs:
           pnpm -F @aeos/provider-claude test
           pnpm -F @aeos/provider-codex test
           pnpm -F @aeos/provider-opencode test
+  # P4.M1 exit gate: build the container-tier runtime image and run the
+  # container golden path + escape canary against IT (the main `ci` job runs
+  # the same e2e against a stock node image).
+  sandbox-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: build aeos-runner image (via the CLI, embedded Dockerfile)
+        run: node apps/cli/dist/main.js sandbox build && node apps/cli/dist/main.js sandbox status
+      - name: runner image carries the harness runtime
+        run: docker run --rm aeos-runner:local sh -c 'node --version && git --version && rg --version | head -1'
+      - name: container golden path + escape canary on aeos-runner
+        env:
+          AEOS_SANDBOX_E2E_IMAGE: aeos-runner:local
+        run: pnpm -F @aeos/aeosd exec vitest run test/sandbox-container.e2e.test.ts
+  # P4.M3.T2 exit gate: the docker compose quickstart, exactly as documented,
+  # on a clean runner — build, start, token-gated API, one objective (fake
+  # provider, no model account), teardown.
+  compose-quickstart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @aeos/sdk... build
+      - name: docker compose up (quickstart steps 1–2)
+        env:
+          AEOS_PROVIDER: fake
+        run: |
+          mkdir -p secrets && openssl rand -hex 32 > secrets/aeos_api_token
+          docker compose up -d --build --wait
+      - name: quickstart smoke
+        run: node docker/compose-smoke.mjs http://127.0.0.1:7777 secrets/aeos_api_token
+      - name: logs on failure
+        if: failure()
+        run: docker compose logs --no-color | tail -200
+      - run: docker compose down -v
+  # P4.M4.T2 fast signal on every PR: the Helm chart lints and renders; the
+  # full golden path on a kind cluster runs nightly (nightly-k8s.yml)
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint deploy/helm/aeos
+      - name: helm template renders every object
+        run: |
+          helm template t deploy/helm/aeos --set extraEnv.AEOS_PROVIDER=fake > /tmp/rendered.yaml
+          grep -q 'kind: Deployment' /tmp/rendered.yaml
+  # P5.M2.T1: the docs site builds from docs/ and every internal link and
+  # anchor resolves (the build runs scripts/check-links.mjs)
+  docs-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @aeos/docs build

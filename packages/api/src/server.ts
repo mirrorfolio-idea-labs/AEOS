@@ -1,16 +1,19 @@
+import { timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import swagger from '@fastify/swagger';
 import websocket from '@fastify/websocket';
 import { openIndexDb, type EventBus, type IndexDb } from '@aeos/kernel';
-import type { AgentConfig, CredentialProfile, EffectivePolicy } from '@aeos/contracts';
+import type { AgentConfig, CredentialProfile, EffectivePolicy, ProviderId } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
-import type { ApprovalsRegistry } from '@aeos/policy';
+import type { ApprovalsRegistry, SandboxChoice } from '@aeos/policy';
+import type { LoadedPricing } from '@aeos/router';
 import { ApiError, sendError } from './envelope.js';
 import { registerWorkspaceRoutes } from './routes/workspaces.js';
 import { registerAgentRoutes } from './routes/agents.js';
 import { registerObjectiveRoutes } from './routes/objectives.js';
 import { registerReviewRoutes } from './routes/review.js';
 import { registerRuntimeRoutes } from './routes/runtime.js';
+import { registerJobRoutes } from './routes/jobs.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
@@ -38,8 +41,24 @@ export type PtyBridge = (
 export interface ApiServerOptions {
   /** AEOS_HOME — the file tree is truth; the API is a view over it. */
   home: string;
-  /** Adapter factory per agent — the daemon wires real providers; tests wire the fake. */
-  adapterFor: (agent: AgentConfig) => HarnessAdapter;
+  /**
+   * Adapter factory per agent — the daemon wires real providers; tests wire
+   * the fake. `provider` is the router's choice for a task class (P3.M2);
+   * absent means the agent's own harness.
+   */
+  /**
+   * `sandbox` (P4.M1): the tier the task runs in — a `container` choice must
+   * come back as an adapter whose harness runs inside that container.
+   */
+  adapterFor: (
+    agent: AgentConfig,
+    opts?: { provider?: ProviderId; sandbox?: SandboxChoice },
+  ) => HarnessAdapter;
+  /**
+   * Pricing index for token-derived USD (P3.M2). Defaults to the cached or
+   * static index without touching the network; the daemon refreshes daily.
+   */
+  pricing?: () => Promise<LoadedPricing>;
   /** Resolves an agent's credential profile id to the full profile. */
   credentialFor: (agent: AgentConfig) => CredentialProfile;
   /** Live event bus (kernel). Optional — without it, /v1/events serves backfill only. */
@@ -94,23 +113,38 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
   app.setErrorHandler((error, _request, reply) => sendError(reply, error));
 
   if (opts.token !== undefined) {
-    const token = opts.token;
+    const expected = Buffer.from(opts.token);
+    // constant-time compare: a token must not be guessable byte by byte
+    const matches = (candidate: string | null | undefined): boolean => {
+      if (candidate === null || candidate === undefined) return false;
+      const given = Buffer.from(candidate);
+      return given.length === expected.length && timingSafeEqual(given, expected);
+    };
     app.addHook('onRequest', (request, reply, done) => {
-      // Browsers cannot set headers on WebSocket upgrades — the attach route
-      // additionally accepts ?token= (scoped to that route only)
-      const queryToken = request.url.startsWith('/v1/sessions/') && request.url.includes('/attach')
-        ? new URL(request.url, 'http://localhost').searchParams.get('token')
-        : null;
-      if (
-        request.headers.authorization === `Bearer ${token}` ||
-        (queryToken !== null && queryToken === token)
-      ) {
+      const url = new URL(request.url, 'http://localhost');
+      // only the API is protected: the ADE shell (static assets) carries no
+      // data and must load so it can ask for the token; /healthz is a bare
+      // liveness probe for proxies and orchestrators
+      if (!url.pathname.startsWith('/v1/')) {
+        done();
+        return;
+      }
+      // Browsers cannot set headers on WebSocket upgrades or EventSource —
+      // the attach and event-stream routes additionally accept ?token=
+      const queryAllowed = (url.pathname.startsWith('/v1/sessions/') && url.pathname.endsWith('/attach')) || url.pathname === '/v1/events';
+      const bearer = request.headers.authorization?.startsWith('Bearer ') === true ? request.headers.authorization.slice(7) : undefined;
+      if (matches(bearer) || (queryAllowed && matches(url.searchParams.get('token')))) {
         done();
         return;
       }
       sendError(reply, new ApiError(401, 'missing or invalid bearer token'));
     });
   }
+
+  app.get('/healthz', {
+    schema: { hide: true },
+    handler: () => ({ status: 'ok' }),
+  });
 
   app.get('/v1/health', {
     schema: {
@@ -125,6 +159,7 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
   registerObjectiveRoutes(app, ctx);
   registerReviewRoutes(app, ctx);
   registerRuntimeRoutes(app, ctx);
+  registerJobRoutes(app, ctx);
   registerMemoryRoutes(app, ctx);
   registerEventRoutes(app, ctx);
   registerApprovalRoutes(app, ctx);

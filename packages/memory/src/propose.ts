@@ -76,9 +76,12 @@ export async function listProposals(root: string): Promise<MemoryProposal[]> {
 export async function applyProposals(
   root: string,
   onEvent?: (event: { path: string; bytes: number; op: string }) => void,
+  opts: { ids?: readonly string[] } = {},
 ): Promise<ApplyResult[]> {
   const results: ApplyResult[] = [];
+  const wanted = opts.ids === undefined ? undefined : new Set(opts.ids);
   for (const proposal of await listProposals(root)) {
+    if (wanted !== undefined && !wanted.has(proposal.id)) continue;
     try {
       let bytes = 0;
       if (proposal.op === 'write') {
@@ -141,4 +144,14 @@ export async function syncIndex(root: string): Promise<void> {
   }
   index.lines = kept;
   await writeIndex(root, index);
+}
+
+/** Human rejection: drop a queued proposal without touching memory. */
+export async function rejectProposal(root: string, id: string): Promise<boolean> {
+  try {
+    await rm(proposalPath(root, id));
+    return true;
+  } catch {
+    return false;
+  }
 }

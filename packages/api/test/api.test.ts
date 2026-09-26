@@ -117,6 +117,33 @@ describe('server skeleton (T1)', () => {
 
     await expect(listenApi(app, { host: '0.0.0.0', port: 0 })).rejects.toThrow(ApiError);
   });
+
+  it('P4.M3.T3 accept: over a real non-loopback socket, unauthenticated /v1 requests are rejected', async () => {
+    const lan = Object.values(os.networkInterfaces())
+      .flat()
+      .find((i) => i !== undefined && i.family === 'IPv4' && !i.internal)?.address;
+    const secured = await makeApp('a-long-enough-remote-token');
+    const address = await listenApi(secured, { host: '0.0.0.0', port: 0, token: 'a-long-enough-remote-token' });
+    const port = new URL(address).port;
+    const target = `http://${lan ?? '127.0.0.1'}:${port}`;
+    try {
+      expect((await fetch(`${target}/v1/workspaces`)).status).toBe(401);
+      expect((await fetch(`${target}/v1/workspaces`, { headers: { authorization: 'Bearer a-long-enough-remote-tokeX' } })).status).toBe(401);
+      expect((await fetch(`${target}/v1/events?token=wrong`)).status).toBe(401);
+      expect((await fetch(`${target}/v1/workspaces`, { headers: { authorization: 'Bearer a-long-enough-remote-token' } })).status).toBe(200);
+      // the event stream accepts ?token= (EventSource cannot set headers); other routes do not
+      expect((await fetch(`${target}/v1/workspaces?token=a-long-enough-remote-token`)).status).toBe(401);
+      const stream = new AbortController();
+      expect((await fetch(`${target}/v1/events?token=a-long-enough-remote-token`, { signal: stream.signal })).status).toBe(200);
+      stream.abort();
+      // liveness stays open for proxies/orchestrators and reveals nothing
+      const health = await fetch(`${target}/healthz`);
+      expect(health.status).toBe(200);
+      expect(await health.json()).toEqual({ status: 'ok' });
+    } finally {
+      await secured.close();
+    }
+  });
 });
 
 describe('resource routes (T2)', () => {
@@ -155,13 +182,14 @@ describe('resource routes (T2)', () => {
     expect(started.json().data.started).toBe(true);
 
     let status: Record<string, unknown> = {};
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 200; i++) {
       const response = await app.inject({
         url: '/v1/objectives/obj1?workspaceId=ws1&agentId=agent1',
       });
       status = response.json().data;
       const tasks = status['tasks'] as Array<{ status: string }>;
-      if (tasks.every((t) => t.status === 'completed')) break;
+      // wait for the whole run (incl. the post-run retrospective) — not just the tasks
+      if (tasks.every((t) => t.status === 'completed') && status['running'] === false) break;
       await delay(20);
     }
     const tasks = status['tasks'] as Array<{ status: string }>;

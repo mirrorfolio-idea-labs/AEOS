@@ -1,0 +1,3 @@
+# gitleaks false positives, by fingerprint. Each needs a reason.
+# ULID fixture passed as a fake codex resumeToken (not a credential).
+2767ab6966f920a66f4ca7a4e65bec719fae8c97:packages/provider-codex/test/adapter.test.ts:generic-api-key:87

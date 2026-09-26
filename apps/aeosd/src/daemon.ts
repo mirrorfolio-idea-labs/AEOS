@@ -21,6 +21,7 @@ import {
 } from '@aeos/kernel';
 import { isCuratorDue, runCurator } from '@aeos/memory';
 import { createSupervisor, type Supervisor } from '@aeos/runner';
+import { createWakeupScheduler, type WakeupScheduler } from '@aeos/scheduler';
 import type { Module } from '@aeos/kernel';
 import { startApiModule, type ApiModuleConfig, type ApiModuleHandle } from './api-module.js';
 
@@ -30,6 +31,13 @@ export interface DaemonConfig {
   api?: ApiModuleConfig;
   /** Opt-in memory curator (P2.M4) — dry-run trigger only in v0.2. */
   curator?: CuratorModuleConfig;
+  /** Wakeup scheduler tick (P3.M5, default 30s). Runs whenever the API is mounted. */
+  wakeupTickMs?: number;
+  /**
+   * Runner transport (P4.M4): unix sockets (default) or TLS-PSK over TCP on
+   * `host` — for runners that must be reachable across hosts/pods.
+   */
+  runnerTransport?: { kind: 'unix' } | { kind: 'tcp'; host: string };
 }
 
 export interface CuratorModuleConfig {
@@ -73,6 +81,7 @@ export function createDaemon(config: DaemonConfig): Daemon {
   let detachAudit: (() => void) | undefined;
   let stopCurator: (() => void) | undefined;
   let api: ApiModuleHandle | undefined;
+  let wakeups: WakeupScheduler | undefined;
 
   const deps: DaemonDeps = {
     home,
@@ -165,7 +174,7 @@ export function createDaemon(config: DaemonConfig): Daemon {
     {
       name: 'supervisor',
       start: async () => {
-        supervisor = createSupervisor({ home, db: deps.db, bus: deps.bus });
+        supervisor = createSupervisor({ home, db: deps.db, bus: deps.bus, ...(config.runnerTransport === undefined ? {} : { transport: config.runnerTransport }) });
         await supervisor.adoptOrphans(); // boot-time re-adoption (spec §10)
       },
       stop: async () => {
@@ -201,6 +210,47 @@ export function createDaemon(config: DaemonConfig): Daemon {
       },
       health: async () =>
         api !== undefined ? { ok: true } : { ok: false, detail: 'api not mounted' },
+    },
+  ];
+
+  // P3.M5 durable wakeups: jobs are files, so a job due while the daemon was
+  // down fires on the first tick after boot (once — no catch-up storm)
+  const wakeupModule: Module[] = config.api === undefined ? [] : [
+    {
+      name: 'wakeups',
+      start: async () => {
+        let lastBusy = Date.now();
+        wakeups = createWakeupScheduler({
+          home,
+          idleForMs: () => {
+            if (api?.busy() === true) lastBusy = Date.now();
+            return Date.now() - lastBusy;
+          },
+          run: async (job) => {
+            if (job.action.type === 'start-objective') {
+              api?.startObjective(job.action.workspaceId, job.action.agentId, job.action.objectiveId);
+            } else {
+              for (const ws of listWorkspaces(home)) {
+                for (const agent of listAgents(home, ws.id)) {
+                  await runCurator(path.join(agentDir(home, ws.id, agent.id), 'memory'), {
+                    dryRun: true,
+                    now: new Date(),
+                    auditHome: home,
+                    agentRef: `${ws.id}/${agent.id}`,
+                  });
+                }
+              }
+            }
+            console.error(`wakeup: fired ${job.id} (${job.action.type})`);
+          },
+        });
+        wakeups.start(config.wakeupTickMs ?? 30_000);
+      },
+      stop: async () => {
+        wakeups?.stop();
+        wakeups = undefined;
+      },
+      health: async () => (wakeups !== undefined ? { ok: true } : { ok: false, detail: 'wakeups not ticking' }),
     },
   ];
 
@@ -267,7 +317,7 @@ export function createDaemon(config: DaemonConfig): Daemon {
     },
   ];
 
-  const kernel = createKernel([...coreModules, ...apiModule, ...curatorModule]);
+  const kernel = createKernel([...coreModules, ...apiModule, ...wakeupModule, ...curatorModule]);
 
   return {
     start: () => kernel.start(),

@@ -60,3 +60,5 @@ tree, so no `NOTICE` file is required and no license conflicts exist.
   `tauri-plugin-single-instance`, `notify-rust`, `ureq`, `ctrlc`, `serde`,
   `serde_json`. All are MIT or Apache-2.0, with no copyleft. The npm
   `@tauri-apps/cli` is Apache-2.0 or MIT.
+- P3.M2 adds no new third-party dependencies. `@aeos/router` uses only
+  `yaml` and `zod`, which were already audited.

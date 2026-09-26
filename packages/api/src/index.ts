@@ -3,6 +3,7 @@ export { ApiError, ok, sendError, type Envelope } from './envelope.js';
 export {
   objectiveDirFor,
   resumeIncompleteObjectives,
+  runningObjectiveCount,
   startObjectiveRun,
   stopFilePath,
 } from './routes/objectives.js';
