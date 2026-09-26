@@ -7,6 +7,8 @@ export const ObjectiveSchema = z.object({
   definitionOfDone: z.string().optional(),
   /** Repo binding id (AgentConfig.repos) — the objective runs in its own worktree of it. */
   repo: z.string().optional(),
+  /** Verification commands overriding the repo binding's (P3.M3); `[]` disables verification. */
+  verify: z.array(z.string().min(1)).optional(),
   budgetUsd: z.number().positive().optional(),
   budgetTokens: z.number().int().positive().optional(),
 });

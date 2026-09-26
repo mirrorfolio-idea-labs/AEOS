@@ -256,6 +256,8 @@ export class AeosClient {
     definitionOfDone?: string;
     /** Repo binding id — the objective runs in its own worktree (P2.M9). */
     repo?: string;
+    /** Verification commands overriding the repo binding's (P3.M3); `[]` disables. */
+    verify?: string[];
   }): Promise<{ id: string }> {
     return this.request('POST', '/v1/objectives', input);
   }

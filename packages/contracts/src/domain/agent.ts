@@ -24,6 +24,11 @@ export const RepoBindingSchema = z.object({
   path: z.string().min(1),
   /** Branch/ref new objective worktrees start from; defaults to the checkout's HEAD. */
   baseRef: z.string().min(1).optional(),
+  /**
+   * Verification commands (P3.M3) run in the worktree after every code
+   * task, e.g. `["pnpm test", "pnpm lint"]`. An objective may override.
+   */
+  verify: z.array(z.string().min(1)).optional(),
 });
 export type RepoBinding = z.infer<typeof RepoBindingSchema>;
 

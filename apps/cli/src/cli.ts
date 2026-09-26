@@ -52,10 +52,10 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos agent wait <id> --workspace <ws> [--until blocked,done] [--timeout-ms 30000] [--after-seq <n>]
   aeos agent seen|unread|settle|unsettle <id> --workspace <ws>
   aeos inbox               # every agent, attention-sorted (blocked first)
-  aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main]
+  aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main] [--verify "pnpm test" ...]
   aeos repo unbind <id> --workspace <ws> --agent <agent>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
-                        [--repo <binding>] [--done "definition of done"]
+                        [--repo <binding>] [--done "definition of done"] [--verify "cmd" ...]
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --auto-plan   # planner writes the plan
   aeos objective approve-plan <id> --workspace <ws> --agent <agent>
   aeos objective routes <id> --workspace <ws> --agent <agent>   # router decisions + realized cost
@@ -222,6 +222,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         id,
         path: path.resolve(need(parsed, 'path')),
         ...(baseRef === undefined ? {} : { baseRef }),
+        ...(parsed.flags.get('verify') === undefined ? {} : { verify: parsed.flags.get('verify') as string[] }),
       });
       io.out(`repo ${id} bound to ${agentId} — objectives with --repo ${id} run in their own worktree`);
       return 0;
@@ -276,6 +277,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         title: need(parsed, 'title'),
         tasks,
         ...(autoPlan ? { autoPlan: true } : {}),
+        ...(parsed.flags.get('verify') === undefined ? {} : { verify: parsed.flags.get('verify') as string[] }),
         ...(parsed.flags.get('repo')?.[0] === undefined ? {} : { repo: parsed.flags.get('repo')?.[0] as string }),
         ...(parsed.flags.get('done')?.[0] === undefined
           ? {}
