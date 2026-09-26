@@ -2,8 +2,9 @@
 
 > **Generated view** — as of 2026-09-26, **P1 complete (`v0.1.0` tagged);
 > P2 complete (v0.2.0 release PR #120 awaits Gate 3); P3 and P4 complete on
-> code (v0.3.0 / v0.4.0 follow via Gate 2 → Gate 3); P5 code-complete up to
-> the human-only steps (rc/v1.0 tags, repo flip, launch).**
+> code (v0.3.0 / v0.4.0 follow via Gate 2 → Gate 3); the repo is public
+> (P5.M4.T1 verified); P5 code-complete up to the human-only steps (rc/v1.0
+> tags, launch).**
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -13,9 +14,9 @@
 
 | | |
 |---|---|
-| **Now** | Every agent-doable v1 task is done. What remains needs Kabeer: Gate 3 merges/tags (#120 v0.2.0, then v0.3/v0.4/rc), manual sign-offs (P1.M4/M10 live smokes, P4.M3.T1/T3 reboot + TLS-on-VM, P5.M2.T2 blind test), repo flip + launch. |
+| **Now** | Every agent-doable v1 task is done. What remains needs Kabeer: Gate 3 merges/tags (#120 v0.2.0, then v0.3/v0.4/rc), manual sign-offs (P1.M4/M10 live smokes, P4.M3.T1 reboot, P5.M2.T2 blind test), beta announcement + launch. |
 | **Next** | After #120 merges: Gate 2 promotion #126 (P3+P4+P5 → `staging`) and the v0.3.0 / v0.4.0 release PRs; then tag `v1.0.0-rc.1` (release pipeline builds, signs and upgrade-tests it). |
-| **Later** | P5.M4 public beta (T1 repo flip, T3 weekly grooming) → P5.M5 GA (T1 blocker burn-down, T4 post-launch week). |
+| **Later** | P5.M4 public beta (T3 weekly grooming) → P5.M5 GA (T1 blocker burn-down, T4 post-launch week). |
 
 ## Milestones
 
@@ -61,32 +62,32 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M4 retrospective loop `[x]` | 2/2 | deterministic post-objective retrospective: verification failures/flakes → `lessons/`, re-dos → `mistakes/`, human review comments → `preferences/`, via `memory.propose` (accept/reject in ADE/CLI/API, or `retrospective: apply` unattended); next brief carries them byte-for-byte — 2026-09-26 |
 | M5 wakeups + delegation `[x]` | 2/2 | durable `<home>/jobs/*.yaml` cron (UTC, `cron-parser`) + idle jobs, `lastRunAt` written before the action, a slot missed while down fires once on boot; `/v1/jobs`, `aeos job add|list|rm`; `@agent` tasks run as that agent (own policy/routing/profile) in the owner's worktree, committed under the delegate's name — 2026-09-26 |
 
-### P4 — Scale + community (v0.4) `[~]` — 8/10 tasks (+2 awaiting manual sign-off) — exit gate code-complete
+### P4 — Scale + community (v0.4) `[~]` — 9/10 tasks (+1 awaiting manual sign-off) — exit gate code-complete
 
 | Milestone | Tasks | Focus |
 |---|---|---|
 | M1 Docker sandbox tier `[x]` | 2/2 | policy `sandbox` tier per task class; `docker run` wrapper mounting only worktree + git dir + profile + read-only binary, env by name, host uid, cap-drop; orphan reaping; `aeos sandbox build`; container golden path + escape canary e2e in CI — 2026-09-26 |
 | M2 public plugin API `[x]` | 3/3 | `aeos` manifest + `PLUGIN_ABI_VERSION` contract gate (typed `contract_mismatch`); core harnesses registered through the same registry; `aeos plugin install` (npm/tarball, `--ignore-scripts`); each plugin in its own process (host-stamped, validated events; crash fails only its session, restart on demand, disable after 3); `create-aeos-plugin` + `docs/plugins.md`; tarball-installed template passes adapter conformance — 2026-09-26 |
-| M3 deploy targets `[~]` | 1/3 (+2 `[~]`) | `aeos service install` (systemd user unit / LaunchAgent, `KillMode=process` so runners survive restarts); `docker compose` image + quickstart CI job; token gate scoped to `/v1` (constant-time, `/healthz`, token file) + ADE sign-in; `docs/deploy.md` TLS recipes. Reboot + VM TLS sign-off manual (guide) — 2026-09-26 |
+| M3 deploy targets `[~]` | 2/3 (+1 `[~]`) | `aeos service install` (systemd user unit / LaunchAgent, `KillMode=process` so runners survive restarts); `docker compose` image + quickstart CI job; token gate scoped to `/v1` (constant-time, `/healthz`, token file) + ADE sign-in; `docs/deploy.md` TLS recipes. TLS recipes verified for Caddy + nginx by `scripts/release/verify-remote-tls.sh` (19/19); reboot sign-off manual (guide) — 2026-09-26 |
 | M4 TCP + Kubernetes `[x]` | 2/2 | TLS-PSK runner transport (mutual auth, per-session 0600 key, endpoint in `runnerSocket` — contracts unchanged); re-adoption suite over unix + TCP, TLS wire fuzz; Helm chart (single-writer Deployment, PVC, kept token, hardened pod) + `helm-lint` on PRs + `nightly-k8s` kind golden path — 2026-09-26 |
 
-### P5 — v1.0 public release `[~]` — 10/18 tasks (+4 awaiting a human)
+### P5 — v1.0 public release `[~]` — 11/18 tasks (+4 awaiting a human)
 
 | Milestone | Tasks | Focus | Gate |
 |---|---|---|---|
 | M1 OSS readiness `[x]` | 4/4 | LICENSE ADR ✓, health files ✓, license audit ✓, history hygiene ✓ | done 2026-07-18 (early, per spine exception) |
 | M2 docs site + onboarding `[~]` | 3/4 (+1 `[~]`) | Starlight site generated from `docs/` (links rewritten, ADR index generated, built-site link+anchor check, Pages deploy on main); quickstart + first-agent tutorial executed by CI; reproducible screenshots + asciicast (`demo:assets`) | blind newcomer test manual |
 | M3 release engineering `[~]` | 2/3 (+1 `[~]`) | changesets fixed group + Version-PR workflow; `release.yml` (verify → self-contained bundles w/ smoke → npm packs → Tauri → SBOM + cosign keyless → GHCR + GitHub Release + npm provenance); `docs/compatibility.md` | rc tag = Gate 3 (Kabeer) |
-| M4 public beta `[~]` | 1/3 | triage live: `.github/labels.yml` + label-sync, SLA table in CONTRIBUTING, 11 seeded good-first issues (#134–#144); repo flip + beta grooming are Kabeer's | requires P4 exit |
+| M4 public beta `[~]` | 2/3 | repo public, Issues + Discussions on, `main` protected (required `ci`), gitleaks clean over full history; triage live: `.github/labels.yml` + label-sync, SLA table in CONTRIBUTING, 11 seeded good-first issues (#134–#144); beta announcement + grooming are Kabeer's | requires P4 exit |
 | M5 GA launch `[~]` | 0/4 (+2 `[~]`) | upgrade test (older release → this build on the same `AEOS_HOME`) wired into `release.yml`, green from v0.1.0 and staging; v1.0.0 notes + launch-kit drafts in `notes/launch/`; tag, publishing and posting are Kabeer's | = v1 |
 
 **Total defined work: 114 tasks** (44 P1 + 31 P2 + 11 P3 + 10 P4 + 18 P5)
 across 34 milestones, plus 4 tracked post-v1 backlog items (scope changes:
 2026-07-19 +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
 retired; 2026-09-26 +P2.M9 repo bindings/worktrees/review, +P2.M10 herdr-derived
-agent runtime). Every task has an accept criterion in the ROADMAP; **104 are
-done, 6 are `[~]` awaiting a human step** (P4.M3.T1/T3, P5.M2.T2, P5.M3.T2,
-P5.M5.T2/T3) and **4 are open** — repo flip, beta grooming, the blocker burn-down at cut time and the post-launch week (P5.M4.T1/T3, P5.M5.T1/T4).
+agent runtime). Every task has an accept criterion in the ROADMAP; **106 are
+done, 5 are `[~]` awaiting a human step** (P4.M3.T1, P5.M2.T2, P5.M3.T2,
+P5.M5.T2/T3) and **3 are open** — beta grooming, the blocker burn-down at cut time and the post-launch week (P5.M4.T3, P5.M5.T1/T4).
 Open tasks keep a matching GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
@@ -123,3 +124,4 @@ None.
 | D18 | 2026-09-26 | Spec §7 requires a transcript per session, but objective-run task sessions had no session record, so every event logged `TranscriptRoutingError` and no transcript was written (the canary e2e called it a "documented v0 deferral"); an errored objective run was also silent in the daemon log | **Fixed same day** (`fix/objective-transcripts`): scheduler `onSessionStarted/onSessionEnded` hooks register each task session (session.yaml + index, under the executing agent); canary e2e now asserts transcripts exist and never contain the canary; errored runs log to stderr |
 | D19 | 2026-09-26 | GitHub task issues (one per ROADMAP task) were never closed as tasks completed: 30 issues for `[x]` tasks (P2.M1/M6/M7/M8, all of P3, P4 except M3.T1/T3, P5.M2.T1/T3/T4) were still open; three done tasks also carried `good first issue` | **Fixed same day**: closed as completed — P2.M7→#114, P2.M8→#117, P3.M1→#118, M2→#121, M3→#122, M4→#123, M5→#124, P4.M1→#127, M2→#128, M3.T2→#129, M4→#131, P5.M2→#132 (P2.M1/M6 predate this log). Tasks at `[~]` (manual sign-off) stay open. Rule going forward: the PR completing a task closes its issue (`Closes #n`) |
 | D20 | 2026-09-26 | The BOARD totals paragraph still said 107 tasks / 67 done / 40 remaining after P2.M9 and P2.M10 were added and P2–P5 were worked through; the Now/Next rows still described P4 as underway | **Fixed same day**: recounted from ROADMAP checkboxes (114 tasks: 104 `[x]`, 6 `[~]`, 4 `[ ]`), rewrote the header and Now/Next/Later |
+| D21 | 2026-09-26 | The repo was already public, with Issues and Discussions on, while ROADMAP/BOARD still listed "repo flip" (P5.M4.T1) as Kabeer's open step; S16 also justified leaving out arm runners because the repo was private | **Fixed same day**: T1 verified post-flip (`main` protection with required `ci`, community profile 100%, gitleaks clean over full history) and flipped `[x]`, issue #85 closed. The arm-runner note stays accurate as history; re-check arm availability now that the repo is public |

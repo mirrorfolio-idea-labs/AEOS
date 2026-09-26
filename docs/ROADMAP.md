@@ -382,7 +382,7 @@ parties honest.
 auth + TLS via reverse proxy).
 - [~] **T1** `aeos service install` (systemd user unit / launchd). *Accept: survives logout/reboot per platform test.* *(Code + unit/`systemd-analyze` tests done; real logout/reboot sign-off is manual — guide in `guides/`.)*
 - [x] **T2** `docker compose up` target. *Accept: compose quickstart green in CI.*
-- [~] **T3** Remote posture: token auth enforced when binding non-loopback + reverse-proxy TLS guide. *Accept: unauthenticated non-loopback request rejected; guide verified on a VM.* *(Non-loopback rejection proven in `api.test.ts` + ADE sign-in in Playwright T10; VM verification of `docs/deploy.md` TLS recipe is manual — guide in `guides/`.)*
+- [x] **T3** Remote posture: token auth enforced when binding non-loopback + reverse-proxy TLS guide. *Accept: unauthenticated non-loopback request rejected; guide verified on a VM.* *(Non-loopback rejection proven in `api.test.ts` + ADE sign-in in Playwright T10; the `docs/deploy.md` TLS recipe was verified on a clean Linux host (a fresh cloud container, not a VM) by `scripts/release/verify-remote-tls.sh`. That run covered both Caddy and nginx over verified TLS: open `/healthz` and UI shell, 401 on `/v1` without or with a wrong token, unbuffered SSE, WebSocket attach through the proxy, and a refused tokenless `0.0.0.0` bind — 19/19, 2026-09-26. ACME issuance itself is the proxy's job and was substituted by a local CA and self-signed certs.)*
 **Exit gate:** each target's quickstart passes on a clean machine/VM.
 
 ### M4 — TCP runner transport + Kubernetes  `[x]`
@@ -432,7 +432,7 @@ signed artifacts + SBOM.
 ### M4 — Public beta (repo goes public)  `[~]`
 **Context brief:** Soft launch to gather signal before GA. Requires P4 exit +
 M1–M3 of this phase.
-- [ ] **T1** Flip repo public; enable Issues/Discussions; publish beta announcement to a limited circle. *Accept: repo public with M1 protections verified post-flip.*
+- [x] **T1** Flip repo public; enable Issues/Discussions; publish beta announcement to a limited circle. *Accept: repo public with M1 protections verified post-flip.* *(Verified 2026-09-26: repo public with Issues + Discussions on; `main` protected with required `ci`; community profile 100%; gitleaks over all 155 commits clean — its one hit, a ULID test fixture, is allowlisted by fingerprint in `.gitleaksignore`. The limited-circle beta announcement is Kabeer's.)*
 - [x] **T2** Triage workflow: labels, response SLA, ≥10 seeded `good-first-issue`s. *Accept: labels + docs live; response SLA stated in CONTRIBUTING.*
 - [ ] **T3** Feedback intake loop: beta findings groomed into this ROADMAP weekly. *Accept: at least one grooming pass recorded in the PM sprint log.*
 **Exit gate:** two weeks of beta with all P0/P1 bugs fixed, or ≥2 external PRs merged — whichever comes first.
