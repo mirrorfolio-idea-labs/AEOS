@@ -1,0 +1,14 @@
+AEOS is starting ({{ include "aeos.fullname" . }}).
+
+1. API token{{ if not .Values.auth.existingSecret }} (generated once, kept across upgrades){{ end }}:
+   kubectl -n {{ .Release.Namespace }} get secret {{ include "aeos.tokenSecret" . }} -o jsonpath='{.data.{{ .Values.auth.existingSecretKey }}}' | base64 -d; echo
+
+2. Open the web UI:
+{{- if .Values.ingress.enabled }}
+   https://{{ .Values.ingress.host }}   (paste the token when asked)
+{{- else }}
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "aeos.fullname" . }} 7777:{{ .Values.service.port }}
+   then http://localhost:7777   (paste the token when asked)
+{{- end }}
+
+State lives on the PVC ({{ .Values.persistence.existingClaim | default (printf "%s-home" (include "aeos.fullname" .)) }}): back it up, and you have backed up AEOS.

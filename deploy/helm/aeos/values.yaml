@@ -1,0 +1,50 @@
+# AEOS Helm values (P4.M4.T2, spec §16 Kubernetes target).
+#
+# AEOS keeps ALL state as files under AEOS_HOME (/data) — so exactly one
+# replica owns the volume (strategy: Recreate). Scale out by running more
+# releases (one per team/workspace), not more replicas.
+
+image:
+  repository: ghcr.io/mirrorfolio-idea-labs/aeosd
+  tag: ""            # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# API bearer token. Leave `existingSecret` empty to have the chart create a
+# random token once (kept across upgrades); read it back with:
+#   kubectl get secret <release>-aeos-token -o jsonpath='{.data.token}' | base64 -d
+auth:
+  existingSecret: ""
+  existingSecretKey: token
+
+# Model-provider keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, …) from a Secret
+# you create: kubectl create secret generic aeos-providers --from-literal=ANTHROPIC_API_KEY=...
+providerSecret: ""
+
+# Extra environment for aeosd (e.g. AEOS_PROVIDER: fake for demos/CI).
+extraEnv: {}
+
+persistence:
+  size: 10Gi
+  storageClass: ""   # cluster default when empty
+  existingClaim: ""
+
+service:
+  type: ClusterIP
+  port: 7777
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: aeos.example.com
+  tls: []            # - secretName: aeos-tls  (terminate TLS here; aeosd speaks HTTP)
+
+resources:
+  requests: { cpu: 250m, memory: 512Mi }
+  limits: { memory: 4Gi }
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +19,8 @@ import {
   type EventBus,
   type IndexDb,
 } from '@aeos/kernel';
-import { connectRunner, type RunnerClient } from '../protocol/client.js';
+import { connectRunner, RunnerConnectError, type RunnerClient } from '../protocol/client.js';
+import { PSK_BYTES, parseEndpoint, readPskFile, writePskFile, type RunnerEndpoint } from '../protocol/transport.js';
 import type { PtyWireMessage } from '../protocol/messages.js';
 import type { RunnerOptions } from '../runner/runner.js';
 import { transitionSession } from './session-state.js';
@@ -47,6 +49,12 @@ export interface SupervisorOptions {
   heartbeatMs?: number;
   connectTimeoutMs?: number;
   exitGraceMs?: number;
+  /**
+   * Runner transport (P4.M4): `unix` (default) or TLS-PSK over TCP, for
+   * runners that must be reachable from another host/pod. `host` is the
+   * interface the runner binds (and the address the daemon dials).
+   */
+  transport?: { kind: 'unix' } | { kind: 'tcp'; host: string };
 }
 
 export interface StartSessionOptions {
@@ -119,15 +127,22 @@ export function createSupervisor(options: SupervisorOptions): Supervisor {
     } as AeosEvent);
   }
 
+  /** A recorded `runnerSocket` (path or `tcp://host:port`) → a dialable endpoint. */
+  function endpointFor(workspaceId: string, agentId: string, sessionId: string, runnerSocket: string): RunnerEndpoint {
+    if (!runnerSocket.startsWith('tcp://')) return { kind: 'unix', path: runnerSocket };
+    const psk = readPskFile(path.join(sessionDir(home, workspaceId, agentId, sessionId), 'runner.psk'));
+    return parseEndpoint(runnerSocket, { psk, identity: sessionId });
+  }
+
   async function connectAndTrack(
     workspaceId: string,
     agentId: string,
     sessionId: string,
-    socketPath: string,
+    runnerSocket: string,
     fromSeq: number,
   ): Promise<RunnerClient> {
     const client = await connectRunner({
-      socketPath,
+      endpoint: endpointFor(workspaceId, agentId, sessionId, runnerSocket),
       sessionId,
       fromSeq,
       connectTimeoutMs: options.connectTimeoutMs ?? 5000,
@@ -178,6 +193,15 @@ export function createSupervisor(options: SupervisorOptions): Supervisor {
         ...(options.exitGraceMs !== undefined ? { exitGraceMs: options.exitGraceMs } : {}),
         stopFilePaths: [path.join(home, 'STOP'), path.join(dir, 'STOP')],
       };
+      const transport = options.transport ?? { kind: 'unix' };
+      const endpointFile = path.join(dir, 'runner.endpoint');
+      if (transport.kind === 'tcp') {
+        // a fresh key per session, never in argv or the session record
+        const pskFile = path.join(dir, 'runner.psk');
+        writePskFile(pskFile, randomBytes(PSK_BYTES));
+        fs.rmSync(endpointFile, { force: true });
+        runnerConfig.tcp = { host: transport.host, pskFile };
+      }
       const child = spawn(
         process.execPath,
         [runnerMainPath, JSON.stringify(runnerConfig)],
@@ -185,17 +209,28 @@ export function createSupervisor(options: SupervisorOptions): Supervisor {
       );
       child.unref();
 
+      // TCP runners bind an ephemeral port and publish it once listening
+      let runnerSocket = socketPath;
+      if (transport.kind === 'tcp') {
+        const deadline = Date.now() + (options.connectTimeoutMs ?? 5000);
+        while (!fs.existsSync(endpointFile) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 25));
+        if (!fs.existsSync(endpointFile)) {
+          transitionSession({ home, db, bus, workspaceId, agentId, sessionId, to: 'failed' });
+          throw new RunnerConnectError(`runner for ${sessionId} never published its TCP endpoint`);
+        }
+        runnerSocket = fs.readFileSync(endpointFile, 'utf8').trim();
+      }
       record = {
         ...record,
         ...(child.pid !== undefined ? { runnerPid: child.pid } : {}),
-        runnerSocket: socketPath,
+        runnerSocket,
       };
       writeSessionYaml(home, workspaceId, agentId, sessionId, record);
       indexSession(db, record, Date.now());
 
       try {
         await retryConnect(() =>
-          connectAndTrack(workspaceId, agentId, sessionId, socketPath, 0),
+          connectAndTrack(workspaceId, agentId, sessionId, runnerSocket, 0),
           options.connectTimeoutMs ?? 5000,
         );
       } catch (error) {
