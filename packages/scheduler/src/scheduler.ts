@@ -9,7 +9,7 @@ import {
 } from '@aeos/contracts';
 import { writeFileAtomic } from '@aeos/kernel';
 import { BudgetMeter, diffStatuses, readObjectiveFile, worktreeStatus, type BudgetCaps } from '@aeos/policy';
-import type { Objective } from '@aeos/contracts';
+import type { Objective, PlanTask } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
 import { parsePlan, serializePlan, withTaskStatus, type ParsedPlan } from './plan.js';
 import { readCheckpoints, resolveNextTask, writeCheckpoint } from './checkpoint.js';
@@ -47,6 +47,18 @@ export interface RunObjectiveOptions {
    * objective pauses behind an approval.request — kill-switch semantics.
    */
   watchedRepo?: string;
+  /** Harness cwd — the objective's git worktree (spec §10). */
+  workdir?: string;
+  /**
+   * Builds the session prompt for a task (objective context, memory
+   * snapshot, workdir brief). Defaults to the bare task title.
+   */
+  composePrompt?: (task: PlanTask, plan: ParsedPlan) => Promise<string>;
+  /**
+   * Seals a completed task's work (e.g. a worktree commit); the returned
+   * sha is recorded as the checkpoint's `commit`.
+   */
+  commitTask?: (task: PlanTask) => Promise<string | undefined>;
 }
 
 export type ObjectiveOutcome =
@@ -164,7 +176,8 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
     const handle = opts.adapter.spawn({
       profile,
       sessionId: nextSessionId(),
-      objective: task.title,
+      objective: opts.composePrompt === undefined ? task.title : await opts.composePrompt(task, plan),
+      ...(opts.workdir === undefined ? {} : { workdir: opts.workdir }),
       ...(resumeToken === undefined ? {} : { resumeToken }),
       ...(opts.permissionPolicy === undefined ? {} : { permissionPolicy: opts.permissionPolicy }),
     });
@@ -259,12 +272,14 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
     }
 
     if (terminal === 'completed') {
+      const commit = await opts.commitTask?.(task);
       await writeCheckpoint(opts.objectiveDir, {
         taskId: task.id,
         status: 'completed',
         attempts: attempts + 1,
         summary: `completed on attempt ${attempts + 1}`,
         costs: { usd, tokens },
+        ...(commit === undefined ? {} : { commit }),
         ...(handle.resumeToken === undefined
           ? {}
           : { providerResumeToken: handle.resumeToken }),

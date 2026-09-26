@@ -261,6 +261,18 @@ deep links + native notifications; no UI logic forked into the shell.
 - [ ] **T3** macOS + Linux build artifacts in CI. *Accept: installable artifacts produced by CI.*
 **Exit gate = P2 exit gate** (top of this section).
 
+### M9 — Repository bindings, worktrees + session brief  `[x]`
+**Context brief:** Spec §7 (repository bindings), §10 (one git worktree per
+agent, repo and objective; agents never touch the user's checkout), §8 rule 2
+(the frozen memory snapshot is injected at session start). Added 2026-09-26:
+the gap was found during the P2.M7 sweep. Until this milestone, harnesses ran
+in their profile dir and received only the bare task title. The review pane
+adapts herdr-reviewr (MIT).
+- [x] **T1** Repo bindings plus one worktree per (agent, repo, objective) on `aeos/<agent>/<objective>`; every completed task is committed with the agent as author (`checkpoint.commit`). *Accept: the objective runs in its worktree, the user's checkout is untouched, and each task yields an agent-authored commit.*
+- [x] **T2** Session brief: the task first, then its notes, objective and definition of done, plan position, the worktree, and the memory snapshot. *Accept: the brief is byte-stable for identical inputs and contains the memory snapshot.*
+- [x] **T3** Review pane: worktree diff by scope (whole objective, last task, uncommitted) in API, SDK, CLI and ADE; line comments go back to the agent as an `R<n>` task. *Accept: a Playwright round-trip covering bind → run → diff → comment → send creates the R1 task.*
+**Exit gate:** the fake-harness objective completes inside a worktree through the UI, and a review round-trip is green in CI (Playwright T6).
+
 ## Phase P3 — Autonomy (v0.3)  `[ ]`
 
 **Exit gate for the phase:** unattended demo — objective in, plan generated

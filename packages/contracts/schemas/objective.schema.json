@@ -19,6 +19,9 @@
         "definitionOfDone": {
           "type": "string"
         },
+        "repo": {
+          "type": "string"
+        },
         "budgetUsd": {
           "type": "number",
           "exclusiveMinimum": 0

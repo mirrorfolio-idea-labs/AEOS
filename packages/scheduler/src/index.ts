@@ -7,3 +7,13 @@ export {
   type NextTaskResolution,
 } from './checkpoint.js';
 export { runObjective, type ObjectiveOutcome, type RunObjectiveOptions } from './scheduler.js';
+export {
+  commitTaskWork,
+  ensureObjectiveWorktree,
+  worktreeBranch,
+  worktreeDiff,
+  worktreeDir,
+  type DiffScope,
+  type EnsureWorktreeOptions,
+  type ObjectiveWorktree,
+} from './worktree.js';

@@ -144,6 +144,60 @@
         }
       }
     },
+    "/v1/agents/{id}/repos": {
+      "post": {
+        "tags": [
+          "agents"
+        ],
+        "description": "Bind a repository (spec §7): objectives targeting it run in their own git worktree on an aeos/<agent>/<objective> branch — never in the checkout itself.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/repos/{repoId}": {
+      "delete": {
+        "tags": [
+          "agents"
+        ],
+        "description": "Unbind a repository. Existing worktrees and agent branches are left in place.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "repoId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/v1/objectives": {
       "post": {
         "tags": [
@@ -221,6 +275,52 @@
           "objectives"
         ],
         "description": "Objective status derived from plan.md + checkpoints (files are truth).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/objectives/{id}/diff": {
+      "get": {
+        "tags": [
+          "objectives"
+        ],
+        "description": "Unified diff of the objective worktree: uncommitted | branch (since the objective began) | last-commit.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/objectives/{id}/review": {
+      "post": {
+        "tags": [
+          "objectives"
+        ],
+        "description": "Send review comments back to the agent: appends an R<n> task to plan.md with the comments as its notes, then (by default) starts the objective.",
         "parameters": [
           {
             "schema": {

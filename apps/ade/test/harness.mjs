@@ -1,5 +1,6 @@
 // Playwright web server: one process serving the built UI (dist/) and the
 // API (provider-fake) on PORT (default 7777). AEOS_HOME is a fresh temp dir.
+import { writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -19,12 +20,22 @@ if (home) {
 }
 const app = await createApiServer({
   home,
-  adapterFor: () =>
-    new FakeAdapter({
+  adapterFor: () => {
+    const fake = new FakeAdapter({
       providerSessionId: 'ses_ade',
       events: buildFixtureEvents({ profileId: 'cp-default' }),
       paceMs: 30,
-    }),
+    });
+    // P2.M9 review pane: in a repo worktree the fake "does work" so there is a diff
+    const spawn = fake.spawn.bind(fake);
+    fake.spawn = (opts) => {
+      if (opts.workdir !== undefined) {
+        writeFileSync(path.join(opts.workdir, 'agent-output.txt'), `${opts.objective.split('\n')[0]}\nsecond line\n`);
+      }
+      return spawn(opts);
+    };
+    return fake;
+  },
   credentialFor: () => ({ id: 'cp-default', kind: 'api-key', secretRef: 'env' }),
   bus: createEventBus(),
   // mirror the daemon (api-module.ts): real default posture + approvals inbox

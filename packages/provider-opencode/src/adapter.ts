@@ -19,13 +19,15 @@ export type RunChild = (
   profile: HarnessProfile,
   argv: readonly string[],
   signal: AbortSignal,
+  /** Process cwd — the objective worktree when set (spec §10). */
+  workdir?: string,
 ) => AsyncIterable<string>;
 
-const defaultRunChild: RunChild = async function* (profile, argv, signal) {
+const defaultRunChild: RunChild = async function* (profile, argv, signal, workdir) {
   const [command, ...rest] = argv;
   if (!command) throw new Error('empty argv');
   const child = spawnProcess(command, rest, {
-    cwd: profile.rootDir,
+    cwd: workdir ?? profile.rootDir,
     env: { PATH: process.env['PATH'] ?? '', ...profile.env },
     stdio: ['ignore', 'pipe', 'ignore'],
     signal,
@@ -65,7 +67,7 @@ class OpencodeSessionHandle implements SessionHandle {
     const { signal } = this.abort;
     const stream = async function* (this: OpencodeSessionHandle): AsyncGenerator<AeosEvent> {
       try {
-        for await (const line of runChild(opts.profile, argv, signal)) {
+        for await (const line of runChild(opts.profile, argv, signal, opts.workdir)) {
           if (signal.aborted) return;
           let parsed: unknown;
           try {

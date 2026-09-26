@@ -1,4 +1,10 @@
-import { AeosEventSchema, type AeosEvent, type AgentConfig, type Workspace } from '@aeos/contracts';
+import {
+  AeosEventSchema,
+  type AeosEvent,
+  type AgentConfig,
+  type RepoBinding,
+  type Workspace,
+} from '@aeos/contracts';
 
 /** Mirror of the server envelope (spec §14). */
 export interface Envelope<T> {
@@ -28,6 +34,22 @@ export interface ObjectiveStatus {
   running: boolean;
   tasks: Array<{ id: string; title: string; status: string }>;
   checkpoints: Array<{ taskId: string; status: string; attempts: number }>;
+}
+
+export type DiffScope = 'uncommitted' | 'branch' | 'last-commit';
+
+export interface ObjectiveDiff {
+  scope: DiffScope;
+  branch: string;
+  worktree: string;
+  baseCommit: string;
+  diff: string;
+}
+
+export interface ReviewComment {
+  file?: string;
+  line?: number;
+  body: string;
 }
 
 export interface EventStreamOptions {
@@ -124,6 +146,41 @@ export class AeosClient {
     );
   }
 
+  bindRepo(workspaceId: string, agentId: string, binding: RepoBinding): Promise<AgentConfig> {
+    return this.request('POST', `/v1/agents/${agentId}/repos?workspaceId=${workspaceId}`, binding);
+  }
+
+  unbindRepo(workspaceId: string, agentId: string, repoId: string): Promise<AgentConfig> {
+    return this.request('DELETE', `/v1/agents/${agentId}/repos/${repoId}?workspaceId=${workspaceId}`);
+  }
+
+  objectiveDiff(
+    workspaceId: string,
+    agentId: string,
+    objectiveId: string,
+    scope: DiffScope = 'branch',
+  ): Promise<ObjectiveDiff> {
+    return this.request(
+      'GET',
+      `/v1/objectives/${objectiveId}/diff?workspaceId=${workspaceId}&agentId=${agentId}&scope=${scope}`,
+    );
+  }
+
+  /** Send review comments back to the agent as a new R<n> task (herdr-reviewr idea). */
+  reviewObjective(
+    workspaceId: string,
+    agentId: string,
+    objectiveId: string,
+    comments: ReviewComment[],
+    start = true,
+  ): Promise<{ taskId: string; title: string; started: boolean }> {
+    return this.request(
+      'POST',
+      `/v1/objectives/${objectiveId}/review?workspaceId=${workspaceId}&agentId=${agentId}`,
+      { comments, start },
+    );
+  }
+
   createObjective(input: {
     workspaceId: string;
     agentId: string;
@@ -132,6 +189,9 @@ export class AeosClient {
     tasks: Array<{ id: string; title: string }>;
     budgetUsd?: number;
     budgetTokens?: number;
+    definitionOfDone?: string;
+    /** Repo binding id — the objective runs in its own worktree (P2.M9). */
+    repo?: string;
   }): Promise<{ id: string }> {
     return this.request('POST', '/v1/objectives', input);
   }
