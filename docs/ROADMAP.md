@@ -429,11 +429,11 @@ signed artifacts + SBOM.
 - [x] **T3** Versioning/compat policy doc (semver, contracts ABI stability, support window). *Accept: policy published on the docs site; contracts package documents its guarantees.*
 **Exit gate:** an RC is cut, installed from artifacts, and passes the golden path.
 
-### M4 — Public beta (repo goes public)  `[ ]`
+### M4 — Public beta (repo goes public)  `[~]`
 **Context brief:** Soft launch to gather signal before GA. Requires P4 exit +
 M1–M3 of this phase.
 - [ ] **T1** Flip repo public; enable Issues/Discussions; publish beta announcement to a limited circle. *Accept: repo public with M1 protections verified post-flip.*
-- [ ] **T2** Triage workflow: labels, response SLA, ≥10 seeded `good-first-issue`s. *Accept: labels + docs live; response SLA stated in CONTRIBUTING.*
+- [x] **T2** Triage workflow: labels, response SLA, ≥10 seeded `good-first-issue`s. *Accept: labels + docs live; response SLA stated in CONTRIBUTING.*
 - [ ] **T3** Feedback intake loop: beta findings groomed into this ROADMAP weekly. *Accept: at least one grooming pass recorded in the PM sprint log.*
 **Exit gate:** two weeks of beta with all P0/P1 bugs fixed, or ≥2 external PRs merged — whichever comes first.
 
