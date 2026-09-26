@@ -269,6 +269,29 @@
         }
       }
     },
+    "/v1/objectives/{id}/plan/approve": {
+      "post": {
+        "tags": [
+          "objectives"
+        ],
+        "description": "Human approval of a planner-proposed plan (plan.proposed.md → plan.md), then start. Works after a denial or expiry too.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/v1/objectives/{id}": {
       "get": {
         "tags": [

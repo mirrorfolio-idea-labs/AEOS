@@ -135,6 +135,9 @@ importers:
       '@aeos/runner':
         specifier: workspace:*
         version: link:../../packages/runner
+      '@aeos/scheduler':
+        specifier: workspace:*
+        version: link:../../packages/scheduler
       '@aeos/secrets':
         specifier: workspace:*
         version: link:../../packages/secrets

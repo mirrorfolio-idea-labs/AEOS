@@ -1,6 +1,6 @@
 import {
   CompiledPolicySchema,
-  PERMISSION_TIERS,
+  TOOL_TIERS,
   type CompiledPolicy,
   type EffectivePolicy,
   type PolicyMode,
@@ -36,7 +36,8 @@ function claudeCodeFlags(effective: EffectivePolicy): { argv: string[]; env: Rec
 }
 
 function codexFlags(effective: EffectivePolicy): { argv: string[]; env: Record<string, string> } {
-  const anyConfirm = PERMISSION_TIERS.some((t) => effective.tiers[t] === 'confirm');
+  // run_plan gates the scheduler, not the harness — it never shapes tool approval
+  const anyConfirm = TOOL_TIERS.some((t) => effective.tiers[t] === 'confirm');
   const sandbox: (typeof CODEX_SANDBOXES)[number] =
     effective.tiers.write_files === 'allow' ? 'workspace-write' : 'read-only';
   return {

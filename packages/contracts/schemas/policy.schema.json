@@ -78,6 +78,14 @@
                 "confirm",
                 "deny"
               ]
+            },
+            "run_plan": {
+              "type": "string",
+              "enum": [
+                "allow",
+                "confirm",
+                "deny"
+              ]
             }
           },
           "additionalProperties": false

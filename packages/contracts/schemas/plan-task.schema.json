@@ -20,6 +20,26 @@
             "completed",
             "blocked"
           ]
+        },
+        "taskClass": {
+          "type": "string",
+          "enum": [
+            "plan",
+            "architect",
+            "implement",
+            "refactor",
+            "review",
+            "security_review",
+            "summarize",
+            "docs",
+            "rename",
+            "verify"
+          ],
+          "default": "implement"
+        },
+        "agent": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
         }
       },
       "required": [

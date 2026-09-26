@@ -1,4 +1,4 @@
-export { parsePlan, serializePlan, withTaskStatus, type ParsedPlan } from './plan.js';
+export { formatTaskText, parsePlan, serializePlan, withTaskStatus, type ParsedPlan } from './plan.js';
 export {
   checkpointPath,
   readCheckpoints,
@@ -17,3 +17,15 @@ export {
   type EnsureWorktreeOptions,
   type ObjectiveWorktree,
 } from './worktree.js';
+export {
+  PLANNING_MARKER,
+  PlanningError,
+  composePlanningPrompt,
+  extractPlanTasks,
+  generatePlan,
+  interleaveVerify,
+  renderPlanMarkdown,
+  type GeneratePlanOptions,
+  type GeneratedPlan,
+  type PlanningPromptInput,
+} from './planner.js';

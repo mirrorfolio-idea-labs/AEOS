@@ -467,6 +467,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/objectives/{id}/plan/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Human approval of a planner-proposed plan (plan.proposed.md → plan.md), then start. Works after a denial or expiry too. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/objectives/{id}": {
         parameters: {
             query?: never;

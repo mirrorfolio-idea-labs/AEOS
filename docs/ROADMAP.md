@@ -302,19 +302,19 @@ See `THIRD_PARTY_NOTICES.md`.
 - [x] **T4** Attention push: `<home>/notifications.yaml` webhooks in json, ntfy or slack format. *Accept: a blocked agent produces exactly one ntfy POST with a high-priority title.*
 **Exit gate:** Playwright T7 green in CI, and the full bar green.
 
-## Phase P3 — Autonomy (v0.3)  `[ ]`
+## Phase P3 — Autonomy (v0.3)  `[~]`
 
 **Exit gate for the phase:** unattended demo — objective in, plan generated
 with task classes, tasks routed to different models by class, verification
 gates progression, retrospective updates memory that provably feeds the next
 session's snapshot; `v0.3` tagged.
 
-### M1 — Planner task classes  `[ ]`
+### M1 — Planner task classes  `[x]`
 **Context brief:** Spec §12–§13. Planning is a frontier-routed model call
 producing a plan file (M6(P1) grammar) whose tasks carry a class
 (`plan, architect, implement, refactor, review, security_review, summarize, docs, rename`).
-- [ ] **T1** `taskClass` in PlanTask contract + schema regen. *Accept: schema drift test green; old plans without class still parse (default `implement`).*
-- [ ] **T2** Planner flow (objective → generated plan) with policy-gated approval. *Accept: provider-fake objective yields a valid classed plan; approval gate honored.*
+- [x] **T1** `taskClass` in PlanTask contract + schema regen. *Accept: schema drift test green; old plans without class still parse (default `implement`).*
+- [x] **T2** Planner flow (objective → generated plan) with policy-gated approval. *Accept: provider-fake objective yields a valid classed plan; approval gate honored.*
 **Exit gate:** generated plan executes end-to-end on provider-fake.
 
 ### M2 — Cost-aware model router  `[ ]`

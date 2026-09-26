@@ -31,10 +31,20 @@ export interface AeosClientOptions {
   fetchImpl?: typeof fetch;
 }
 
+export interface PlanTaskView {
+  id: string;
+  title: string;
+  status: string;
+  taskClass?: string;
+  agent?: string;
+}
+
 export interface ObjectiveStatus {
   running: boolean;
-  tasks: Array<{ id: string; title: string; status: string }>;
-  checkpoints: Array<{ taskId: string; status: string; attempts: number }>;
+  tasks: PlanTaskView[];
+  checkpoints: Array<{ taskId: string; status: string; attempts: number; commit?: string }>;
+  /** Planner proposal awaiting approval (P3.M1). */
+  proposedTasks?: PlanTaskView[];
 }
 
 export type DiffScope = 'uncommitted' | 'branch' | 'last-commit';
@@ -238,7 +248,9 @@ export class AeosClient {
     agentId: string;
     id: string;
     title: string;
-    tasks: Array<{ id: string; title: string }>;
+    /** Omit (with `autoPlan: true`) to have the planner write the plan. */
+    tasks?: Array<{ id: string; title: string }>;
+    autoPlan?: boolean;
     budgetUsd?: number;
     budgetTokens?: number;
     definitionOfDone?: string;
@@ -246,6 +258,15 @@ export class AeosClient {
     repo?: string;
   }): Promise<{ id: string }> {
     return this.request('POST', '/v1/objectives', input);
+  }
+
+  /** Approve a planner-proposed plan and start the objective (P3.M1). */
+  approvePlan(workspaceId: string, agentId: string, objectiveId: string): Promise<{ approved: boolean; tasks: PlanTaskView[] }> {
+    return this.request(
+      'POST',
+      `/v1/objectives/${objectiveId}/plan/approve?workspaceId=${workspaceId}&agentId=${agentId}`,
+      {},
+    );
   }
 
   startObjective(workspaceId: string, agentId: string, objectiveId: string): Promise<{ started: boolean }> {

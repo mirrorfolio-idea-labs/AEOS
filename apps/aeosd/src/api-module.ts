@@ -3,6 +3,7 @@ import path from 'node:path';
 import { agentDir, getAgent, type EventBus, type IndexDb } from '@aeos/kernel';
 import type { Supervisor } from '@aeos/runner';
 import { CredentialProfileSchema, type AgentConfig, type CredentialProfile } from '@aeos/contracts';
+import { PLANNING_MARKER } from '@aeos/scheduler';
 import {
   FakeAdapter,
   buildFixtureEvents,
@@ -78,6 +79,22 @@ function credentialFor(config: ApiModuleConfig, agent: AgentConfig): CredentialP
   });
 }
 
+/**
+ * The fake provider's "model" for planner calls (P3.M1): a deterministic,
+ * classed plan derived from the objective line, so the autonomy loop runs
+ * end-to-end without a network.
+ */
+export function fakePlanner(prompt: string): string | undefined {
+  if (!prompt.startsWith(PLANNING_MARKER)) return undefined;
+  const objective = /^Objective: (.+)$/m.exec(prompt)?.[1] ?? 'the objective';
+  return [
+    'Here is the plan:',
+    `- [ ] **T1** [architect] Outline the approach for ${objective}`,
+    `- [ ] **T2** [implement] Implement ${objective}`,
+    `- [ ] **T3** [review] Review the change against the definition of done`,
+  ].join('\n');
+}
+
 export async function startApiModule(
   home: string,
   db: IndexDb,
@@ -124,6 +141,7 @@ export async function startApiModule(
       return new FakeAdapter({
         providerSessionId: `ses_${agent.id}`,
         events,
+        respond: fakePlanner,
         ...(config.fakePaceMs === undefined ? {} : { paceMs: config.fakePaceMs }),
       });
     }

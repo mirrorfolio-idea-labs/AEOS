@@ -152,6 +152,7 @@ export class ClaudeAdapter implements HarnessAdapter {
       'stream-json',
       '--verbose',
       ...opts.profile.argv,
+      ...(opts.model === undefined ? [] : ['--model', opts.model]),
       ...(opts.resumeToken === undefined ? [] : ['--resume', opts.resumeToken]),
     ];
   }

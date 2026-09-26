@@ -49,11 +49,11 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M10 agent runtime `[x]` | 4/4 | status (events + herdr screen manifests), race-free wait, attention inbox, webhook/ntfy/slack push; fixed resume tokens being dropped under policy — added and done 2026-09-26 |
 | M9 repos + worktrees + brief `[x]` | 3/3 | repo bindings, worktree per objective with agent-authored task commits, session brief with memory snapshot, review pane (herdr-reviewr idea) — added and done 2026-09-26 |
 
-### P3 — Autonomy (v0.3) `[ ]` — 0/11 tasks
+### P3 — Autonomy (v0.3) `[~]` — 2/11 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
-| M1 planner task classes | 0/2 | classed plan generation, approval gate |
+| M1 planner task classes `[x]` | 2/2 | `[class]`/`@agent` plan grammar (old plans default `implement`); read-only planner session → `plan.proposed.md` gated by the new `run_plan` tier (confirm by default via the approvals inbox, allow auto-runs, deny keeps it proposal-only); ADE/CLI auto-plan — 2026-09-26 |
 | M2 model router | 0/3 | pricing index, class routing, cost logging |
 | M3 verification task type | 0/2 | verify gates progression, 3-strike |
 | M4 retrospective loop | 0/2 | lessons/preferences feed next snapshot |
@@ -89,8 +89,8 @@ GitHub issue
 
 ## Active sprint
 
-[S14](sprints/S14.md) — P2.M8 Tauri + the P2 exit gate (2026-09-26); the v0.2 release PR is
-prepared for Kabeer. Next is P3 autonomy.
+[S15](sprints/S15.md) — P3 autonomy (2026-09-26); M1 planner is done, M2 router is next.
+P2 is closed: S14 plus the Gate 2 promotion PR #119, with v0.2.0 awaiting Gate 3.
 
 ## Blockers
 

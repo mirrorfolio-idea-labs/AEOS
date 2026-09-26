@@ -147,6 +147,7 @@ export class CodexAdapter implements HarnessAdapter {
       'exec',
       '--json',
       '--skip-git-repo-check',
+      ...(opts.model === undefined ? [] : ['--model', opts.model]),
       ...(opts.resumeToken === undefined
         ? []
         : ['resume', opts.resumeToken]),

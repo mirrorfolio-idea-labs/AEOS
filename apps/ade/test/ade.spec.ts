@@ -228,3 +228,26 @@ test('T8: deep link — ?agent=<ws>/<agent>&tab=approvals opens that agent on th
   await page.goto('/?agent=client-acme/ops-dev&tab=bogus');
   await expect(page.getByTestId('tab-objective')).toHaveAttribute('data-state', 'active');
 });
+
+test('T9: planner — auto-plan proposes a classed plan that waits for approval, then runs', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('agent-name').fill('Planner Dev');
+  await page.getByTestId('create-agent').click();
+  await page.getByTestId('agent-planner-dev').click();
+  await page.getByTestId('objective-id').fill('obj-plan');
+  await page.getByTestId('objective-title').fill('Ship CSV export');
+  await page.getByTestId('objective-autoplan').check();
+  await page.getByTestId('run-objective').click();
+
+  await expect(page.getByTestId('proposed-plan')).toContainText('[architect] Outline the approach', { timeout: 15_000 });
+  await page.getByTestId('tab-approvals').click();
+  await expect(page.getByTestId('approvals-row').first()).toContainText('run_plan');
+  await page.locator('[data-testid^="approval-approve-"]').first().click();
+  // the plan's own tool calls then park under the default posture — approve until done
+  for (let i = 0; i < 2; i++) {
+    await page.locator('[data-testid^="approval-approve-"]').first().click({ timeout: 15_000 });
+  }
+  await page.getByTestId('tab-objective').click();
+  await expect(page.getByTestId('task-class-T1')).toHaveText('architect', { timeout: 15_000 });
+  await expect(page.getByTestId('task-status-T2')).toHaveText('completed', { timeout: 15_000 });
+});

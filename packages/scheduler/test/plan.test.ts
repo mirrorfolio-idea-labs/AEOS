@@ -17,6 +17,7 @@ function generatePlan(rand: () => number) {
     id: `T${i + 1}`,
     title: `task number ${i + 1} with words ${Math.floor(rand() * 1000)}`,
     status: STATUSES[Math.floor(rand() * STATUSES.length)] as (typeof STATUSES)[number],
+    taskClass: 'implement' as const, // pre-P3 plans carry no class → default (P3.M1.T1 accept)
   }));
   const lines: string[] = ['# Plan', ''];
   for (const task of tasks) {
