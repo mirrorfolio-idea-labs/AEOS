@@ -51,6 +51,11 @@ export interface ClaudeAdapterOptions {
   /** Slot → persistent login home for subscription accounts (see profile.ts). */
   subscriptionHomeFor?: (slot: string) => string;
   runChild?: RunChild;
+  /**
+   * argv prefix resolver (P2.M7): pinned managed binary, BYO path or PATH
+   * name. Called per spawn so verification/gating errors fail that spawn.
+   */
+  resolveCommand?: () => readonly string[];
 }
 
 class ClaudeSessionHandle implements SessionHandle {
@@ -138,7 +143,7 @@ export class ClaudeAdapter implements HarnessAdapter {
 
   buildArgv(opts: SpawnOptions): string[] {
     return [
-      'claude',
+      ...(this.opts.resolveCommand?.() ?? ['claude']),
       '-p',
       opts.objective,
       '--output-format',

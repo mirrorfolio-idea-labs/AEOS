@@ -3,7 +3,16 @@ import path from 'node:path';
 import { agentDir, getAgent, type EventBus, type IndexDb } from '@aeos/kernel';
 import type { Supervisor } from '@aeos/runner';
 import { CredentialProfileSchema, type AgentConfig, type CredentialProfile } from '@aeos/contracts';
-import { FakeAdapter, buildFixtureEvents, type HarnessAdapter } from '@aeos/provider-core';
+import {
+  FakeAdapter,
+  buildFixtureEvents,
+  createBinaryManager,
+  gateAdapter,
+  resolveHarnessCommand,
+  type HarnessAdapter,
+  type ManagedHarness,
+  type ResolvedHarness,
+} from '@aeos/provider-core';
 import { ClaudeAdapter, type SecretResolver } from '@aeos/provider-claude';
 import { OpencodeAdapter } from '@aeos/provider-opencode';
 import { CodexAdapter } from '@aeos/provider-codex';
@@ -96,6 +105,8 @@ export async function startApiModule(
     },
   };
   const subscriptionHomeFor = (slot: string): string => path.join(home, 'subscriptions', slot);
+  // P2.M7 managed harness binaries: pins resolve to verified installs only
+  const binaries = createBinaryManager({ root: path.join(home, 'binaries') });
 
   const adapterFor = (agent: AgentConfig): HarnessAdapter => {
     const provider = config.providerOverride ?? agent.harness.provider;
@@ -116,22 +127,47 @@ export async function startApiModule(
         ...(config.fakePaceMs === undefined ? {} : { paceMs: config.fakePaceMs }),
       });
     }
+    // an overridden provider ignores the agent's own pin (it names another harness)
+    const own = provider === agent.harness.provider;
+    let resolved: ResolvedHarness | undefined;
+    const resolve = (): ResolvedHarness =>
+      (resolved ??= resolveHarnessCommand(
+        {
+          harness: provider,
+          version: own ? agent.harness.version : undefined,
+          binaryPath: own ? agent.harness.binaryPath : undefined,
+        },
+        { manager: binaries },
+      ));
+    const knownVersion = (): string | undefined => {
+      try {
+        return resolve().version;
+      } catch {
+        return undefined; // resolution errors surface from spawn via resolveCommand
+      }
+    };
     const common = {
       agentDir: (a: AgentConfig) => agentDir(home, a.workspaceId, a.id),
       credential: (a: AgentConfig) => credentialFor(config, a),
       secrets,
       subscriptionHomeFor,
+      resolveCommand: () => resolve().command,
     };
-    if (provider === 'opencode') return new OpencodeAdapter(common);
+    const gated = (adapter: HarnessAdapter, harness: ManagedHarness): HarnessAdapter =>
+      gateAdapter(adapter, harness, knownVersion);
+    if (provider === 'opencode') return gated(new OpencodeAdapter(common), provider);
     if (provider === 'codex') {
-      return new CodexAdapter({
-        ...common,
-        // ChatGPT-plan slots map to persistent login homes (P2.M3 resolver
-        // fallback covers non-env refs; subscription passthrough is opt-in)
-        subscriptionHomeFor: (slot: string) => path.join(home, 'subscriptions', slot),
-      });
+      return gated(
+        new CodexAdapter({
+          ...common,
+          // ChatGPT-plan slots map to persistent login homes (P2.M3 resolver
+          // fallback covers non-env refs; subscription passthrough is opt-in)
+          subscriptionHomeFor: (slot: string) => path.join(home, 'subscriptions', slot),
+        }),
+        provider,
+      );
     }
-    return new ClaudeAdapter(common);
+    return gated(new ClaudeAdapter(common), provider);
   };
 
   const app = await createApiServer({

@@ -34,7 +34,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[~]` — 19/25 tasks
+### P2 — Safety + polish (v0.2) `[~]` — 21/24 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
@@ -44,9 +44,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M4 memory curator `[x]` | 3/3 | idle-triggered dry-run scaffold, propose-pipeline ops (deterministic v0), own trail + never-delete proof; daemon stays dry-run-only for now — done 2026-08-25 (second overnight continuation) |
 | M5 PTY attach + co-edit guard `[x]` | 3/3 | runner PTY (minimal-env shell), WS attach gated to allow-tier + xterm Takeover tab, ADR-009 detect-and-pause guard (unwired by design until worktrees) — done 2026-08-25 (deps approved mid-session; third overnight continuation) |
 | M6 Codex adapter `[x]` | 2/2 | recorded-fixture translation (codex-cli 0.149.1), resume, conformance parity; capability matrix test-enforced incl. README — done 2026-08-26 |
-| M7 managed binaries | 0/2 | pin/verify, version-gated capabilities |
-| M6 Codex adapter | 0/2 | conformance parity (OpenCode moved to P1.M10) |
-| M7 managed binaries | 0/2 | pin/verify, version-gated capabilities |
+| M7 managed binaries `[x]` | 2/2 | pinned npm-integrity installs sealed by tree hash, PATH never overrides a pin, typed version gates; exit gate green: `pinned-harnesses` CI job (PR #114) — 2026-09-26 |
 | M8 Tauri wrapper | 0/3 | desktop shell, notifications, CI artifacts |
 
 ### P3 — Autonomy (v0.3) `[ ]` — 0/11 tasks
@@ -89,9 +87,8 @@ GitHub issue
 
 ## Active sprint
 
-[S10](sprints/S10.md) — P2.M6 Codex adapter, closed 2026-08-26 at the
-exit gate (all four adapters complete the same fixture objective).
-Next sprint opens on P2.M7 managed harness binaries.
+[S11](sprints/S11.md) — P2.M7 managed harness binaries (opened 2026-09-26);
+then P2.M9 herdr-derived agent runtime, P2.M8 Tauri → v0.2.
 
 ## Blockers
 
@@ -115,3 +112,5 @@ None.
 | D12 | 2026-08-25 | Cold-pickup sweep (overnight continuation): ROADMAP phase headers for P2 and P5 still `[ ]` despite completed tasks inside them (P2 11/25; P5.M1 4/4) — same class as D1 | **Fixed same day**: both phase headers → `[~]` |
 | D13 | 2026-08-25 | Generated views stale after the three P2 exits (R3): BOARD header still read "as of 2026-07-20 … Session parked" while its body was current, and TRACEABILITY was untouched since `v0.1.0` (no P2.M1–M3 rows) | **Fixed same day**: BOARD header corrected to `c6b2600`; TRACEABILITY regenerated through P2.M3 with a fresh verification record |
 | D14 | 2026-08-25 | R5 scan: T2's checkbox flip missed its own commit (2a018fe) and landed retroactively in b00fb2d (self-documented there) — one-time violation of the same-commit rule | **Logged, no action**: ID↔checkbox invariant verified clean across all 107 tasks |
+| D15 | 2026-09-26 | BOARD P2 table carried stale duplicate rows (M6 `0/2`, M7 twice) and a `19/25` count; ROADMAP owns 24 P2 tasks (T2 of M6 retired) | **Fixed same day**: duplicates dropped, count → 19/24 |
+| D16 | 2026-09-26 | Stray-branch sweep: `chore/aeos-m4-smoke-harness`, `feat/aeos-p1-m1-contracts`, `feat/aeos-p1-m3-runner`, `feat/p2-m6-codex` carry zero commits beyond `develop` (all merged via PRs) | **Logged**: no feature to rescue; remote deletion left to Kabeer (agent delete blocked by permission policy) |

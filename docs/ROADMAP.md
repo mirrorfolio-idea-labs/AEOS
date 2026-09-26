@@ -245,12 +245,12 @@ taxonomy; resume support; passes the M4(P1) conformance suite.
 - [x] **T3** Cross-harness capability matrix + docs. *Accept: matrix asserted by conformance tests, not hand-maintained.*
 **Exit gate:** the same fixture objective completes on all adapters (fake, Claude, OpenCode from P1.M10, Codex).
 
-### M7 — Managed harness binaries  `[ ]`
+### M7 — Managed harness binaries  `[x]`
 **Context brief:** Spec §9 (Conductor pattern). Pin + manage harness versions
 per agent with checksum verification; BYO-binary fallback; capability gating
 by version (spec §17.2 mitigation).
-- [ ] **T1** Binary manager (fetch, pin, verify, per-agent version selection). *Accept: tampered binary rejected; pinned version used over PATH.*
-- [ ] **T2** BYO fallback + version-gated capabilities. *Accept: feature requiring version X is refused under pinned version < X with a typed error.*
+- [x] **T1** Binary manager (fetch, pin, verify, per-agent version selection). *Accept: tampered binary rejected; pinned version used over PATH.*
+- [x] **T2** BYO fallback + version-gated capabilities. *Accept: feature requiring version X is refused under pinned version < X with a typed error.*
 **Exit gate:** conformance suite runs in CI against pinned versions.
 
 ### M8 — Tauri desktop wrapper  `[ ]`

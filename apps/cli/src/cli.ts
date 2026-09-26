@@ -1,5 +1,8 @@
+import os from 'node:os';
+import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AeosClient } from '@aeos/sdk';
+import { DEFAULT_PINS, createBinaryManager, type ManagedHarness } from '@aeos/provider-core';
 
 export interface CliIo {
   out: (line: string) => void;
@@ -43,6 +46,7 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos health
   aeos workspace create <id> --name <name>
   aeos agent create <id> --workspace <ws> --name <name> [--provider claude-code] [--credential-profile <cp>]
+                   [--harness-version <pinned>] [--binary-path <byo executable>]
   aeos agent switch-credential <id> --workspace <ws> --profile <credentialProfileId>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
   aeos objective run <id> --workspace <ws> --agent <agent> [--poll-ms 250] [--timeout-ms 120000]
@@ -50,7 +54,49 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos events tail [--type-prefix session.] [--agent <id>] [--max <n>]
   aeos stop --all          # kill switch: no new sessions spawn; in-flight ones finish
   aeos stop status
-  aeos resume-ops          # lifts the kill switch`;
+  aeos resume-ops          # lifts the kill switch
+  aeos harness pins        # pinned harness releases of record
+  aeos harness install <harness>@<version>   # fetch + integrity-check + seal (local, AEOS_HOME)
+  aeos harness verify <harness>@<version>    # re-hash an install against its seal
+  aeos harness list`;
+
+const HARNESSES: readonly ManagedHarness[] = ['claude-code', 'codex', 'opencode'];
+
+/** `codex@0.149.1` → harness + version (managed-binary commands are local, not API calls). */
+function parseHarnessRef(ref: string | undefined): { harness: ManagedHarness; version: string } {
+  const at = ref?.lastIndexOf('@') ?? -1;
+  const harness = ref?.slice(0, at) as ManagedHarness;
+  if (ref === undefined || at <= 0 || !HARNESSES.includes(harness)) {
+    throw new Error(`expected <harness>@<version> with harness one of ${HARNESSES.join(', ')}`);
+  }
+  return { harness, version: ref.slice(at + 1) };
+}
+
+async function runHarnessCommand(action: string | undefined, ref: string | undefined, io: CliIo): Promise<number> {
+  const home = process.env['AEOS_HOME'] ?? path.join(os.homedir(), '.aeos');
+  const manager = createBinaryManager({ root: path.join(home, 'binaries') });
+  if (action === 'pins') {
+    for (const pin of DEFAULT_PINS) io.out(`${pin.harness}@${pin.version}  ${pin.package}  ${pin.integrity}`);
+    return 0;
+  }
+  if (action === 'list') {
+    for (const record of manager.list()) {
+      io.out(`${record.harness}@${record.version}  sealed ${record.treeSha256.slice(0, 12)}  ${record.installedAt}`);
+    }
+    return 0;
+  }
+  if (action === 'install' || action === 'verify') {
+    const { harness, version } = parseHarnessRef(ref);
+    const binary =
+      action === 'install'
+        ? await manager.install(harness, version)
+        : manager.verify(harness, version, { fresh: true });
+    io.out(`${harness}@${version} ${action === 'install' ? 'installed' : 'verified'}: ${binary.executable}`);
+    return 0;
+  }
+  io.err('usage: aeos harness pins|list|install <harness>@<version>|verify <harness>@<version>');
+  return 1;
+}
 
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
@@ -63,6 +109,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   });
 
   try {
+    if (group === 'harness') return await runHarnessCommand(action, id, io);
     if (group === 'health') {
       io.out(JSON.stringify(await client.health()));
       return 0;
@@ -82,6 +129,12 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
             | 'claude-code'
             | 'codex'
             | 'opencode',
+          ...(parsed.flags.get('harness-version')?.[0] === undefined
+            ? {}
+            : { version: parsed.flags.get('harness-version')?.[0] as string }),
+          ...(parsed.flags.get('binary-path')?.[0] === undefined
+            ? {}
+            : { binaryPath: parsed.flags.get('binary-path')?.[0] as string }),
           featureToggles: {
             plugins: false,
             skills: false,

@@ -192,6 +192,22 @@ cannot drift from the code silently.
 | `opencode` | true | true | true | false | true | usd |
 | `fake` | true | true | false | false | true | usd |
 
+**Managed harness binaries.** Pin a harness per agent
+(`aeos agent create … --harness-version 0.149.1`) and AEOS runs exactly that
+release. It is fetched from the npm registry, checked against the integrity
+pinned in `packages/provider-core/src/binaries/pins.ts`, sealed with a tree
+hash, and re-verified before it is used. A tampered install is refused, and
+a pin never falls back to whatever is on `PATH`. Without a pin, AEOS uses
+`--binary-path` (bring your own) and then `PATH`. Capabilities are gated by
+version, so asking for a feature that an older pinned release lacks fails
+with a typed `capability_version_unsupported` error.
+
+```bash
+aeos harness pins                      # releases of record
+aeos harness install codex@0.149.1     # fetch + integrity check + seal
+aeos harness verify codex@0.149.1      # re-hash against the seal
+```
+
 ---
 
 ## Repository

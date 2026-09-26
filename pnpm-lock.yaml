@@ -160,6 +160,9 @@ importers:
       '@aeos/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@aeos/provider-core':
+        specifier: workspace:*
+        version: link:../../packages/provider-core
       '@aeos/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -170,9 +173,6 @@ importers:
       '@aeos/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
-      '@aeos/provider-core':
-        specifier: workspace:*
-        version: link:../../packages/provider-core
       '@types/node':
         specifier: ^22
         version: 22.20.1
