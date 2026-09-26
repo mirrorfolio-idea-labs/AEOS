@@ -34,6 +34,7 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
   const [title, setTitle] = useState('');
   const [taskSpec, setTaskSpec] = useState('T1: do the work');
   const [repo, setRepo] = useState(agent.repos?.[0]?.id ?? '');
+  const [autoPlan, setAutoPlan] = useState(false);
   const [status, setStatus] = useState<ObjectiveStatus | null>(null);
   const [events, setEvents] = useState<AeosEvent[]>([]);
   const [costUsd, setCostUsd] = useState(0);
@@ -107,7 +108,7 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
       agentId: agent.id,
       id,
       title: title || id,
-      tasks,
+      ...(autoPlan ? { autoPlan: true } : { tasks }),
       ...(repo === '' ? {} : { repo }),
     });
     await client.startObjective(agent.workspaceId, agent.id, id);
@@ -116,7 +117,7 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
         .objectiveStatus(agent.workspaceId, agent.id, id)
         .then((next) => {
           setStatus(next);
-          if (next.tasks.every((t) => t.status === 'completed' || t.status === 'blocked')) {
+          if (next.tasks.length > 0 && next.tasks.every((t) => t.status === 'completed' || t.status === 'blocked')) {
             clearInterval(poll);
           }
         })
@@ -233,10 +234,16 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
                 />
                 <Input
                   className="min-w-64 flex-1"
-                  value={taskSpec}
+                  value={autoPlan ? '' : taskSpec}
+                  disabled={autoPlan}
+                  placeholder={autoPlan ? 'the planner proposes tasks' : undefined}
                   onChange={(e) => setTaskSpec(e.target.value)}
                   data-testid="objective-tasks"
                 />
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={autoPlan} onChange={(e) => setAutoPlan(e.target.checked)} data-testid="objective-autoplan" />
+                  Planner
+                </label>
                 {(agent.repos ?? []).length > 0 && (
                   <select
                     className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
@@ -267,6 +274,19 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
               </span>
             </CardHeader>
             <CardContent>
+              {status !== null && status.tasks.length === 0 && status.proposedTasks !== undefined && (
+                <div className="mb-3 rounded-md border border-amber-500/40 p-3 text-sm" data-testid="proposed-plan">
+                  <p className="mb-2 font-medium">The planner proposes {status.proposedTasks.length} tasks:</p>
+                  <ul className="mb-2 list-inside list-disc text-muted-foreground">
+                    {status.proposedTasks.map((t) => (
+                      <li key={t.id}>
+                        <span className="font-mono">{t.id}</span> [{t.taskClass}] {t.title}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">Approve it in the Approvals tab to start execution.</p>
+                </div>
+              )}
               {status === null ? (
                 <p className="text-sm text-muted-foreground">Run an objective to see its plan.</p>
               ) : (
@@ -282,7 +302,14 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
                     {status.tasks.map((task) => (
                       <TableRow key={task.id}>
                         <TableCell className="font-mono">{task.id}</TableCell>
-                        <TableCell>{task.title}</TableCell>
+                        <TableCell>
+                          {task.taskClass !== undefined && task.taskClass !== 'implement' && (
+                            <Badge variant="outline" className="mr-2 font-mono text-[10px]" data-testid={`task-class-${task.id}`}>
+                              {task.taskClass}
+                            </Badge>
+                          )}
+                          {task.title}
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant={statusVariant(task.status)}

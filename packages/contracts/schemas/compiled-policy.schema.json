@@ -27,7 +27,8 @@
                   "git_push",
                   "deploy",
                   "secrets_access",
-                  "network_access"
+                  "network_access",
+                  "run_plan"
                 ]
               }
             },

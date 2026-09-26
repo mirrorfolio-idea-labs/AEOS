@@ -16,7 +16,8 @@ export {
 } from './domain/session.js';
 export {
   ObjectiveSchema, PlanTaskSchema, PlanTaskStatusSchema, CheckpointSchema,
-  type Objective, type PlanTask, type Checkpoint,
+  TASK_CLASSES, TaskClassSchema,
+  type Objective, type PlanTask, type Checkpoint, type TaskClass,
 } from './domain/objective.js';
 export {
   AeosEventSchema,
@@ -27,6 +28,7 @@ export {
 } from './events/taxonomy.js';
 export {
   PERMISSION_TIERS,
+  TOOL_TIERS,
   TierSchema,
   PolicyModeSchema,
   PolicyFileSchema,

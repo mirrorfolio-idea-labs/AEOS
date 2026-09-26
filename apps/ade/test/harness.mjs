@@ -25,6 +25,11 @@ const app = await createApiServer({
       providerSessionId: 'ses_ade',
       events: buildFixtureEvents({ profileId: 'cp-default' }),
       paceMs: 30,
+      // P3.M1 planner calls: a deterministic classed plan (mirrors aeosd's fakePlanner)
+      respond: (prompt) =>
+        prompt.startsWith('AEOS planning request')
+          ? '- [ ] **T1** [architect] Outline the approach\n- [ ] **T2** [implement] Build it'
+          : undefined,
     });
     // P2.M9 review pane: in a repo worktree the fake "does work" so there is a diff
     const spawn = fake.spawn.bind(fake);

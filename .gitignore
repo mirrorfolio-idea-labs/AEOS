@@ -18,3 +18,7 @@ apps/ade/.playwright-home/
 apps/ade/test-results/
 apps/ade/playwright-report/
 .claude-flow/
+
+# Rust/Tauri build output (P2.M8) — never commit
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/

@@ -5,12 +5,13 @@ import {
   AEOS_EVENT_TYPES,
   AeosEventSchema,
   PERMISSION_TIERS,
+  TOOL_TIERS,
   PolicyFileSchema,
 } from '../src/index.js';
 
 describe('policy schemas', () => {
-  it('declares the nine spec §11 tiers in order', () => {
-    expect(PERMISSION_TIERS).toEqual([
+  it('declares the nine spec §11 tool tiers in order, plus run_plan (P3.M1)', () => {
+    const toolTiers = [
       'read_files',
       'write_files',
       'execute_commands',
@@ -20,7 +21,9 @@ describe('policy schemas', () => {
       'deploy',
       'secrets_access',
       'network_access',
-    ]);
+    ];
+    expect(TOOL_TIERS).toEqual(toolTiers);
+    expect(PERMISSION_TIERS).toEqual([...toolTiers, 'run_plan']);
   });
 
   it('parses a partial policy layer and defaults cleanly', () => {

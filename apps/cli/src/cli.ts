@@ -56,6 +56,8 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos repo unbind <id> --workspace <ws> --agent <agent>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
                         [--repo <binding>] [--done "definition of done"]
+  aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --auto-plan   # planner writes the plan
+  aeos objective approve-plan <id> --workspace <ws> --agent <agent>
   aeos objective diff <id> --workspace <ws> --agent <agent> [--scope branch|uncommitted|last-commit]
   aeos objective review <id> --workspace <ws> --agent <agent> --comment "src/a.ts:12: rename this" [--comment ...]
   aeos objective run <id> --workspace <ws> --agent <agent> [--poll-ms 250] [--timeout-ms 120000]
@@ -244,7 +246,14 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       io.out(`review sent as task ${result.taskId}: ${result.title}${result.started ? ' — objective restarted' : ''}`);
       return 0;
     }
+    if (group === 'objective' && action === 'approve-plan' && id !== undefined) {
+      const result = await client.approvePlan(need(parsed, 'workspace'), need(parsed, 'agent'), id);
+      for (const task of result.tasks) io.out(`  ${task.id} [${task.taskClass ?? 'implement'}] ${task.title}`);
+      io.out(`plan approved — objective ${id} started`);
+      return 0;
+    }
     if (group === 'objective' && action === 'create' && id !== undefined) {
+      const autoPlan = parsed.flags.get('auto-plan') !== undefined;
       const tasks = (parsed.flags.get('task') ?? []).map((spec) => {
         const colon = spec.indexOf(':');
         if (colon === -1) throw new Error(`--task must look like "T1: title" (got "${spec}")`);
@@ -256,12 +265,13 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         id,
         title: need(parsed, 'title'),
         tasks,
+        ...(autoPlan ? { autoPlan: true } : {}),
         ...(parsed.flags.get('repo')?.[0] === undefined ? {} : { repo: parsed.flags.get('repo')?.[0] as string }),
         ...(parsed.flags.get('done')?.[0] === undefined
           ? {}
           : { definitionOfDone: parsed.flags.get('done')?.[0] as string }),
       });
-      io.out(`objective ${id} created with ${tasks.length} tasks`);
+      io.out(autoPlan ? `objective ${id} created — the planner proposes tasks on start` : `objective ${id} created with ${tasks.length} tasks`);
       return 0;
     }
     if (group === 'objective' && (action === 'run' || action === 'status') && id !== undefined) {

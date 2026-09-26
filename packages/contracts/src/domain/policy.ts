@@ -16,7 +16,16 @@ export const PERMISSION_TIERS = [
   'deploy',
   'secrets_access',
   'network_access',
+  /**
+   * Executing a planner-generated plan (P3.M1, spec §12). Not a tool tier:
+   * `confirm` (default) parks the proposed plan for a human, `allow`
+   * auto-runs it, `deny` keeps generated plans proposal-only.
+   */
+  'run_plan',
 ] as const;
+
+/** Tiers that classify harness tool calls (everything except `run_plan`). */
+export const TOOL_TIERS = PERMISSION_TIERS.filter((t) => t !== 'run_plan');
 
 export type PermissionTier = (typeof PERMISSION_TIERS)[number];
 
@@ -36,6 +45,7 @@ export const TiersSchema = z
     deploy: PolicyModeSchema.optional(),
     secrets_access: PolicyModeSchema.optional(),
     network_access: PolicyModeSchema.optional(),
+    run_plan: PolicyModeSchema.optional(),
   })
   .strict();
 

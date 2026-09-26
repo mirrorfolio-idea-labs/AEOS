@@ -36,6 +36,8 @@ export interface SpawnOptions {
    * worktree (spec §10). Defaults to the profile root when absent.
    */
   workdir?: string;
+  /** Model to run (router decision, P3.M2); harness default when absent. */
+  model?: string;
   /** Provider-native resume token from a previous session (capability `resume`). */
   resumeToken?: string;
   /**

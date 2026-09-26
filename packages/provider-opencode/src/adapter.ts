@@ -143,6 +143,7 @@ export class OpencodeAdapter implements HarnessAdapter {
       '--format',
       'json',
       ...opts.profile.argv,
+      ...(opts.model === undefined ? [] : ['--model', opts.model]),
       ...(opts.resumeToken === undefined ? [] : ['--session', opts.resumeToken]),
     ];
   }
