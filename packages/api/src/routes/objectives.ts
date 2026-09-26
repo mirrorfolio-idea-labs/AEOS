@@ -28,6 +28,17 @@ import {
   PERMISSION_TIERS,
 } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
+import {
+  appendRouteRecord,
+  estimateUsd,
+  loadPricingIndex,
+  loadRoutingPolicy,
+  readRouteRecords,
+  routeTask,
+  type LoadedPricing,
+  type RouteDecision,
+  type RoutedProvider,
+} from '@aeos/router';
 import { composeSessionBrief, taskNotesPath } from '../brief.js';
 import { statusTrackerFor } from '../status.js';
 import { guardAdapter } from '../policy-gate.js';
@@ -115,8 +126,9 @@ interface PlanPhaseInput {
   title: string;
   definitionOfDone: string | undefined;
   worktree: ObjectiveWorktree | undefined;
-  /** The UNGUARDED adapter — planning applies its own read-only policy. */
-  rawAdapter: HarnessAdapter;
+  /** UNGUARDED adapter factory — planning applies its own read-only policy. */
+  rawAdapterFor: (provider: RoutedProvider) => HarnessAdapter;
+  routePlan: RouteDecision;
   effective: EffectivePolicy | undefined;
   onEvent: (event: AeosEvent) => void;
 }
@@ -132,6 +144,26 @@ export function planningPolicy(effective: EffectivePolicy | undefined): Effectiv
   ) as EffectivePolicy['tiers'];
   return { tiers, confirmTimeoutSeconds: effective?.confirmTimeoutSeconds ?? 300 };
 }
+
+const routeEvent = (agentId: string, taskId: string, decision: RouteDecision): AeosEvent =>
+  AeosEventSchema.parse({
+    v: 1,
+    id: newEventId(),
+    ts: new Date().toISOString(),
+    source: 'router',
+    agentId,
+    taskId,
+    type: 'route.decided',
+    payload: {
+      taskClass: decision.taskClass,
+      provider: decision.provider,
+      ...(decision.model === undefined ? {} : { model: decision.model }),
+      ...(decision.thinking === undefined ? {} : { thinking: decision.thinking }),
+      providerSource: decision.providerSource,
+      modelSource: decision.modelSource,
+      reason: decision.reason,
+    },
+  });
 
 const planEvent = (
   type: 'approval.request' | 'approval.resolved',
@@ -167,8 +199,10 @@ async function planIfNeeded(input: PlanPhaseInput): Promise<'ready' | ObjectiveO
   let proposed = await readFile(proposedPlanPath(dir), 'utf8').catch(() => undefined);
   if (proposed === undefined) {
     const readOnly = planningPolicy(input.effective);
+    onEvent(routeEvent(agent.id, 'plan', input.routePlan));
     const generated = await generatePlan({
-      adapter: guardAdapter(input.rawAdapter, readOnly),
+      adapter: guardAdapter(input.rawAdapterFor(input.routePlan.provider), readOnly),
+      model: input.routePlan.model,
       agent,
       sessionId: newEventId(),
       prompt: composePlanningPrompt({
@@ -242,18 +276,34 @@ export function startObjectiveRun(
   const ref = { workspaceId, id: agentId };
   tracker.set(ref, 'working', { via: 'events', reason: `objective ${objectiveId} started` });
   const run = (async () => {
-    const rawAdapter = ctx.adapterFor(agent);
-    let adapter = rawAdapter;
     let permissionPolicy: CompiledPolicy | undefined;
     let effective: EffectivePolicy | undefined;
     if (ctx.policyFor !== undefined) {
       effective = await ctx.policyFor(agent);
-      adapter = guardAdapter(adapter, effective, {
-        ...(ctx.approvals === undefined ? {} : { registry: ctx.approvals }),
-        ...(ctx.injectSecrets === undefined ? {} : { inject: ctx.injectSecrets }),
-      });
       permissionPolicy = compilePolicy(effective);
     }
+    // P3.M2 router: one (policy-guarded) adapter per provider the plan routes to
+    const rawAdapterFor = (provider: RoutedProvider): HarnessAdapter =>
+      provider === agent.harness.provider ? ctx.adapterFor(agent) : ctx.adapterFor(agent, { provider });
+    const guarded = new Map<RoutedProvider, HarnessAdapter>();
+    const adapterFor = (provider: RoutedProvider): HarnessAdapter => {
+      let cached = guarded.get(provider);
+      if (cached === undefined) {
+        cached =
+          effective === undefined
+            ? rawAdapterFor(provider)
+            : guardAdapter(rawAdapterFor(provider), effective, {
+                ...(ctx.approvals === undefined ? {} : { registry: ctx.approvals }),
+                ...(ctx.injectSecrets === undefined ? {} : { inject: ctx.injectSecrets }),
+              });
+        guarded.set(provider, cached);
+      }
+      return cached;
+    };
+    const adapter = adapterFor(agent.harness.provider);
+    const routing = loadRoutingPolicy(ctx.home, workspaceId);
+    const pricing: LoadedPricing = await (ctx.pricing?.() ?? loadPricingIndex({ home: ctx.home, offline: true }));
+    const decisions = new Map<string, { decision: RouteDecision; adapter: HarnessAdapter }>();
     const worktree = await objectiveWorktree(ctx, agent, objectiveId);
     const objective = readObjectiveFile(dir);
     const title = await objectiveTitle(dir, objectiveId);
@@ -275,7 +325,8 @@ export function startObjectiveRun(
       title,
       definitionOfDone: objective?.definitionOfDone,
       worktree,
-      rawAdapter,
+      rawAdapterFor,
+      routePlan: routeTask(agent, 'plan', routing),
       effective,
       onEvent,
     });
@@ -308,6 +359,27 @@ export function startObjectiveRun(
               }),
           }),
       ...(permissionPolicy === undefined ? {} : { permissionPolicy }),
+      selectExecution: (task) => {
+        const decision = routeTask(agent, task.taskClass, routing);
+        const chosen = adapterFor(decision.provider);
+        decisions.set(task.id, { decision, adapter: chosen });
+        onEvent({ ...routeEvent(agent.id, task.id, decision) });
+        return Promise.resolve({ adapter: chosen, model: decision.model });
+      },
+      onTaskSettled: (task, result) => {
+        const routed = decisions.get(task.id);
+        if (routed === undefined) return;
+        const reportsUsd = routed.adapter.capabilities().costUsd !== false;
+        const derived = reportsUsd ? undefined : estimateUsd(pricing, routed.decision.model, result.tokens);
+        appendRouteRecord(dir, {
+          ts: new Date().toISOString(),
+          taskId: task.id,
+          decision: routed.decision,
+          pricingSource: pricing.source,
+          pricingStale: pricing.stale,
+          realized: { ...result, ...(derived === undefined ? {} : { derivedUsd: derived }) },
+        });
+      },
       onEvent,
     });
   })()
@@ -471,6 +543,18 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
     handler: async () => {
       await rm(stopFilePath(ctx.home), { force: true });
       return ok({ stopped: false });
+    },
+  });
+
+  app.get<{ Params: { id: string } }>('/v1/objectives/:id/routes', {
+    schema: {
+      description: 'Router decisions + realized cost per task attempt (routes.ndjson, P3.M2).',
+      tags: ['objectives'],
+    },
+    handler: (request) => {
+      const { workspaceId, agentId } = ObjectiveRef.parse(request.query);
+      getAgent(ctx.home, workspaceId, agentId);
+      return ok(readRouteRecords(objectiveDirFor(ctx.home, workspaceId, agentId, request.params.id)));
     },
   });
 

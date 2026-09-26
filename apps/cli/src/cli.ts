@@ -58,6 +58,7 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
                         [--repo <binding>] [--done "definition of done"]
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --auto-plan   # planner writes the plan
   aeos objective approve-plan <id> --workspace <ws> --agent <agent>
+  aeos objective routes <id> --workspace <ws> --agent <agent>   # router decisions + realized cost
   aeos objective diff <id> --workspace <ws> --agent <agent> [--scope branch|uncommitted|last-commit]
   aeos objective review <id> --workspace <ws> --agent <agent> --comment "src/a.ts:12: rename this" [--comment ...]
   aeos objective run <id> --workspace <ws> --agent <agent> [--poll-ms 250] [--timeout-ms 120000]
@@ -244,6 +245,15 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       if (comments.length === 0) throw new Error('at least one --comment is required');
       const result = await client.reviewObjective(need(parsed, 'workspace'), need(parsed, 'agent'), id, comments);
       io.out(`review sent as task ${result.taskId}: ${result.title}${result.started ? ' — objective restarted' : ''}`);
+      return 0;
+    }
+    if (group === 'objective' && action === 'routes' && id !== undefined) {
+      for (const r of await client.objectiveRoutes(need(parsed, 'workspace'), need(parsed, 'agent'), id)) {
+        const usd = r.realized.derivedUsd ?? r.realized.usd;
+        io.out(
+          `${r.taskId} [${r.decision.taskClass}] ${r.decision.provider}/${r.decision.model ?? 'default'}  ${r.realized.status}  $${usd.toFixed(4)}${r.realized.derivedUsd === undefined ? '' : ' (token-priced)'}`,
+        );
+      }
       return 0;
     }
     if (group === 'objective' && action === 'approve-plan' && id !== undefined) {

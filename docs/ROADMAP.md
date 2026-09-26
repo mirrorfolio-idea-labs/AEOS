@@ -317,14 +317,14 @@ producing a plan file (M6(P1) grammar) whose tasks carry a class
 - [x] **T2** Planner flow (objective → generated plan) with policy-gated approval. *Accept: provider-fake objective yields a valid classed plan; approval gate honored.*
 **Exit gate:** generated plan executes end-to-end on provider-fake.
 
-### M2 — Cost-aware model router  `[ ]`
+### M2 — Cost-aware model router  `[x]`
 **Context brief:** Spec §13. Pricing/capability index (OpenRouter `/models` +
 static tables for subscription harnesses, daily refresh, offline cache);
 routing policy class → (provider, model, thinking budget) with per-workspace
 overrides; decisions + realized costs logged per task.
-- [ ] **T1** Pricing index with refresh + offline fallback. *Accept: index survives network-down (stale-but-served); refresh test with recorded API fixture.*
-- [ ] **T2** Routing policy engine + overrides. *Accept: fixture matrix (class × policy) routes as documented.*
-- [ ] **T3** Decision + realized-cost logging. *Accept: every routed task has a queryable route/cost record; audit shows decision inputs.*
+- [x] **T1** Pricing index with refresh + offline fallback. *Accept: index survives network-down (stale-but-served); refresh test with recorded API fixture.*
+- [x] **T2** Routing policy engine + overrides. *Accept: fixture matrix (class × policy) routes as documented.*
+- [x] **T3** Decision + realized-cost logging. *Accept: every routed task has a queryable route/cost record; audit shows decision inputs.*
 **Exit gate:** integration test proves plan tasks of different classes hit different (fake) providers per policy.
 
 ### M3 — Verification task type  `[ ]`

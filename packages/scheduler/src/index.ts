@@ -6,7 +6,7 @@ export {
   writeCheckpoint,
   type NextTaskResolution,
 } from './checkpoint.js';
-export { runObjective, type ObjectiveOutcome, type RunObjectiveOptions } from './scheduler.js';
+export { runObjective, type ObjectiveOutcome, type RunObjectiveOptions, type TaskSettlement } from './scheduler.js';
 export {
   commitTaskWork,
   ensureObjectiveWorktree,

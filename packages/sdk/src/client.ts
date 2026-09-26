@@ -260,6 +260,24 @@ export class AeosClient {
     return this.request('POST', '/v1/objectives', input);
   }
 
+  /** Router decisions + realized cost per task attempt (P3.M2). */
+  objectiveRoutes(
+    workspaceId: string,
+    agentId: string,
+    objectiveId: string,
+  ): Promise<
+    Array<{
+      ts: string;
+      taskId: string;
+      decision: { taskClass: string; provider: string; model?: string; thinking?: string; reason: string };
+      pricingSource: string;
+      pricingStale: boolean;
+      realized: { status: string; usd: number; tokens: { input: number; output: number }; derivedUsd?: number };
+    }>
+  > {
+    return this.request('GET', `/v1/objectives/${objectiveId}/routes?workspaceId=${workspaceId}&agentId=${agentId}`);
+  }
+
   /** Approve a planner-proposed plan and start the objective (P3.M1). */
   approvePlan(workspaceId: string, agentId: string, objectiveId: string): Promise<{ approved: boolean; tasks: PlanTaskView[] }> {
     return this.request(

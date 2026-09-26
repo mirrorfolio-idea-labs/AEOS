@@ -17,6 +17,7 @@ const AUDITED_TYPES = new Set([
   'budget.exceeded',
   'cost.usage',
   'memory.written',
+  'route.decided',
 ]);
 
 const auditPathFor = (home: string, utcDay: string): string =>
