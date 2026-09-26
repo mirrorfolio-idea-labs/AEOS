@@ -27,3 +27,29 @@ jobs:
         run: |
           pnpm -F @aeos/ade exec playwright install --with-deps chromium
           pnpm -F @aeos/ade test
+  # P2.M7 exit gate: conformance runs against the PINNED harness releases —
+  # each pin is fetched, integrity-checked against DEFAULT_PINS, sealed,
+  # re-verified and version-probed before the adapter suites run.
+  pinned-harnesses:
+    runs-on: ubuntu-latest
+    env:
+      AEOS_HOME: ${{ github.workspace }}/.aeos-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: install + verify pinned harness binaries
+        run: |
+          node apps/cli/dist/main.js harness pins | while read -r ref _; do
+            node apps/cli/dist/main.js harness install "$ref"
+            bin=$(node apps/cli/dist/main.js harness verify "$ref" | sed 's/.*verified: //')
+            "$bin" --version | grep -F "${ref#*@}"
+          done
+      - name: adapter conformance suites
+        run: |
+          pnpm -F @aeos/provider-claude test
+          pnpm -F @aeos/provider-codex test
+          pnpm -F @aeos/provider-opencode test

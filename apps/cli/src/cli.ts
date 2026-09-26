@@ -1,5 +1,8 @@
+import os from 'node:os';
+import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AeosClient } from '@aeos/sdk';
+import { DEFAULT_PINS, createBinaryManager, type ManagedHarness } from '@aeos/provider-core';
 
 export interface CliIo {
   out: (line: string) => void;
@@ -43,14 +46,66 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos health
   aeos workspace create <id> --name <name>
   aeos agent create <id> --workspace <ws> --name <name> [--provider claude-code] [--credential-profile <cp>]
+                   [--harness-version <pinned>] [--binary-path <byo executable>]
   aeos agent switch-credential <id> --workspace <ws> --profile <credentialProfileId>
+  aeos agent status <id> --workspace <ws>
+  aeos agent wait <id> --workspace <ws> [--until blocked,done] [--timeout-ms 30000] [--after-seq <n>]
+  aeos agent seen|unread|settle|unsettle <id> --workspace <ws>
+  aeos inbox               # every agent, attention-sorted (blocked first)
+  aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main]
+  aeos repo unbind <id> --workspace <ws> --agent <agent>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
+                        [--repo <binding>] [--done "definition of done"]
+  aeos objective diff <id> --workspace <ws> --agent <agent> [--scope branch|uncommitted|last-commit]
+  aeos objective review <id> --workspace <ws> --agent <agent> --comment "src/a.ts:12: rename this" [--comment ...]
   aeos objective run <id> --workspace <ws> --agent <agent> [--poll-ms 250] [--timeout-ms 120000]
   aeos objective status <id> --workspace <ws> --agent <agent>
   aeos events tail [--type-prefix session.] [--agent <id>] [--max <n>]
   aeos stop --all          # kill switch: no new sessions spawn; in-flight ones finish
   aeos stop status
-  aeos resume-ops          # lifts the kill switch`;
+  aeos resume-ops          # lifts the kill switch
+  aeos harness pins        # pinned harness releases of record
+  aeos harness install <harness>@<version>   # fetch + integrity-check + seal (local, AEOS_HOME)
+  aeos harness verify <harness>@<version>    # re-hash an install against its seal
+  aeos harness list`;
+
+const HARNESSES: readonly ManagedHarness[] = ['claude-code', 'codex', 'opencode'];
+
+/** `codex@0.149.1` → harness + version (managed-binary commands are local, not API calls). */
+function parseHarnessRef(ref: string | undefined): { harness: ManagedHarness; version: string } {
+  const at = ref?.lastIndexOf('@') ?? -1;
+  const harness = ref?.slice(0, at) as ManagedHarness;
+  if (ref === undefined || at <= 0 || !HARNESSES.includes(harness)) {
+    throw new Error(`expected <harness>@<version> with harness one of ${HARNESSES.join(', ')}`);
+  }
+  return { harness, version: ref.slice(at + 1) };
+}
+
+async function runHarnessCommand(action: string | undefined, ref: string | undefined, io: CliIo): Promise<number> {
+  const home = process.env['AEOS_HOME'] ?? path.join(os.homedir(), '.aeos');
+  const manager = createBinaryManager({ root: path.join(home, 'binaries') });
+  if (action === 'pins') {
+    for (const pin of DEFAULT_PINS) io.out(`${pin.harness}@${pin.version}  ${pin.package}  ${pin.integrity}`);
+    return 0;
+  }
+  if (action === 'list') {
+    for (const record of manager.list()) {
+      io.out(`${record.harness}@${record.version}  sealed ${record.treeSha256.slice(0, 12)}  ${record.installedAt}`);
+    }
+    return 0;
+  }
+  if (action === 'install' || action === 'verify') {
+    const { harness, version } = parseHarnessRef(ref);
+    const binary =
+      action === 'install'
+        ? await manager.install(harness, version)
+        : manager.verify(harness, version, { fresh: true });
+    io.out(`${harness}@${version} ${action === 'install' ? 'installed' : 'verified'}: ${binary.executable}`);
+    return 0;
+  }
+  io.err('usage: aeos harness pins|list|install <harness>@<version>|verify <harness>@<version>');
+  return 1;
+}
 
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
@@ -63,6 +118,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   });
 
   try {
+    if (group === 'harness') return await runHarnessCommand(action, id, io);
     if (group === 'health') {
       io.out(JSON.stringify(await client.health()));
       return 0;
@@ -82,6 +138,12 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
             | 'claude-code'
             | 'codex'
             | 'opencode',
+          ...(parsed.flags.get('harness-version')?.[0] === undefined
+            ? {}
+            : { version: parsed.flags.get('harness-version')?.[0] as string }),
+          ...(parsed.flags.get('binary-path')?.[0] === undefined
+            ? {}
+            : { binaryPath: parsed.flags.get('binary-path')?.[0] as string }),
           featureToggles: {
             plugins: false,
             skills: false,
@@ -104,6 +166,84 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       io.out(`agent ${agent.id} now uses credential profile ${agent.credentialProfileId}`);
       return 0;
     }
+    if (group === 'agent' && action === 'status' && id !== undefined) {
+      const entry = await client.agentStatus(need(parsed, 'workspace'), id);
+      io.out(`${entry.agentId} ${entry.status} (seq ${String(entry.seq)}, via ${entry.via})${entry.reason === undefined ? '' : ` — ${entry.reason}`}`);
+      return 0;
+    }
+    if (group === 'agent' && action === 'wait' && id !== undefined) {
+      const until = (parsed.flags.get('until')?.[0] ?? 'blocked,done').split(',') as Array<
+        'idle' | 'working' | 'blocked' | 'done' | 'unknown'
+      >;
+      const afterSeq = parsed.flags.get('after-seq')?.[0];
+      const result = await client.waitForAgent(need(parsed, 'workspace'), id, {
+        until,
+        timeoutMs: Number(parsed.flags.get('timeout-ms')?.[0] ?? 30_000),
+        ...(afterSeq === undefined ? {} : { afterSeq: Number(afterSeq) }),
+      });
+      io.out(`${result.entry.agentId} ${result.entry.status}${result.entry.reason === undefined ? '' : ` — ${result.entry.reason}`}`);
+      if (!result.matched) {
+        io.err(`timed out waiting for ${until.join('|')}`);
+        return 4;
+      }
+      return 0;
+    }
+    if (
+      group === 'agent' &&
+      (action === 'seen' || action === 'unread' || action === 'settle' || action === 'unsettle') &&
+      id !== undefined
+    ) {
+      const item = await client.setAttention(need(parsed, 'workspace'), id, action);
+      io.out(`${item.agentId}: ${item.settled ? 'settled' : item.unseen ? 'unseen' : 'seen'}`);
+      return 0;
+    }
+    if (group === 'inbox') {
+      const marks = ['!', '*', '~', ' ', '-'];
+      for (const item of await client.inbox()) {
+        io.out(
+          `${marks[item.bucket] ?? ' '} ${item.workspaceId}/${item.agentId}  ${item.status}${item.unseen ? ' (new)' : ''}${item.reason === undefined ? '' : `  ${item.reason}`}`,
+        );
+      }
+      return 0;
+    }
+    if (group === 'repo' && (action === 'bind' || action === 'unbind') && id !== undefined) {
+      const workspaceId = need(parsed, 'workspace');
+      const agentId = need(parsed, 'agent');
+      if (action === 'unbind') {
+        await client.unbindRepo(workspaceId, agentId, id);
+        io.out(`repo ${id} unbound from ${agentId}`);
+        return 0;
+      }
+      const baseRef = parsed.flags.get('base-ref')?.[0];
+      await client.bindRepo(workspaceId, agentId, {
+        id,
+        path: path.resolve(need(parsed, 'path')),
+        ...(baseRef === undefined ? {} : { baseRef }),
+      });
+      io.out(`repo ${id} bound to ${agentId} — objectives with --repo ${id} run in their own worktree`);
+      return 0;
+    }
+    if (group === 'objective' && action === 'diff' && id !== undefined) {
+      const scope = (parsed.flags.get('scope')?.[0] ?? 'branch') as 'branch' | 'uncommitted' | 'last-commit';
+      const result = await client.objectiveDiff(need(parsed, 'workspace'), need(parsed, 'agent'), id, scope);
+      io.out(`# ${result.branch} (${result.scope}) — ${result.worktree}`);
+      io.out(result.diff.length > 0 ? result.diff.trimEnd() : '(no changes)');
+      return 0;
+    }
+    if (group === 'objective' && action === 'review' && id !== undefined) {
+      const comments = (parsed.flags.get('comment') ?? []).map((spec) => {
+        // "path:line: body" | "path: body" | "body"
+        const located = /^([^\s:]+):(\d+):\s*(.+)$/s.exec(spec);
+        if (located) return { file: located[1] as string, line: Number(located[2]), body: located[3] as string };
+        const filed = /^([^\s:]+\.[A-Za-z0-9]+):\s*(.+)$/s.exec(spec);
+        if (filed) return { file: filed[1] as string, body: filed[2] as string };
+        return { body: spec };
+      });
+      if (comments.length === 0) throw new Error('at least one --comment is required');
+      const result = await client.reviewObjective(need(parsed, 'workspace'), need(parsed, 'agent'), id, comments);
+      io.out(`review sent as task ${result.taskId}: ${result.title}${result.started ? ' — objective restarted' : ''}`);
+      return 0;
+    }
     if (group === 'objective' && action === 'create' && id !== undefined) {
       const tasks = (parsed.flags.get('task') ?? []).map((spec) => {
         const colon = spec.indexOf(':');
@@ -116,6 +256,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         id,
         title: need(parsed, 'title'),
         tasks,
+        ...(parsed.flags.get('repo')?.[0] === undefined ? {} : { repo: parsed.flags.get('repo')?.[0] as string }),
+        ...(parsed.flags.get('done')?.[0] === undefined
+          ? {}
+          : { definitionOfDone: parsed.flags.get('done')?.[0] as string }),
       });
       io.out(`objective ${id} created with ${tasks.length} tasks`);
       return 0;

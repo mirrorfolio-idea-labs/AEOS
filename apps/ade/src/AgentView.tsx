@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FolderOpen, KeyRound, Play, ShieldCheck, TerminalSquare } from 'lucide-react';
+import { FolderOpen, GitPullRequest, KeyRound, Play, ShieldCheck, TerminalSquare } from 'lucide-react';
 import type { AeosEvent, AgentConfig } from '@aeos/contracts';
 import type { ObjectiveStatus } from '@aeos/sdk';
 import { client } from './api.js';
@@ -12,12 +12,17 @@ import { Input } from './components/ui/input.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.js';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table.js';
 import { FilesPanel } from './FilesPanel.js';
+import { ReviewPanel } from './ReviewPanel.js';
 import { TerminalPanel } from './TerminalPanel.js';
 
 interface AgentViewProps {
   agent: AgentConfig;
   onChanged: () => Promise<void>;
+  /** Tab to open first (deep links: `?tab=approvals`). */
+  initialTab?: string;
 }
+
+const TABS = new Set(['objective', 'approvals', 'review', 'files', 'terminal']);
 
 const statusVariant = (status: string) =>
   status === 'completed'
@@ -28,10 +33,11 @@ const statusVariant = (status: string) =>
         ? 'destructive'
         : 'outline';
 
-export function AgentView({ agent, onChanged }: AgentViewProps) {
+export function AgentView({ agent, onChanged, initialTab }: AgentViewProps) {
   const [objectiveId, setObjectiveId] = useState('');
   const [title, setTitle] = useState('');
   const [taskSpec, setTaskSpec] = useState('T1: do the work');
+  const [repo, setRepo] = useState(agent.repos?.[0]?.id ?? '');
   const [status, setStatus] = useState<ObjectiveStatus | null>(null);
   const [events, setEvents] = useState<AeosEvent[]>([]);
   const [costUsd, setCostUsd] = useState(0);
@@ -106,6 +112,7 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
       id,
       title: title || id,
       tasks,
+      ...(repo === '' ? {} : { repo }),
     });
     await client.startObjective(agent.workspaceId, agent.id, id);
     const poll = setInterval(() => {
@@ -148,7 +155,10 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
   };
 
   return (
-    <Tabs defaultValue="objective" className="flex h-full flex-col">
+    <Tabs
+      defaultValue={initialTab !== undefined && TABS.has(initialTab) ? initialTab : 'objective'}
+      className="flex h-full flex-col"
+    >
       <header className="flex items-center gap-3 border-b px-5 py-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
           {agent.name.slice(0, 2).toUpperCase()}
@@ -194,6 +204,9 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="review" data-testid="tab-review">
+            <GitPullRequest className="mr-1.5 h-3.5 w-3.5" /> Review
+          </TabsTrigger>
           <TabsTrigger value="files" data-testid="tab-files">
             <FolderOpen className="mr-1.5 h-3.5 w-3.5" /> Access agent files
           </TabsTrigger>
@@ -231,6 +244,21 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
                   onChange={(e) => setTaskSpec(e.target.value)}
                   data-testid="objective-tasks"
                 />
+                {(agent.repos ?? []).length > 0 && (
+                  <select
+                    className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+                    value={repo}
+                    onChange={(e) => setRepo(e.target.value)}
+                    data-testid="objective-repo"
+                  >
+                    <option value="">no repo</option>
+                    {(agent.repos ?? []).map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.id}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <Button type="submit" data-testid="run-objective">
                   <Play className="h-3.5 w-3.5" /> Run
                 </Button>
@@ -307,6 +335,10 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
 
         <TabsContent value="approvals" className="mt-0">
           <ApprovalsPanel onChanged={refreshApprovalCount} />
+        </TabsContent>
+
+        <TabsContent value="review" className="mt-0">
+          <ReviewPanel agent={agent} objectiveId={objectiveId} onAgentChanged={onChanged} />
         </TabsContent>
 
         <TabsContent value="files" className="mt-0">

@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { AgentConfigSchema } from '@aeos/contracts';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { AgentConfigSchema, RepoBindingSchema } from '@aeos/contracts';
 import { createAgent, getAgent, listAgents, updateAgent } from '@aeos/kernel';
-import { ok } from '../envelope.js';
+import { ApiError, ok } from '../envelope.js';
 import type { ApiContext } from '../server.js';
 
 const WorkspaceQuery = z.object({ workspaceId: z.string().min(1) });
@@ -48,6 +50,41 @@ export function registerAgentRoutes(app: FastifyInstance, ctx: ApiContext): void
         credentialProfileId,
       });
       return ok(updated);
+    },
+  });
+
+  app.post<{ Params: { id: string } }>('/v1/agents/:id/repos', {
+    schema: {
+      description:
+        'Bind a repository (spec §7): objectives targeting it run in their own git worktree on an aeos/<agent>/<objective> branch — never in the checkout itself.',
+      tags: ['agents'],
+    },
+    handler: (request, reply) => {
+      const { workspaceId } = WorkspaceQuery.parse(request.query);
+      const binding = RepoBindingSchema.parse(request.body);
+      if (!path.isAbsolute(binding.path)) throw new ApiError(400, 'repo path must be absolute');
+      try {
+        execFileSync('git', ['rev-parse', '--git-dir'], { cwd: binding.path, stdio: 'ignore' });
+      } catch {
+        throw new ApiError(400, `${binding.path} is not a git repository`);
+      }
+      const agent = getAgent(ctx.home, workspaceId, request.params.id);
+      const repos = [...(agent.repos ?? []).filter((r) => r.id !== binding.id), binding];
+      reply.status(201);
+      return ok(updateAgent(ctx.home, ctx.db, workspaceId, agent.id, { repos }));
+    },
+  });
+
+  app.delete<{ Params: { id: string; repoId: string } }>('/v1/agents/:id/repos/:repoId', {
+    schema: {
+      description: 'Unbind a repository. Existing worktrees and agent branches are left in place.',
+      tags: ['agents'],
+    },
+    handler: (request) => {
+      const { workspaceId } = WorkspaceQuery.parse(request.query);
+      const agent = getAgent(ctx.home, workspaceId, request.params.id);
+      const repos = (agent.repos ?? []).filter((r) => r.id !== request.params.repoId);
+      return ok(updateAgent(ctx.home, ctx.db, workspaceId, agent.id, { repos }));
     },
   });
 }

@@ -4,7 +4,9 @@
   "license": "MIT",
   "type": "module",
   "private": true,
-  "bin": { "aeos": "./dist/main.js" },
+  "bin": {
+    "aeos": "./dist/main.js"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -14,12 +16,12 @@
   },
   "dependencies": {
     "@aeos/contracts": "workspace:*",
+    "@aeos/provider-core": "workspace:*",
     "@aeos/sdk": "workspace:*"
   },
   "devDependencies": {
     "@aeos/api": "workspace:*",
     "@aeos/kernel": "workspace:*",
-    "@aeos/provider-core": "workspace:*",
     "@types/node": "^22",
     "vitest": "^2.1.8"
   }

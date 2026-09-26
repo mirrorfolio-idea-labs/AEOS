@@ -91,6 +91,17 @@ describe('ClaudeAdapter specifics', () => {
     expect(argv).not.toContain('--resume');
   });
 
+  it('execs the resolved managed binary when resolveCommand is set (P2.M7)', () => {
+    const adapter = new ClaudeAdapter({
+      agentDir: (a) => path.join(scratch, a.id),
+      credential: () => credential,
+      secrets,
+      resolveCommand: () => ['/aeos/binaries/claude-code/2.1.283/node_modules/.bin/claude'],
+    });
+    const argv = adapter.buildArgv({ profile: dummyProfile, sessionId: 's', objective: 'x' });
+    expect(argv.slice(0, 2)).toEqual(['/aeos/binaries/claude-code/2.1.283/node_modules/.bin/claude', '-p']);
+  });
+
   it('appends --resume <token> when resuming', () => {
     const argv = makeAdapter().buildArgv({
       profile: dummyProfile,

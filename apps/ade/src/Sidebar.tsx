@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { BellDot, Check, Plus } from 'lucide-react';
 import type { AgentConfig, Workspace } from '@aeos/contracts';
+import type { InboxItem } from '@aeos/sdk';
 import { client } from './api.js';
 import { cn } from './lib/utils.js';
 import { Button } from './components/ui/button.js';
@@ -20,7 +21,52 @@ const slug = (name: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
+const STATUS_DOT: Record<string, string> = {
+  blocked: 'bg-red-500',
+  working: 'bg-amber-400 animate-pulse',
+  done: 'bg-emerald-500',
+  idle: 'bg-muted-foreground/40',
+  unknown: 'bg-muted-foreground/40',
+};
+
 export function Sidebar({ workspaces, agents, selected, onSelect, onChanged }: SidebarProps) {
+  // P2.M10 attention inbox (herdr-agent-inbox idea): live via agent.status_changed
+  const [inbox, setInbox] = useState<InboxItem[]>([]);
+  const loadInbox = useCallback(() => {
+    void client
+      .inbox()
+      .then(setInbox)
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    loadInbox();
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        for await (const _event of client.events({ typePrefix: 'agent.status_changed', signal: controller.signal })) {
+          loadInbox();
+        }
+      } catch {
+        // stream closed
+      }
+    })();
+    return () => controller.abort();
+  }, [loadInbox, workspaces.length, agents]);
+
+  const statusOf = (workspaceId: string, agentId: string): InboxItem | undefined =>
+    inbox.find((i) => i.workspaceId === workspaceId && i.agentId === agentId);
+  const attention = inbox.filter((i) => i.bucket <= 1);
+
+  const openFromInbox = (item: InboxItem): void => {
+    const agent = agents.get(item.workspaceId)?.find((a) => a.id === item.agentId);
+    if (agent !== undefined) onSelect(agent);
+    void client.setAttention(item.workspaceId, item.agentId, 'seen').then(loadInbox);
+  };
+
+  const settle = (item: InboxItem): void => {
+    void client.setAttention(item.workspaceId, item.agentId, 'settle').then(loadInbox);
+  };
+
   const [workspaceName, setWorkspaceName] = useState('');
   const [agentName, setAgentName] = useState('');
   const [agentWorkspace, setAgentWorkspace] = useState('');
@@ -63,6 +109,36 @@ export function Sidebar({ workspaces, agents, selected, onSelect, onChanged }: S
         A<span className="text-primary">DE</span>
       </h1>
 
+      {attention.length > 0 && (
+        <div data-testid="inbox">
+          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <BellDot className="h-3.5 w-3.5 text-red-400" /> Needs attention
+          </div>
+          {attention.map((item) => (
+            <div
+              key={`${item.workspaceId}/${item.agentId}`}
+              className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-secondary"
+              data-testid={`inbox-${item.agentId}`}
+            >
+              <span className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[item.status])} />
+              <button type="button" className="flex-1 truncate text-left" onClick={() => openFromInbox(item)} title={item.reason}>
+                <span className="font-medium">{item.name}</span>{' '}
+                <span className="text-xs text-muted-foreground">{item.status === 'blocked' ? 'needs you' : 'finished'}</span>
+              </button>
+              <button
+                type="button"
+                className="opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={() => settle(item)}
+                title="Settle — hide until new activity"
+                data-testid={`inbox-settle-${item.agentId}`}
+              >
+                <Check className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {workspaces.map((workspace) => (
         <div key={workspace.id}>
           <div className="mb-1.5 rounded-md border px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -78,8 +154,16 @@ export function Sidebar({ workspaces, agents, selected, onSelect, onChanged }: S
                 selected?.id === agent.id && selected.workspaceId === workspace.id && 'bg-accent',
               )}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+              <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
                 {agent.name.slice(0, 2).toUpperCase()}
+                <span
+                  className={cn(
+                    'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card',
+                    STATUS_DOT[statusOf(workspace.id, agent.id)?.status ?? 'idle'],
+                  )}
+                  data-testid={`agent-status-${agent.id}`}
+                  data-status={statusOf(workspace.id, agent.id)?.status ?? 'idle'}
+                />
               </span>
               {agent.name}
             </button>

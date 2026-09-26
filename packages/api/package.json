@@ -23,6 +23,7 @@
     "@aeos/memory": "workspace:*",
     "@aeos/policy": "workspace:*",
     "@aeos/provider-core": "workspace:*",
+    "@aeos/runner": "workspace:*",
     "@aeos/scheduler": "workspace:*",
     "@fastify/swagger": "^9.4.0",
     "@fastify/websocket": "^11.3.0",

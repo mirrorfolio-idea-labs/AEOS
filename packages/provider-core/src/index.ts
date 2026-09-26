@@ -9,3 +9,4 @@ export type {
 // so the runtime entry point stays importable outside a test runner.
 export { FakeAdapter, buildFixtureEvents, type FakeScript } from './provider-fake.js';
 export { ADAPTER_MATRIX, type AdapterId } from './matrix.js';
+export * from './binaries/index.js';

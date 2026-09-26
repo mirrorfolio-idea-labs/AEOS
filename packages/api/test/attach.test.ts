@@ -10,6 +10,7 @@ import {
   type EffectivePolicy,
 } from '@aeos/contracts';
 import { createApiServer, listenApi, type PtyBridge, type PtyHandle } from '../src/server.js';
+import { statusTrackerFor } from '../src/status.js';
 
 /**
  * P2.M5.T2: the WebSocket attach endpoint pipes bytes between browser and
@@ -124,6 +125,42 @@ describe('session PTY attach endpoint (P2.M5.T2)', () => {
 
     ws.send(JSON.stringify({ type: 'release' }));
     await waitFor(() => released);
+    ws.close();
+  });
+
+  it('screen rules on takeover output drive the agent status (P2.M10.T1)', async () => {
+    let emit: (data: string) => void = () => undefined;
+    app = await createApiServer({
+      home,
+      adapterFor: () => {
+        throw new Error('unused in attach tests');
+      },
+      credentialFor: () => {
+        throw new Error('unused in attach tests');
+      },
+      resolveAgent: () => agent,
+      policyFor: async () => allowPolicy,
+      notify: false,
+      attachPty: async (_sessionId, onOutput) => {
+        emit = onOutput;
+        return { input: () => undefined, resize: () => undefined, release: () => undefined };
+      },
+    });
+    const address = await listenApi(app, { port: 0 });
+    const ws = new WebSocket(wsUrl(address, 's1'));
+    await waitOpen(ws);
+    await waitFor(() => emit.length === 1);
+    // a human runs `claude` interactively in the takeover shell and hits a permission prompt
+    emit(
+      [' Bash command', '', '   rm -rf build', '', ' Do you want to proceed?', ' ❯ 1. Yes', '   2. No'].join('\r\n'),
+    );
+    const tracker = statusTrackerFor(home);
+    await waitFor(() => tracker.get({ workspaceId: 'ws1', id: 'ada' }).status === 'blocked');
+    expect(tracker.get({ workspaceId: 'ws1', id: 'ada' })).toMatchObject({
+      via: 'screen',
+      rule: 'bash_permission_prompt',
+      sessionId: 's1',
+    });
     ws.close();
   });
 
