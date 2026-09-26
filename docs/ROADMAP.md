@@ -445,6 +445,26 @@ M1–M3 of this phase.
 - [ ] **T4** Post-launch week: issue triage per SLA, hotfix policy exercised (or dry-run). *Accept: retro written into the PM system; hotfix path proven.*
 **Exit gate = P5 exit gate = v1 shipped.**
 
+### M6 — Public site, docs and one-line install  `[ ]`
+**Context brief:** Added 2026-09-26 at Kabeer's request. AEOS gets a public
+face and a Claude Code / Claude Cowork-style install story:
+- a React landing page;
+- a proper docs site that stays on Starlight (M2.T1) and renders the
+  Markdown in `docs/`. Markdown stays the only source of documentation;
+  React is added only for interactive pieces, through Astro's React
+  integration;
+- a one-line CLI install, as Claude Code has;
+- desktop downloads per OS, as Claude Cowork has;
+- a sweep that brings the Markdown docs up to date and keeps them there.
+
+This should land before the launch comms (M5.T3), which link to it.
+- [ ] **T1** Public landing page in React: the product pitch, demo assets from `demo:assets`, OS-detecting download buttons for the desktop app, the one-line CLI install command, and links to the docs and GitHub. *Accept: CI builds it and deploys it with the docs on `main`; the download button offers the right installer on Linux and macOS; every link is checked in CI; Lighthouse performance and accessibility are ≥ 90.*
+- [ ] **T2** Make the Starlight docs site (kept from M2.T1) a proper docs site. Markdown in `docs/` stays the only source, with no forked content. Add structured navigation, search, the generated ADR index, stable heading anchors and per-release versions. Interactive pieces (install picker, OS-aware download, copy buttons) are React components through Astro's React integration, sharing a look with the landing page. *Accept: CI builds the site from `docs/` with the link and anchor check green; no documentation content lives outside `docs/`; the site stays on Starlight; React components render in the built site.*
+- [ ] **T3** One-line CLI and daemon install, like Claude Code. `curl -fsSL <site>/install.sh | sh` works on Linux and macOS: it detects OS and arch, downloads the release bundle, verifies its SHA-256 and cosign signature, installs it and puts `aeos`/`aeosd` on `PATH`. Also available: `npm i -g @aeos/cli`, a Homebrew tap, and `aeos update` for self-update. *Accept: CI runs the installer against the latest release on clean Ubuntu, macOS and Arch, then starts the daemon and passes `aeos health`; an install whose checksum or signature was tampered with is refused.*
+- [ ] **T4** Desktop app download and install, like Claude Cowork. Every release publishes signed installers: a macOS universal dmg (notarized), and for Linux a deb, an AppImage, the Arch package (plus an AUR `aeos-bin`) and an rpm. The landing page links them. The app auto-updates through the Tauri updater with signed manifests, and on first run it installs and starts the daemon with no terminal step. *Accept: on fresh macOS, Ubuntu and Arch machines, an install from the landing page reaches the ADE with no terminal step; an update from rc.N to rc.N+1 applies through the updater.*
+- [ ] **T5** Bring the Markdown docs up to date and keep them there. Check every user-facing page in `docs/` and the README against current behavior: P2–P5 features, the T3/T4 install paths, desktop and deploy. Generate the CLI reference from `aeos --help` and the API reference from the OpenAPI spec, each with a drift test, and add an R2 line to the PR template. *Accept: the CLI and API reference drift tests run in CI; the sprint log records a docs sweep listing every page it checked; no stale reference remains.*
+**Exit gate:** a newcomer gets from the landing page to a running agent, through the desktop app or the one-line CLI install, using only the public site.
+
 ## Post-v1 backlog (tracked, deliberately out of v1 scope)
 
 Source: spec §9, §14, §17.6, §20. Promote to a phase/milestone only via a

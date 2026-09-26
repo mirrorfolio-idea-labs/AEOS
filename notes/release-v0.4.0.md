@@ -38,6 +38,12 @@ Everything since `v0.3.0`. **Phase P4 exit gate: green on code.**
     per-session key.
   - A Helm chart: a single-writer Deployment, a PVC, a token that is kept
     across upgrades, and a hardened pod.
+- **Desktop app on Arch Linux.** `packaging/arch/PKGBUILD` builds the
+  desktop app, `aeosd` and `aeos` from source against Arch's own WebKitGTK,
+  using a pinned Node 22. It installs the `aeos://` link handler. CI builds,
+  installs and smoke-tests the package in a clean Arch container. On the
+  proprietary NVIDIA driver, the app turns off WebKit's DMA-BUF renderer,
+  which otherwise shows a blank window.
 - **CLI.** `aeos approvals list|approve|deny`, `aeos service`,
   `aeos plugin`, `aeos sandbox`. `objective run` now tells you what it is
   waiting for.
@@ -69,7 +75,11 @@ Everything since `v0.3.0`. **Phase P4 exit gate: green on code.**
 
 ## Known limits / still open
 
-- The logout/reboot test for `aeos service install` and the VM TLS check
-  are manual sign-offs (P4.M3.T1, T3).
+- The logout/reboot test for `aeos service install` is a manual sign-off
+  (P4.M3.T1). The TLS guide is verified end to end for both Caddy and nginx
+  by `scripts/release/verify-remote-tls.sh`.
+- The `v0.3.0` artifacts were built from a `main` that already contained
+  this P4 work, because a stacked-PR retarget skipped the `staging` step.
+  These notes are where that work is described.
 - Plugin providers can't use the container sandbox tier yet. They fail
   closed.
