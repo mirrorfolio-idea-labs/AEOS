@@ -239,6 +239,13 @@ aeos agent wait dev --workspace ws --until blocked,done --timeout-ms 600000
 printf 'webhooks:\n  - url: https://ntfy.sh/my-aeos\n    format: ntfy\n' > ~/.aeos/notifications.yaml
 ```
 
+**Desktop app.** `apps/desktop` is a thin Tauri 2 shell. It starts `aeosd`
+if the daemon isn't already running and opens the ADE. Native notifications
+appear when an agent needs you, and clicking one opens that agent's
+approvals. `aeos://agent/<workspace>/<agent>/approvals` links work too. The
+`desktop` CI workflow builds Linux (deb, AppImage) and macOS (dmg)
+installers.
+
 ---
 
 ## Repository

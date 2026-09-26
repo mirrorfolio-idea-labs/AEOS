@@ -18,7 +18,11 @@ import { TerminalPanel } from './TerminalPanel.js';
 interface AgentViewProps {
   agent: AgentConfig;
   onChanged: () => Promise<void>;
+  /** Tab to open first (deep links: `?tab=approvals`). */
+  initialTab?: string;
 }
+
+const TABS = new Set(['objective', 'approvals', 'review', 'files', 'terminal']);
 
 const statusVariant = (status: string) =>
   status === 'completed'
@@ -29,7 +33,7 @@ const statusVariant = (status: string) =>
         ? 'destructive'
         : 'outline';
 
-export function AgentView({ agent, onChanged }: AgentViewProps) {
+export function AgentView({ agent, onChanged, initialTab }: AgentViewProps) {
   const [objectiveId, setObjectiveId] = useState('');
   const [title, setTitle] = useState('');
   const [taskSpec, setTaskSpec] = useState('T1: do the work');
@@ -151,7 +155,10 @@ export function AgentView({ agent, onChanged }: AgentViewProps) {
   };
 
   return (
-    <Tabs defaultValue="objective" className="flex h-full flex-col">
+    <Tabs
+      defaultValue={initialTab !== undefined && TABS.has(initialTab) ? initialTab : 'objective'}
+      className="flex h-full flex-col"
+    >
       <header className="flex items-center gap-3 border-b px-5 py-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
           {agent.name.slice(0, 2).toUpperCase()}
