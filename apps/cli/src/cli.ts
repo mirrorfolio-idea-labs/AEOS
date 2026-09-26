@@ -3,8 +3,10 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AeosClient } from '@aeos/sdk';
 import { spawnSync } from 'node:child_process';
+import type { ProviderId } from '@aeos/contracts';
 import { DEFAULT_PINS, createBinaryManager, dockerAvailable, type ManagedHarness } from '@aeos/provider-core';
 import { RUNNER_DOCKERFILE } from './runner-dockerfile.js';
+import { PluginError, installPlugin, listInstalledPlugins, removePlugin } from '@aeos/plugins';
 
 export interface CliIo {
   out: (line: string) => void;
@@ -47,7 +49,7 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
 
   aeos health
   aeos workspace create <id> --name <name>
-  aeos agent create <id> --workspace <ws> --name <name> [--provider claude-code] [--credential-profile <cp>]
+  aeos agent create <id> --workspace <ws> --name <name> [--provider claude-code|codex|opencode|plugin:<id>] [--credential-profile <cp>]
                    [--harness-version <pinned>] [--binary-path <byo executable>]
   aeos agent switch-credential <id> --workspace <ws> --profile <credentialProfileId>
   aeos agent status <id> --workspace <ws>
@@ -76,6 +78,8 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos stop status
   aeos resume-ops          # lifts the kill switch
   aeos harness pins        # pinned harness releases of record
+  aeos plugin install <npm-spec|./plugin.tgz>   # third-party plugin (no install scripts run; restart aeosd to load)
+  aeos plugin list | aeos plugin remove <package>
   aeos sandbox build [--tag aeos-runner:local]   # container-tier runtime image (P4.M1)
   aeos sandbox status
   aeos harness install <harness>@<version>   # fetch + integrity-check + seal (local, AEOS_HOME)
@@ -133,6 +137,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   try {
     if (group === 'harness') return await runHarnessCommand(action, id, io);
     if (group === 'sandbox') return runSandboxCommand(action, parsed, io);
+    if (group === 'plugin') return runPluginCommand(action, id, io);
     if (group === 'health') {
       io.out(JSON.stringify(await client.health()));
       return 0;
@@ -148,10 +153,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         workspaceId: need(parsed, 'workspace'),
         name: need(parsed, 'name'),
         harness: {
-          provider: (parsed.flags.get('provider')?.[0] ?? 'claude-code') as
-            | 'claude-code'
-            | 'codex'
-            | 'opencode',
+          // a builtin or `plugin:<id>` — the daemon validates it (P4.M2)
+          provider: (parsed.flags.get('provider')?.[0] ?? 'claude-code') as ProviderId,
           ...(parsed.flags.get('harness-version')?.[0] === undefined
             ? {}
             : { version: parsed.flags.get('harness-version')?.[0] as string }),
@@ -449,5 +452,34 @@ function runSandboxCommand(action: string | undefined, parsed: Parsed, io: CliIo
     return 0;
   }
   io.err('usage: aeos sandbox build [--tag <image>] | aeos sandbox status');
+  return 2;
+}
+
+/** `aeos plugin install|list|remove` (P4.M2) — local to AEOS_HOME, like `aeos harness`. */
+function runPluginCommand(action: string | undefined, arg: string | undefined, io: CliIo): number {
+  const home = process.env['AEOS_HOME'] ?? path.join(os.homedir(), '.aeos');
+  try {
+    if (action === 'install' && arg !== undefined) {
+      const plugin = installPlugin(home, arg);
+      const provides = plugin.manifest.contributes.map((c) => `${c.kind}:${c.id}`).join(', ');
+      io.out(`installed ${plugin.name}@${plugin.version} (${provides}) — restart aeosd to load it`);
+      return 0;
+    }
+    if (action === 'list') {
+      for (const p of listInstalledPlugins(home)) {
+        const provides = p.manifest.contributes.map((c) => `${c.kind}:${c.id}`).join(', ');
+        io.out(`${p.name}@${p.version}  ${provides}${p.error === undefined ? '' : `  NOT LOADABLE (${p.error.code}): ${p.error.message}`}`);
+      }
+      return 0;
+    }
+    if (action === 'remove' && arg !== undefined) {
+      io.out(removePlugin(home, arg) ? `removed ${arg}` : `${arg} is not installed`);
+      return 0;
+    }
+  } catch (error) {
+    io.err(error instanceof PluginError ? `${error.code}: ${error.message}` : String(error));
+    return 1;
+  }
+  io.err('usage: aeos plugin install <spec> | aeos plugin list | aeos plugin remove <package>');
   return 2;
 }

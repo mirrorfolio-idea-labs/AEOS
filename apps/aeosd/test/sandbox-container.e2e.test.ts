@@ -39,7 +39,12 @@ const git = (cwd: string, ...args: string[]): string => execFileSync('git', args
 
 describe.skipIf(!HAVE_DOCKER)('container sandbox tier (P4.M1)', () => {
   it('golden path inside a container; escape canary untouchable; policy switches tiers per class', { timeout: 240_000 }, async () => {
-    if (process.env['AEOS_SANDBOX_E2E_IMAGE'] === undefined) execFileSync('docker', ['pull', '--quiet', IMAGE], { stdio: 'ignore', timeout: 180_000 });
+    // pull only when missing — a registry hiccup must not fail a cached run
+    try {
+      execFileSync('docker', ['image', 'inspect', IMAGE], { stdio: 'ignore' });
+    } catch {
+      execFileSync('docker', ['pull', '--quiet', IMAGE], { stdio: 'ignore', timeout: 180_000 });
+    }
     const scratch = await mkdtemp(path.join(os.tmpdir(), 'aeos-sandbox-'));
     const home = path.join(scratch, 'home');
     const repo = path.join(scratch, 'repo');

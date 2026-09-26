@@ -2,14 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { parse as parseYaml } from 'yaml';
-import { TaskClassSchema, type AgentConfig, type TaskClass } from '@aeos/contracts';
+import { ProviderIdSchema, TaskClassSchema, type AgentConfig, type ProviderId, type TaskClass } from '@aeos/contracts';
 
-const PROVIDERS = ['claude-code', 'codex', 'opencode'] as const;
-export type RoutedProvider = (typeof PROVIDERS)[number];
+/** A builtin harness or a plugin-contributed `plugin:<id>` provider (P4.M2). */
+export type RoutedProvider = ProviderId;
 
 export const RouteTargetSchema = z
   .object({
-    provider: z.enum(PROVIDERS).optional(),
+    provider: ProviderIdSchema.optional(),
     model: z.string().min(1).optional(),
     /** Thinking effort hint (spec §13); recorded with the decision, passed where a harness supports it. */
     thinking: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),

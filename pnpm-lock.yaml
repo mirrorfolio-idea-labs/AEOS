@@ -117,6 +117,9 @@ importers:
       '@aeos/memory':
         specifier: workspace:*
         version: link:../../packages/memory
+      '@aeos/plugins':
+        specifier: workspace:*
+        version: link:../../packages/plugins
       '@aeos/policy':
         specifier: workspace:*
         version: link:../../packages/policy
@@ -166,6 +169,9 @@ importers:
       '@aeos/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@aeos/plugins':
+        specifier: workspace:*
+        version: link:../../packages/plugins
       '@aeos/provider-core':
         specifier: workspace:*
         version: link:../../packages/provider-core
@@ -260,6 +266,24 @@ importers:
         specifier: ^3.23.5
         version: 3.25.2(zod@3.25.76)
 
+  packages/create-aeos-plugin:
+    devDependencies:
+      '@aeos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@aeos/plugins':
+        specifier: workspace:*
+        version: link:../plugins
+      '@aeos/provider-core':
+        specifier: workspace:*
+        version: link:../provider-core
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/kernel:
     dependencies:
       '@aeos/contracts':
@@ -290,6 +314,25 @@ importers:
       yaml:
         specifier: ^2.6.1
         version: 2.9.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
+  packages/plugins:
+    dependencies:
+      '@aeos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@aeos/provider-core':
+        specifier: workspace:*
+        version: link:../provider-core
       zod:
         specifier: ^3.23.8
         version: 3.25.76

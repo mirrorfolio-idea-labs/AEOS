@@ -365,15 +365,15 @@ docker socket or rootless nesting; harness-native sandboxes compose inside.
 - [x] **T2** Tier selection per agent/action-class in policy. *Accept: policy fixture switches tiers; escape-canary test (host file outside worktree untouchable) green.*
 **Exit gate:** container golden path + escape canary in CI.
 
-### M2 — Public plugin API  `[ ]`
+### M2 — Public plugin API  `[x]`
 **Context brief:** Spec §15. Plugin = npm package with manifest (contributes:
 `provider|memory-backend|planner|scheduler-job|policy|ui-panel|deploy-target`,
 contract version, entry point); loaded by composition root; UI panels as
 federated modules; `contracts` is the ABI; conformance suites keep third
 parties honest.
-- [ ] **T1** Manifest schema + loader + contract-version gating; core plugins consume the public mechanism. *Accept: version-mismatched plugin refused with typed error.*
-- [ ] **T2** Third-party install flow (npm/tarball) + sandbox of plugin failures. *Accept: crashing plugin cannot take down the daemon.*
-- [ ] **T3** Plugin author guide + `create-aeos-plugin` template repo. *Accept: template builds a working example provider passing conformance.*
+- [x] **T1** Manifest schema + loader + contract-version gating; core plugins consume the public mechanism. *Accept: version-mismatched plugin refused with typed error.*
+- [x] **T2** Third-party install flow (npm/tarball) + sandbox of plugin failures. *Accept: crashing plugin cannot take down the daemon.*
+- [x] **T3** Plugin author guide + `create-aeos-plugin` template repo. *Accept: template builds a working example provider passing conformance.*
 **Exit gate:** example third-party plugin installed from a tarball passes conformance.
 
 ### M3 — Deploy targets  `[ ]`

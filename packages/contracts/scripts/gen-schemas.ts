@@ -6,7 +6,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
   AeosEventSchema, AgentConfigSchema, CheckpointSchema, CompiledPolicySchema,
   CredentialProfileSchema, EnvelopeBaseSchema, ObjectiveSchema, PlanTaskSchema,
-  PolicyFileSchema, SessionRecordSchema, WorkspaceSchema,
+  PluginManifestSchema, PolicyFileSchema, SessionRecordSchema, WorkspaceSchema,
 } from '../src/index.js';
 
 const SOURCES: Record<string, ZodTypeAny> = {
@@ -21,6 +21,7 @@ const SOURCES: Record<string, ZodTypeAny> = {
   'compiled-policy': CompiledPolicySchema,
   'plan-task': PlanTaskSchema,
   'checkpoint': CheckpointSchema,
+  'plugin-manifest': PluginManifestSchema,
 };
 
 export function generateAllSchemas(): Record<string, string> {

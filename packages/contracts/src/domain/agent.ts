@@ -32,6 +32,24 @@ export const RepoBindingSchema = z.object({
 });
 export type RepoBinding = z.infer<typeof RepoBindingSchema>;
 
+/** The three first-party harnesses (core plugins living in-repo — spec §15). */
+export const BUILTIN_PROVIDERS = ['claude-code', 'codex', 'opencode'] as const;
+export type BuiltinProvider = (typeof BUILTIN_PROVIDERS)[number];
+/** A third-party provider contributed by an installed plugin (P4.M2). */
+export type PluginProviderId = `plugin:${string}`;
+export const PLUGIN_PROVIDER_REGEX = /^plugin:[a-z0-9][a-z0-9-]{0,62}$/;
+/**
+ * Harness provider id: a builtin, or `plugin:<id>` for a provider an
+ * installed plugin contributes. The cast only narrows the static type to
+ * the template literal; at runtime (and in the JSON Schema) it is a
+ * pattern-checked string.
+ */
+export const ProviderIdSchema = z.union([
+  z.enum(BUILTIN_PROVIDERS),
+  z.string().regex(PLUGIN_PROVIDER_REGEX) as unknown as z.ZodType<PluginProviderId>,
+]);
+export type ProviderId = z.infer<typeof ProviderIdSchema>;
+
 export const AgentConfigSchema = z.object({
   id: z.string().regex(SLUG_REGEX),
   workspaceId: z.string().regex(SLUG_REGEX),
@@ -39,7 +57,7 @@ export const AgentConfigSchema = z.object({
   profile: z.string().optional(),
   avatar: z.string().optional(),
   harness: z.object({
-    provider: z.enum(['claude-code', 'codex', 'opencode']),
+    provider: ProviderIdSchema,
     /** Pinned harness version — resolved to a verified managed install (P2.M7). */
     version: z.string().optional(),
     /** Bring-your-own executable, used when no version is pinned (P2.M7.T2). */

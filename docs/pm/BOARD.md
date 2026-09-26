@@ -12,8 +12,8 @@
 
 | | |
 |---|---|
-| **Now** | P4 underway: M1 container sandbox tier done (policy-selected per task class, escape canary in CI). P3 complete on code (exit gate green). |
-| **Next** | P4.M2 plugin API → M3 deploy targets → M4 TCP/Helm. P3's Gate 2 promotion (#126) waits on the v0.2.0 release PR #120 (Kabeer). |
+| **Now** | P4 underway: M1 container sandbox tier and M2 public plugin API done. P3 complete on code (exit gate green). |
+| **Next** | P4.M3 deploy targets → M4 TCP/Helm. P3's Gate 2 promotion (#126) waits on the v0.2.0 release PR #120 (Kabeer). |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -60,12 +60,12 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M4 retrospective loop `[x]` | 2/2 | deterministic post-objective retrospective: verification failures/flakes → `lessons/`, re-dos → `mistakes/`, human review comments → `preferences/`, via `memory.propose` (accept/reject in ADE/CLI/API, or `retrospective: apply` unattended); next brief carries them byte-for-byte — 2026-09-26 |
 | M5 wakeups + delegation `[x]` | 2/2 | durable `<home>/jobs/*.yaml` cron (UTC, `cron-parser`) + idle jobs, `lastRunAt` written before the action, a slot missed while down fires once on boot; `/v1/jobs`, `aeos job add|list|rm`; `@agent` tasks run as that agent (own policy/routing/profile) in the owner's worktree, committed under the delegate's name — 2026-09-26 |
 
-### P4 — Scale + community (v0.4) `[~]` — 2/10 tasks
+### P4 — Scale + community (v0.4) `[~]` — 5/10 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
 | M1 Docker sandbox tier `[x]` | 2/2 | policy `sandbox` tier per task class; `docker run` wrapper mounting only worktree + git dir + profile + read-only binary, env by name, host uid, cap-drop; orphan reaping; `aeos sandbox build`; container golden path + escape canary e2e in CI — 2026-09-26 |
-| M2 public plugin API | 0/3 | manifest/loader, install flow, template |
+| M2 public plugin API `[x]` | 3/3 | `aeos` manifest + `PLUGIN_ABI_VERSION` contract gate (typed `contract_mismatch`); core harnesses registered through the same registry; `aeos plugin install` (npm/tarball, `--ignore-scripts`); each plugin in its own process (host-stamped, validated events; crash fails only its session, restart on demand, disable after 3); `create-aeos-plugin` + `docs/plugins.md`; tarball-installed template passes adapter conformance — 2026-09-26 |
 | M3 deploy targets | 0/3 | service install, compose, remote posture |
 | M4 TCP + Kubernetes | 0/2 | authed TCP transport, Helm/kind CI |
 
