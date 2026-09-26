@@ -35,6 +35,54 @@
             "confirmTimeoutSeconds": {
               "type": "integer",
               "exclusiveMinimum": 0
+            },
+            "sandbox": {
+              "type": "object",
+              "properties": {
+                "tier": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "container"
+                  ]
+                },
+                "classes": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "container"
+                    ]
+                  },
+                  "propertyNames": {
+                    "enum": [
+                      "plan",
+                      "architect",
+                      "implement",
+                      "refactor",
+                      "review",
+                      "security_review",
+                      "summarize",
+                      "docs",
+                      "rename",
+                      "verify"
+                    ]
+                  }
+                },
+                "image": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "network": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "bridge"
+                  ]
+                }
+              },
+              "additionalProperties": false
             }
           },
           "required": [

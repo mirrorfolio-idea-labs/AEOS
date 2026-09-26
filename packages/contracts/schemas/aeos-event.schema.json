@@ -1251,6 +1251,13 @@
                 },
                 "reason": {
                   "type": "string"
+                },
+                "sandbox": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "container"
+                  ]
                 }
               },
               "required": [

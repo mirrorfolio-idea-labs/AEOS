@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TaskClassSchema } from './objective.js';
 
 /**
  * Permission tiers and policy-file shapes (spec §11). Policies are YAML
@@ -50,6 +51,29 @@ export const TiersSchema = z
   .strict();
 
 /**
+ * Sandbox tiers (spec §10, P4.M1): `none` — trusted local mode, still
+ * worktree-scoped; `container` — the harness runs in a per-session Docker
+ * container that sees only the worktree, its own profile dir and its
+ * binary. Harness-native sandboxes compose inside whichever tier is active.
+ */
+export const SANDBOX_TIERS = ['none', 'container'] as const;
+export const SandboxTierSchema = z.enum(SANDBOX_TIERS);
+export type SandboxTier = z.infer<typeof SandboxTierSchema>;
+
+/** Sandbox layer: a default tier, per-task-class overrides, container knobs. */
+export const SandboxPolicySchema = z
+  .object({
+    tier: SandboxTierSchema.optional(),
+    classes: z.record(TaskClassSchema, SandboxTierSchema).optional(),
+    /** Container image (default `aeos-runner:local`, built by `aeos sandbox build`). */
+    image: z.string().min(1).optional(),
+    /** `bridge` (default — the harness must reach its model API) or `none`. */
+    network: z.enum(['none', 'bridge']).optional(),
+  })
+  .strict();
+export type SandboxPolicy = z.infer<typeof SandboxPolicySchema>;
+
+/**
  * One layer of a policy file. Every field is optional so layers stay
  * minimal; `.strict()` rejects stray keys (typo = loud error, not silence).
  */
@@ -57,6 +81,7 @@ export const PolicyFileSchema = z
   .object({
     tiers: TiersSchema.optional(),
     confirmTimeoutSeconds: z.number().int().positive().optional(),
+    sandbox: SandboxPolicySchema.optional(),
   })
   .strict();
 export type PolicyFile = z.infer<typeof PolicyFileSchema>;
@@ -66,6 +91,8 @@ export const EffectivePolicySchema = z
   .object({
     tiers: z.record(TierSchema, PolicyModeSchema),
     confirmTimeoutSeconds: z.number().int().positive(),
+    /** Present only when some layer declares one — absent means tier `none`. */
+    sandbox: SandboxPolicySchema.optional(),
   })
   .strict();
 export type EffectivePolicy = z.infer<typeof EffectivePolicySchema>;

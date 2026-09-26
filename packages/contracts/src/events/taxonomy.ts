@@ -75,6 +75,8 @@ export const AeosEventSchema = z.discriminatedUnion('type', [
       providerSource: z.string(),
       modelSource: z.string(),
       reason: z.string(),
+      /** Sandbox tier the task runs in (P4.M1) — absent on plan routing. */
+      sandbox: z.enum(['none', 'container']).optional(),
     }),
   ),
   ev(
