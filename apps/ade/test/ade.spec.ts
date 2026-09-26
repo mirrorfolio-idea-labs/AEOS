@@ -220,6 +220,14 @@ test('T7: attention inbox — a parked agent shows as blocked, then finished, th
   await expect(page.getByTestId('inbox-ops-dev')).toHaveCount(0);
 });
 
+test('T8: deep link — ?agent=<ws>/<agent>&tab=approvals opens that agent on the approvals view', async ({ page }) => {
+  // the desktop shell's notifications and aeos:// links navigate here (P2.M8.T2)
+  await page.goto('/?agent=client-acme/ops-dev&tab=approvals');
+  await expect(page.getByTestId('tab-approvals')).toHaveAttribute('data-state', 'active');
+  await expect(page.getByTestId('credential-profile')).toBeVisible();
+  await page.goto('/?agent=client-acme/ops-dev&tab=bogus');
+  await expect(page.getByTestId('tab-objective')).toHaveAttribute('data-state', 'active');
+
 test('T9: planner — auto-plan proposes a classed plan that waits for approval, then runs', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('agent-name').fill('Planner Dev');

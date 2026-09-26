@@ -56,3 +56,7 @@ tree, so no `NOTICE` file is required and no license conflicts exist.
   listed in the root `THIRD_PARTY_NOTICES.md`.
 - The AGPL-3.0 project herdr-remote was consulted for ideas only; none of
   its code is included.
+- Desktop shell (P2.M8), Rust crates: `tauri`, `tauri-plugin-deep-link`,
+  `tauri-plugin-single-instance`, `notify-rust`, `ureq`, `ctrlc`, `serde`,
+  `serde_json`. All are MIT or Apache-2.0, with no copyleft. The npm
+  `@tauri-apps/cli` is Apache-2.0 or MIT.

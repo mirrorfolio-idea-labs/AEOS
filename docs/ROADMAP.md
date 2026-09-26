@@ -170,7 +170,7 @@ credential profiles reuse the M4 model including multi-account slots.
 - [x] **T3** Conformance: OpenCode adapter passes the provider-core suite. *Accept: conformance green in CI alongside claude + fake.*
 **Exit gate:** the same fixture objective completes on the fake, Claude, and OpenCode adapters.
 
-## Phase P2 — Safety + polish (v0.2)  `[~]`
+## Phase P2 — Safety + polish (v0.2)  `[x]`
 
 **Exit gate for the phase:** a new agent runs under least-privilege policy with
 daemon-enforced budget caps, every action audited, secrets never leaking into
@@ -178,6 +178,22 @@ transcripts, on any of three harnesses (Claude/Codex/OpenCode), with human PTY
 takeover available — demonstrated by the P2 integration suite; `v0.2` tagged.
 Detailed plans per milestone are written just-in-time at each predecessor's
 exit (same rule as P1).
+
+> **Phase status (2026-09-26): PASSED on code.** M1–M10 are all `[x]`. M9
+> and M10 were added on 2026-09-26: worktrees and session brief, and the
+> herdr-derived runtime. The exit gate is `apps/aeosd/test/p2-exit.e2e.test.ts`,
+> which runs a NEW agent on the real daemon under the default posture. It
+> checks, in one run:
+> - an approval park and resume;
+> - PTY takeover refused below allow-tier;
+> - work isolated in a worktree;
+> - a daemon-enforced budget hard stop with no strike consumed;
+> - approvals, tool traffic and budget stops present in the audit log;
+> - a secret canary absent from audit, SSE and REST;
+> - the three-harness matrix.
+>
+> `v0.2.0` is tagged by Kabeer after he merges the staging→main release PR
+> (Gate 3).
 
 ### M1 — Policy engine + approvals inbox  `[x]`
 **Context brief:** Spec §11. Permission tiers (`read_files … network_access`)
@@ -253,12 +269,12 @@ by version (spec §17.2 mitigation).
 - [x] **T2** BYO fallback + version-gated capabilities. *Accept: feature requiring version X is refused under pinned version < X with a typed error.*
 **Exit gate:** conformance suite runs in CI against pinned versions.
 
-### M8 — Tauri desktop wrapper  `[ ]`
+### M8 — Tauri desktop wrapper  `[x]`
 **Context brief:** Spec §14 (D4). Thin Tauri shell around the served web UI;
 deep links + native notifications; no UI logic forked into the shell.
-- [ ] **T1** Tauri shell loading the daemon-served UI (daemon lifecycle handled). *Accept: app cold-starts daemon if absent; quits cleanly.*
-- [ ] **T2** Native notifications (approvals, budget stops) + deep links. *Accept: approval notification opens the inbox view.*
-- [ ] **T3** macOS + Linux build artifacts in CI. *Accept: installable artifacts produced by CI.*
+- [x] **T1** Tauri shell loading the daemon-served UI (daemon lifecycle handled). *Accept: app cold-starts daemon if absent; quits cleanly.*
+- [x] **T2** Native notifications (approvals, budget stops) + deep links. *Accept: approval notification opens the inbox view.*
+- [x] **T3** macOS + Linux build artifacts in CI. *Accept: installable artifacts produced by CI.*
 **Exit gate = P2 exit gate** (top of this section).
 
 ### M9 — Repository bindings, worktrees + session brief  `[x]`
