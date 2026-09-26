@@ -1,14 +1,26 @@
 {
   "name": "@aeos/cli",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "license": "MIT",
   "type": "module",
-  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
     "aeos": "./dist/main.js"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mirrorfolio-idea-labs/AEOS.git",
+    "directory": "apps/cli"
+  },
+  "homepage": "https://github.com/mirrorfolio-idea-labs/AEOS",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",

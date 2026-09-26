@@ -7,6 +7,8 @@ on:
   push:
     branches: [main, staging]
   workflow_dispatch:
+  # P5.M3.T2: release.yml builds the installers through this same workflow
+  workflow_call:
 jobs:
   bundle:
     strategy:

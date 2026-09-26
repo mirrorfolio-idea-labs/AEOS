@@ -1,11 +1,26 @@
 {
   "name": "create-aeos-plugin",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Scaffold an AEOS plugin (a working example provider that passes the adapter conformance suite).",
   "license": "MIT",
   "type": "module",
-  "bin": { "create-aeos-plugin": "./bin/create-aeos-plugin.mjs" },
-  "files": ["bin", "template"],
+  "bin": {
+    "create-aeos-plugin": "./bin/create-aeos-plugin.mjs"
+  },
+  "files": [
+    "bin",
+    "template"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mirrorfolio-idea-labs/AEOS.git",
+    "directory": "packages/create-aeos-plugin"
+  },
+  "homepage": "https://github.com/mirrorfolio-idea-labs/AEOS",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "node -e \"\"",
     "typecheck": "node -e \"\"",
