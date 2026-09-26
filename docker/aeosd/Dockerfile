@@ -5,6 +5,10 @@
 #
 # Build context: the repository root.
 FROM node:22-slim AS build
+# node-pty (PTY takeover) compiles a native addon at install time
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 RUN corepack enable
 COPY . .
