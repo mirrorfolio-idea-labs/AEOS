@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -13,11 +14,26 @@ function resolveHome(): string {
   return process.env['AEOS_HOME'] ?? path.join(os.homedir(), '.aeos');
 }
 
+/**
+ * The API bearer token: `AEOS_API_TOKEN`, or the first line of the file
+ * named by `AEOS_API_TOKEN_FILE` (docker/compose/k8s secrets).
+ */
+function apiToken(): string | undefined {
+  const file = process.env['AEOS_API_TOKEN_FILE'];
+  if (file !== undefined) {
+    const token = fs.readFileSync(file, 'utf8').split('\n')[0]?.trim();
+    if (token === undefined || token.length < 16) throw new Error(`AEOS_API_TOKEN_FILE ${file} holds no token (16+ chars required)`);
+    return token;
+  }
+  return process.env['AEOS_API_TOKEN'];
+}
+
 const KNOWN_PROVIDERS = new Set(['fake', 'claude-code', 'opencode', 'codex']);
 
 async function main(): Promise<number> {
   const command = process.argv[2] ?? 'run';
-  const providerOverride = process.env['AEOS_PROVIDER'];
+  // an empty value (e.g. compose's `${AEOS_PROVIDER:-}`) means unset
+  const providerOverride = process.env['AEOS_PROVIDER'] === '' ? undefined : process.env['AEOS_PROVIDER'];
   if (providerOverride !== undefined && !KNOWN_PROVIDERS.has(providerOverride)) {
     console.error(`unknown AEOS_PROVIDER '${providerOverride}' (expected fake | claude-code | opencode)`);
     return 2;
@@ -29,9 +45,7 @@ async function main(): Promise<number> {
   const apiConfig = command !== 'run' ? undefined : {
       port: Number(process.env['AEOS_PORT'] ?? 7777),
       ...(process.env['AEOS_HOST'] === undefined ? {} : { host: process.env['AEOS_HOST'] }),
-      ...(process.env['AEOS_API_TOKEN'] === undefined
-        ? {}
-        : { token: process.env['AEOS_API_TOKEN'] }),
+      ...(apiToken() === undefined ? {} : { token: apiToken() as string }),
       ...(providerOverride === undefined
         ? {}
         : { providerOverride: providerOverride as 'fake' | 'claude-code' | 'opencode' | 'codex' }),

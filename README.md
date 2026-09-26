@@ -139,6 +139,12 @@ and recovery is the entire idea this project exists to prove.
 Want to run several Claude subscriptions at once (e.g. one per client)?
 See [`packages/provider-claude/README.md`](packages/provider-claude/README.md#multi-account-subscriptions).
 
+**Keep it running, or run it on a server:** `aeos service install` makes it
+a login service on Linux/macOS, and `docker compose up -d` runs it in a
+container with token auth — see [`docs/deploy.md`](docs/deploy.md) (also:
+remote access behind TLS). **Extend it:** third-party providers are npm
+plugins — see [`docs/plugins.md`](docs/plugins.md).
+
 ---
 
 ## System overview

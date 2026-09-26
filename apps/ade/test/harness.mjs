@@ -18,8 +18,11 @@ if (home) {
 } else {
   home = await mkdtemp(path.join(os.tmpdir(), 'aeos-ade-'));
 }
+// P4.M3.T3: the token-protected variant (second Playwright web server)
+const token = process.env.AEOS_API_TOKEN;
 const app = await createApiServer({
   home,
+  ...(token ? { token } : {}),
   adapterFor: () => {
     const fake = new FakeAdapter({
       providerSessionId: 'ses_ade',
@@ -70,5 +73,5 @@ const app = await createApiServer({
 await app.register(fastifyStatic, {
   root: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist'),
 });
-const address = await listenApi(app, { port: Number(process.env.PORT ?? 7777) });
+const address = await listenApi(app, { port: Number(process.env.PORT ?? 7777), ...(token ? { token } : {}) });
 console.log(`ADE harness on ${address} (home: ${home})`);

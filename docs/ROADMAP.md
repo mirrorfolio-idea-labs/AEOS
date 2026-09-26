@@ -376,13 +376,13 @@ parties honest.
 - [x] **T3** Plugin author guide + `create-aeos-plugin` template repo. *Accept: template builds a working example provider passing conformance.*
 **Exit gate:** example third-party plugin installed from a tarball passes conformance.
 
-### M3 — Deploy targets  `[ ]`
+### M3 — Deploy targets  `[~]`
 **Context brief:** Spec §16. Same code, different placement: user service
 (systemd/launchd), docker compose (AEOS_HOME volume), remote posture (token
 auth + TLS via reverse proxy).
-- [ ] **T1** `aeos service install` (systemd user unit / launchd). *Accept: survives logout/reboot per platform test.*
-- [ ] **T2** `docker compose up` target. *Accept: compose quickstart green in CI.*
-- [ ] **T3** Remote posture: token auth enforced when binding non-loopback + reverse-proxy TLS guide. *Accept: unauthenticated non-loopback request rejected; guide verified on a VM.*
+- [~] **T1** `aeos service install` (systemd user unit / launchd). *Accept: survives logout/reboot per platform test.* *(Code + unit/`systemd-analyze` tests done; real logout/reboot sign-off is manual — guide in `guides/`.)*
+- [x] **T2** `docker compose up` target. *Accept: compose quickstart green in CI.*
+- [~] **T3** Remote posture: token auth enforced when binding non-loopback + reverse-proxy TLS guide. *Accept: unauthenticated non-loopback request rejected; guide verified on a VM.* *(Non-loopback rejection proven in `api.test.ts` + ADE sign-in in Playwright T10; VM verification of `docs/deploy.md` TLS recipe is manual — guide in `guides/`.)*
 **Exit gate:** each target's quickstart passes on a clean machine/VM.
 
 ### M4 — TCP runner transport + Kubernetes  `[ ]`

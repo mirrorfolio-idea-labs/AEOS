@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import type { ProviderId } from '@aeos/contracts';
 import { DEFAULT_PINS, createBinaryManager, dockerAvailable, type ManagedHarness } from '@aeos/provider-core';
 import { RUNNER_DOCKERFILE } from './runner-dockerfile.js';
+import { applyPlan, currentPlatform, currentUser, planInstall, planUninstall, resolveAeosd } from './service.js';
 import { PluginError, installPlugin, listInstalledPlugins, removePlugin } from '@aeos/plugins';
 
 export interface CliIo {
@@ -78,6 +79,9 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos stop status
   aeos resume-ops          # lifts the kill switch
   aeos harness pins        # pinned harness releases of record
+  aeos service install [--aeosd <main.js>] [--port 7777] [--host 0.0.0.0 --token-file <f>] [--dry-run]
+                       # run aeosd as a user service (systemd user unit / launchd agent)
+  aeos service uninstall | aeos service status
   aeos plugin install <npm-spec|./plugin.tgz>   # third-party plugin (no install scripts run; restart aeosd to load)
   aeos plugin list | aeos plugin remove <package>
   aeos sandbox build [--tag aeos-runner:local]   # container-tier runtime image (P4.M1)
@@ -138,6 +142,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     if (group === 'harness') return await runHarnessCommand(action, id, io);
     if (group === 'sandbox') return runSandboxCommand(action, parsed, io);
     if (group === 'plugin') return runPluginCommand(action, id, io);
+    if (group === 'service') return runServiceCommand(action, parsed, io);
     if (group === 'health') {
       io.out(JSON.stringify(await client.health()));
       return 0;
@@ -481,5 +486,53 @@ function runPluginCommand(action: string | undefined, arg: string | undefined, i
     return 1;
   }
   io.err('usage: aeos plugin install <spec> | aeos plugin list | aeos plugin remove <package>');
+  return 2;
+}
+
+/** `aeos service install|uninstall|status` (P4.M3.T1). */
+function runServiceCommand(action: string | undefined, parsed: Parsed, io: CliIo): number {
+  const platform = currentPlatform();
+  if (platform === undefined) {
+    io.err(`aeos service supports Linux (systemd) and macOS (launchd); on ${process.platform} run aeosd under your own supervisor`);
+    return 1;
+  }
+  const flag = (name: string): string | undefined => parsed.flags.get(name)?.[0];
+  const home = process.env['AEOS_HOME'] ?? path.join(os.homedir(), '.aeos');
+  const user = currentUser();
+  if (action === 'install') {
+    const host = flag('host');
+    const tokenFile = flag('token-file');
+    if (host !== undefined && !['127.0.0.1', 'localhost', '::1'].includes(host) && tokenFile === undefined) {
+      io.err(`binding ${host} requires --token-file (aeosd refuses non-loopback binds without a token)`);
+      return 2;
+    }
+    const plan = planInstall(
+      {
+        node: process.execPath,
+        aeosd: resolveAeosd(flag('aeosd')),
+        home,
+        port: Number(flag('port') ?? 7777),
+        ...(host === undefined ? {} : { host }),
+        ...(tokenFile === undefined ? {} : { tokenFile: path.resolve(tokenFile) }),
+      },
+      platform,
+      os.homedir(),
+      user,
+    );
+    if (parsed.flags.has('dry-run')) {
+      io.out(`# ${plan.file}\n${plan.content}`);
+      for (const c of plan.commands) io.out(`$ ${c.argv.join(' ')}${c.optional === true ? '   # optional' : ''}`);
+      return 0;
+    }
+    return applyPlan(plan, io, false);
+  }
+  if (action === 'uninstall') return applyPlan(planUninstall(platform, os.homedir(), user), io, true);
+  if (action === 'status') {
+    const argv = platform === 'linux' ? ['systemctl', '--user', 'status', 'aeosd.service', '--no-pager'] : ['launchctl', 'print', `gui/${String(user.uid)}/dev.aeos.aeosd`];
+    const result = spawnSync(argv[0] as string, argv.slice(1), { encoding: 'utf8' });
+    io.out((result.stdout || result.stderr || '').trimEnd());
+    return result.status === 0 ? 0 : 1;
+  }
+  io.err('usage: aeos service install [--dry-run] | uninstall | status');
   return 2;
 }

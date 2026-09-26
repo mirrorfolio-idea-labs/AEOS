@@ -1,0 +1,36 @@
+# AEOS with docker compose (P4.M3.T2, spec §16).
+#
+#   1. make a token:   mkdir -p secrets && openssl rand -hex 32 > secrets/aeos_api_token
+#   2. start:          docker compose up -d
+#   3. open:           http://localhost:7777   (paste the token when asked)
+#   4. provider keys:  put ANTHROPIC_API_KEY / OPENAI_API_KEY in a .env file
+#                      next to this one (never commit it)
+#
+# aeosd binds 0.0.0.0 inside the container, so token auth is mandatory:
+# every /v1 request without the bearer token is rejected (401).
+services:
+  aeosd:
+    build:
+      context: .
+      dockerfile: docker/aeosd/Dockerfile
+    image: aeos/aeosd:local
+    restart: unless-stopped
+    ports:
+      - "${AEOS_PUBLISH:-127.0.0.1:7777}:7777"
+    environment:
+      AEOS_API_TOKEN_FILE: /run/secrets/aeos_api_token
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # CI/demo only: `fake` runs objectives without any model account
+      AEOS_PROVIDER: ${AEOS_PROVIDER:-}
+    secrets:
+      - aeos_api_token
+    volumes:
+      - aeos-home:/data
+
+secrets:
+  aeos_api_token:
+    file: ./secrets/aeos_api_token
+
+volumes:
+  aeos-home:

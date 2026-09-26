@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AgentConfig } from '@aeos/contracts';
 import type { MemoryProposalView, ObjectiveStatus } from '@aeos/sdk';
 import { Button } from './components/ui/button.js';
-import { client } from './api.js';
+import { apiFetch, client } from './api.js';
 import { Badge } from './components/ui/badge.js';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card.js';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table.js';
@@ -42,14 +42,14 @@ export function FilesPanel({ agent, objectiveId }: FilesPanelProps) {
     if (accept) await client.applyMemoryProposals(agent.workspaceId, agent.id, [id]);
     else await client.rejectMemoryProposal(agent.workspaceId, agent.id, id);
     loadProposals();
-    const response = await fetch(`/v1/memory/index?workspaceId=${agent.workspaceId}&agentId=${agent.id}`);
+    const response = await apiFetch(`/v1/memory/index?workspaceId=${agent.workspaceId}&agentId=${agent.id}`);
     setIndex(((await response.json()) as { data: MemoryIndex | null }).data);
   };
 
   useEffect(loadProposals, [agent]);
 
   useEffect(() => {
-    void fetch(`/v1/memory/index?workspaceId=${agent.workspaceId}&agentId=${agent.id}`)
+    void apiFetch(`/v1/memory/index?workspaceId=${agent.workspaceId}&agentId=${agent.id}`)
       .then((r) => r.json())
       .then((envelope: { data: MemoryIndex | null }) => setIndex(envelope.data));
     if (!objectiveId) return;
@@ -76,7 +76,7 @@ export function FilesPanel({ agent, objectiveId }: FilesPanelProps) {
   }, [agent, objectiveId]);
 
   const openFile = async (relPath: string) => {
-    const response = await fetch(
+    const response = await apiFetch(
       `/v1/memory/file?workspaceId=${agent.workspaceId}&agentId=${agent.id}&path=${encodeURIComponent(relPath)}`,
     );
     const envelope = (await response.json()) as { data: { path: string; content: string } | null };
