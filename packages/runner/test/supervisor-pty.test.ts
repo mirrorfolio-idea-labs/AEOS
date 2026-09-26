@@ -54,13 +54,16 @@ describe('supervisor PTY bridge (P2.M5.T2)', () => {
     for (const session of started.splice(0)) {
       supervisor.stopSession(session.id, 'test teardown');
       const pid = session.runnerPid;
-      if (pid === undefined) continue;
-      for (let i = 0; i < 200 && alive(pid); i++) await new Promise((r) => setTimeout(r, 50));
+      if (pid === undefined || !alive(pid)) continue;
+      // the runner idles on after its child ends (it serves re-adoption);
+      // this test owns it, so terminate it and wait for it to be gone
+      process.kill(pid, 'SIGTERM');
+      for (let i = 0; i < 100 && alive(pid); i++) await new Promise((r) => setTimeout(r, 50));
       if (alive(pid)) process.kill(pid, 'SIGKILL');
     }
     supervisor.close();
     fs.rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
-  });
+  }, 20_000);
 
   it('refuses sessions without a live runner', async () => {
     await expect(supervisor.attachPty('nope', () => undefined)).rejects.toThrow(PtyAttachError);
