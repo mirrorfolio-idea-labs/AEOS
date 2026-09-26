@@ -6,6 +6,7 @@
 
 pub mod daemon;
 pub mod links;
+pub mod platform;
 
 use std::io::{BufRead, BufReader};
 use std::sync::Mutex;
@@ -93,6 +94,7 @@ fn notify(app: &tauri::AppHandle, base: &str, alert: links::Alert) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    platform::apply_webview_workarounds();
     let base = daemon::base_url();
     let app = tauri::Builder::default()
         // a second launch (e.g. an `aeos://` link) forwards to the running app

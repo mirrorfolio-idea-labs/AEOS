@@ -262,6 +262,20 @@ approvals. `aeos://agent/<workspace>/<agent>/approvals` links work too. The
 `desktop` CI workflow builds Linux (deb, AppImage) and macOS (dmg)
 installers.
 
+On **Arch Linux**, build the native package instead of using the AppImage.
+It compiles against Arch's own WebKitGTK and installs the desktop app,
+`aeosd` and `aeos`, plus the `aeos://` link handler:
+
+```bash
+git clone https://github.com/mirrorfolio-idea-labs/AEOS && cd AEOS/packaging/arch
+makepkg -si
+```
+
+CI builds, installs and smoke-tests this package in a clean Arch container
+on every desktop change. On NVIDIA's proprietary driver the app turns off
+WebKit's DMA-BUF renderer, which otherwise shows a blank window. To override
+that, set `WEBKIT_DISABLE_DMABUF_RENDERER` yourself.
+
 ---
 
 ## Repository
