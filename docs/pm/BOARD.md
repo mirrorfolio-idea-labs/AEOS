@@ -16,7 +16,7 @@
 |---|---|
 | **Now** | Every agent-doable v1 task is done. What remains needs Kabeer: Gate 3 merges/tags (#120 v0.2.0, then v0.3/v0.4/rc), manual sign-offs (P1.M4/M10 live smokes, P4.M3.T1 reboot, P5.M2.T2 blind test), beta announcement + launch. |
 | **Next** | After #120 merges: Gate 2 promotion #126 (P3+P4+P5 → `staging`) and the v0.3.0 / v0.4.0 release PRs; then tag `v1.0.0-rc.1` (release pipeline builds, signs and upgrade-tests it). |
-| **Later** | P5.M6 public site: React landing page, React docs over `docs/` Markdown, one-line CLI install, desktop downloads, docs sweep → P5.M4 public beta (T3 weekly grooming) → P5.M5 GA (T1 blocker burn-down, T4 post-launch week). |
+| **Later** | P5.M6 public site: React landing page, Starlight docs (with React islands) over `docs/` Markdown, one-line CLI install, desktop downloads, docs sweep → P5.M4 public beta (T3 weekly grooming) → P5.M5 GA (T1 blocker burn-down, T4 post-launch week). |
 
 ## Milestones
 
@@ -80,13 +80,13 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 release engineering `[~]` | 2/3 (+1 `[~]`) | changesets fixed group + Version-PR workflow; `release.yml` (verify → self-contained bundles w/ smoke → npm packs → Tauri → SBOM + cosign keyless → GHCR + GitHub Release + npm provenance); `docs/compatibility.md` | rc tag = Gate 3 (Kabeer) |
 | M4 public beta `[~]` | 2/3 | repo public, Issues + Discussions on, `main` protected (required `ci`), gitleaks clean over full history; triage live: `.github/labels.yml` + label-sync, SLA table in CONTRIBUTING, 11 seeded good-first issues (#134–#144); beta announcement + grooming are Kabeer's | requires P4 exit |
 | M5 GA launch `[~]` | 0/4 (+2 `[~]`) | upgrade test (older release → this build on the same `AEOS_HOME`) wired into `release.yml`, green from v0.1.0 and staging; v1.0.0 notes + launch-kit drafts in `notes/launch/`; tag, publishing and posting are Kabeer's | = v1 |
-| M6 public site + install `[ ]` | 0/5 | added 2026-09-26 at Kabeer's request: React landing page (T1); React docs site that renders `docs/` Markdown, replacing Starlight (T2); Claude-Code-style one-line CLI install with verified bundles + `aeos update` (T3); Claude-Cowork-style signed desktop downloads per OS with auto-update (T4); Markdown docs sweep + generated CLI/API reference with drift tests (T5) | newcomer: landing page → running agent |
+| M6 public site + install `[ ]` | 0/5 | added 2026-09-26 at Kabeer's request: React landing page (T1); proper docs on Starlight (kept) over `docs/` Markdown, React for interactive pieces (T2); Claude-Code-style one-line CLI install with verified bundles + `aeos update` (T3); Claude-Cowork-style signed desktop downloads per OS with auto-update (T4); Markdown docs sweep + generated CLI/API reference with drift tests (T5) | newcomer: landing page → running agent |
 
 **Total defined work: 119 tasks** (44 P1 + 31 P2 + 11 P3 + 10 P4 + 23 P5)
 across 35 milestones, plus 4 tracked post-v1 backlog items (scope changes:
 2026-07-19 +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
 retired; 2026-09-26 +P2.M9 repo bindings/worktrees/review, +P2.M10 herdr-derived
-agent runtime, +P5.M6 public site / React docs / one-line install). Every task has an accept criterion in the ROADMAP; **106 are
+agent runtime, +P5.M6 public site / docs / one-line install). Every task has an accept criterion in the ROADMAP; **106 are
 done, 5 are `[~]` awaiting a human step** (P4.M3.T1, P5.M2.T2, P5.M3.T2,
 P5.M5.T2/T3) and **8 are open** — the five P5.M6 public-site/install tasks, beta grooming, the blocker burn-down at cut time and the post-launch week (P5.M6.T1–T5, P5.M4.T3, P5.M5.T1/T4).
 Open tasks keep a matching GitHub issue
