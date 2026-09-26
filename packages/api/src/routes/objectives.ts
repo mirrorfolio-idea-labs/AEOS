@@ -2,7 +2,7 @@ import { appendFile, mkdir, readdir, readFile, rm, stat } from 'node:fs/promises
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { agentDir, getAgent, writeFileAtomic } from '@aeos/kernel';
+import { agentDir, getAgent, indexSession, writeFileAtomic, writeSessionYaml } from '@aeos/kernel';
 import { rename } from 'node:fs/promises';
 import {
   commitTaskWork,
@@ -437,6 +437,20 @@ export function startObjectiveRun(
         onEvent({ ...routeEvent(runAs.id, task.id, decision, sandbox) });
         return { adapter: chosen, model: decision.model, ...(runAs.id === agent.id ? {} : { agent: runAs }) };
       },
+      // spec §7: every task session gets a session record (session.yaml +
+      // index row) under the agent it runs as, so its events route to a
+      // transcript like any other session's
+      onSessionStarted: async ({ sessionId, agent: runAs }) => {
+        await mkdir(path.join(agentDir(ctx.home, runAs.workspaceId, runAs.id), 'sessions', sessionId), { recursive: true });
+        const record = { id: sessionId, agentId: runAs.id, objectiveId, state: 'running' as const };
+        writeSessionYaml(ctx.home, runAs.workspaceId, runAs.id, sessionId, record);
+        indexSession(ctx.db, record, Date.now());
+      },
+      onSessionEnded: ({ sessionId, agent: runAs, state, providerSessionId }) => {
+        const record = { id: sessionId, agentId: runAs.id, objectiveId, state, ...(providerSessionId === undefined ? {} : { providerSessionId }) };
+        writeSessionYaml(ctx.home, runAs.workspaceId, runAs.id, sessionId, record);
+        indexSession(ctx.db, record, Date.now());
+      },
       onTaskSettled: (task, result) => {
         const routed = decisions.get(task.id);
         if (routed === undefined) return;
@@ -493,6 +507,8 @@ export function startObjectiveRun(
         return outcome;
       },
       (error: unknown) => {
+        // an errored run must never be silent for the operator
+        console.error(`objective ${workspaceId}/${agent.id}/${objectiveId} errored: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`);
         tracker.set(ref, 'blocked', {
           via: 'events',
           reason: `objective ${objectiveId} errored: ${error instanceof Error ? error.message : String(error)}`,
