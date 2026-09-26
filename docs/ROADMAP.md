@@ -411,13 +411,13 @@ and history hygiene before anything is public.
 - [x] **T4** History/secret hygiene: gitleaks scan over full history; strip private artifacts; branch protection + required CI on `main`. *Accept: gitleaks clean; protection rules active.*
 **Exit gate:** repo could be flipped public today with zero legal/security exposure.
 
-### M2 — Docs site + onboarding  `[ ]`
+### M2 — Docs site + onboarding  `[~]`
 **Context brief:** Public-facing docs generated from this repo (`docs/` stays
 the source of truth; the site renders it — no forked content).
-- [ ] **T1** Docs site scaffold (Starlight/VitePress) + CI deploy to Pages. *Accept: site builds from `docs/` in CI; broken-link check green.*
-- [ ] **T2** Quickstarts per deploy target + first-agent tutorial. *Accept: tech-writer-blind test — a newcomer succeeds using only the site.*
-- [ ] **T3** Architecture section rendered from the spec + ADR index. *Accept: spec renders with working section anchors; ADRs listed automatically.*
-- [ ] **T4** Demo assets: asciinema of the golden path, UI screenshots/video. *Accept: README embeds them; assets reproducible via a script.*
+- [x] **T1** Docs site scaffold (Starlight/VitePress) + CI deploy to Pages. *Accept: site builds from `docs/` in CI; broken-link check green.*
+- [~] **T2** Quickstarts per deploy target + first-agent tutorial. *Accept: tech-writer-blind test — a newcomer succeeds using only the site.* *(Content done — quickstart, per-target deploy guide, first-agent tutorial whose commands CI executes; the blind newcomer test is a human step — guide in `guides/`.)*
+- [x] **T3** Architecture section rendered from the spec + ADR index. *Accept: spec renders with working section anchors; ADRs listed automatically.*
+- [x] **T4** Demo assets: asciinema of the golden path, UI screenshots/video. *Accept: README embeds them; assets reproducible via a script.*
 **Exit gate:** documented quickstart verified by someone who didn't write it.
 
 ### M3 — Release engineering  `[~]`

@@ -109,3 +109,14 @@ jobs:
         run: |
           helm template t deploy/helm/aeos --set extraEnv.AEOS_PROVIDER=fake > /tmp/rendered.yaml
           grep -q 'kind: Deployment' /tmp/rendered.yaml
+  # P5.M2.T1: the docs site builds from docs/ and every internal link and
+  # anchor resolves (the build runs scripts/check-links.mjs)
+  docs-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @aeos/docs build

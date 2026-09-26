@@ -28,6 +28,7 @@ import {
   newEventId,
   type AeosEvent,
   type AgentConfig,
+  type SessionRecord,
   type CompiledPolicy,
   type EffectivePolicy,
   type PlanTask,
@@ -167,6 +168,17 @@ export function planningPolicy(effective: EffectivePolicy | undefined): Effectiv
   return { tiers, confirmTimeoutSeconds: effective?.confirmTimeoutSeconds ?? 300 };
 }
 
+/**
+ * Register (or update) a session this route spawned — session.yaml + the
+ * index row, under the agent it runs as — so its events route to a
+ * transcript (spec §7). Planner and task sessions both go through here.
+ */
+async function recordSession(ctx: ApiContext, agent: AgentConfig, record: Omit<SessionRecord, 'agentId'>): Promise<void> {
+  await mkdir(path.join(agentDir(ctx.home, agent.workspaceId, agent.id), 'sessions', record.id), { recursive: true });
+  writeSessionYaml(ctx.home, agent.workspaceId, agent.id, record.id, { ...record, agentId: agent.id });
+  indexSession(ctx.db, { ...record, agentId: agent.id }, Date.now());
+}
+
 const routeEvent = (agentId: string, taskId: string, decision: RouteDecision, sandbox?: SandboxChoice): AeosEvent =>
   AeosEventSchema.parse({
     v: 1,
@@ -188,10 +200,13 @@ const routeEvent = (agentId: string, taskId: string, decision: RouteDecision, sa
     },
   });
 
+/**
+ * Plan approvals are objective-level (task `plan`), not events of a harness
+ * session — they carry no sessionId, so no transcript routing is implied.
+ */
 const planEvent = (
   type: 'approval.request' | 'approval.resolved',
   agentId: string,
-  sessionId: string,
   payload: Record<string, unknown>,
 ): AeosEvent =>
   AeosEventSchema.parse({
@@ -200,7 +215,7 @@ const planEvent = (
     ts: new Date().toISOString(),
     source: 'planner',
     agentId,
-    sessionId,
+    taskId: 'plan',
     type,
     payload,
   });
@@ -223,11 +238,14 @@ async function planIfNeeded(input: PlanPhaseInput): Promise<'ready' | ObjectiveO
   if (proposed === undefined) {
     const readOnly = planningPolicy(input.effective);
     onEvent(routeEvent(agent.id, 'plan', input.routePlan));
+    // the planner's session is a session like any other: record + transcript (spec §7)
+    const plannerSession = newEventId();
+    await recordSession(ctx, agent, { id: plannerSession, objectiveId, state: 'running' });
     const generated = await generatePlan({
       adapter: guardAdapter(input.rawAdapterFor(input.routePlan.provider), readOnly),
       model: input.routePlan.model,
       agent,
-      sessionId: newEventId(),
+      sessionId: plannerSession,
       prompt: composePlanningPrompt({
         objectiveTitle: input.title,
         definitionOfDone: input.definitionOfDone,
@@ -236,7 +254,11 @@ async function planIfNeeded(input: PlanPhaseInput): Promise<'ready' | ObjectiveO
       workdir: input.worktree?.dir,
       permissionPolicy: compilePolicy(readOnly),
       onEvent,
+    }).catch(async (error: unknown) => {
+      await recordSession(ctx, agent, { id: plannerSession, objectiveId, state: 'failed' });
+      throw error;
     });
+    await recordSession(ctx, agent, { id: plannerSession, objectiveId, state: 'completed' });
     const tasks = input.verifyCommands.length > 0 && input.worktree !== undefined ? interleaveVerify(generated.tasks) : generated.tasks;
     proposed = renderPlanMarkdown(input.title, tasks, `_Proposed by the planner for objective \`${objectiveId}\`._`);
     await writeFileAtomic(proposedPlanPath(dir), proposed);
@@ -265,7 +287,7 @@ async function planIfNeeded(input: PlanPhaseInput): Promise<'ready' | ObjectiveO
     expiresAtMs: Date.now() + 7 * 24 * 60 * 60 * 1000,
   });
   onEvent(
-    planEvent('approval.request', agent.id, sessionId, {
+    planEvent('approval.request', agent.id, {
       requestId: request.requestId,
       action: 'run_plan',
       detail: `plan for ${objectiveId}: ${summary}`.slice(0, 500),
@@ -273,7 +295,7 @@ async function planIfNeeded(input: PlanPhaseInput): Promise<'ready' | ObjectiveO
     }),
   );
   const outcome = await request.outcome;
-  onEvent(planEvent('approval.resolved', agent.id, sessionId, { requestId: request.requestId, decision: outcome.decision, by: outcome.by }));
+  onEvent(planEvent('approval.resolved', agent.id, { requestId: request.requestId, decision: outcome.decision, by: outcome.by }));
   if (outcome.decision !== 'approved') {
     return { status: 'paused', taskId: 'plan', reason: `plan ${outcome.decision} — edit plan.proposed.md and approve, or restart to re-request` };
   }
@@ -440,17 +462,9 @@ export function startObjectiveRun(
       // spec §7: every task session gets a session record (session.yaml +
       // index row) under the agent it runs as, so its events route to a
       // transcript like any other session's
-      onSessionStarted: async ({ sessionId, agent: runAs }) => {
-        await mkdir(path.join(agentDir(ctx.home, runAs.workspaceId, runAs.id), 'sessions', sessionId), { recursive: true });
-        const record = { id: sessionId, agentId: runAs.id, objectiveId, state: 'running' as const };
-        writeSessionYaml(ctx.home, runAs.workspaceId, runAs.id, sessionId, record);
-        indexSession(ctx.db, record, Date.now());
-      },
-      onSessionEnded: ({ sessionId, agent: runAs, state, providerSessionId }) => {
-        const record = { id: sessionId, agentId: runAs.id, objectiveId, state, ...(providerSessionId === undefined ? {} : { providerSessionId }) };
-        writeSessionYaml(ctx.home, runAs.workspaceId, runAs.id, sessionId, record);
-        indexSession(ctx.db, record, Date.now());
-      },
+      onSessionStarted: ({ sessionId, agent: runAs }) => recordSession(ctx, runAs, { id: sessionId, objectiveId, state: 'running' }),
+      onSessionEnded: ({ sessionId, agent: runAs, state, providerSessionId }) =>
+        recordSession(ctx, runAs, { id: sessionId, objectiveId, state, ...(providerSessionId === undefined ? {} : { providerSessionId }) }),
       onTaskSettled: (task, result) => {
         const routed = decisions.get(task.id);
         if (routed === undefined) return;

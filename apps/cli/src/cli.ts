@@ -57,6 +57,7 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos agent wait <id> --workspace <ws> [--until blocked,done] [--timeout-ms 30000] [--after-seq <n>]
   aeos agent seen|unread|settle|unsettle <id> --workspace <ws>
   aeos inbox               # every agent, attention-sorted (blocked first)
+  aeos approvals [list] | aeos approvals approve|deny <requestId>   # parked actions waiting for you
   aeos memory proposals --workspace <ws> --agent <agent>        # queued lessons/preferences
   aeos memory accept [<id>] --workspace <ws> --agent <agent>    # all, or one
   aeos memory reject <id> --workspace <ws> --agent <agent>
@@ -373,13 +374,33 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       const pollMs = Number(parsed.flags.get('poll-ms')?.[0] ?? 250);
       const timeoutMs = Number(parsed.flags.get('timeout-ms')?.[0] ?? 120_000);
       const deadline = Date.now() + timeoutMs;
+      const announced = new Set<string>();
+      let lastLine = '';
       for (;;) {
         const status = await client.objectiveStatus(workspaceId, agentId, id);
         const states = status.tasks.map((t) => t.status);
-        io.out(`tasks: ${states.join(', ')}`);
-        if (states.every((s) => s === 'completed')) {
+        const line = `tasks: ${states.join(', ')}`;
+        if (line !== lastLine) io.out(line);
+        lastLine = line;
+        if (states.length > 0 && states.every((s) => s === 'completed')) {
           io.out(`objective ${id} completed`);
           return 0;
+        }
+        // a planner proposal waits for a human (P3.M1 run_plan tier)
+        if (!status.running && (status.proposedTasks?.length ?? 0) > 0) {
+          io.out(`plan proposed (${String(status.proposedTasks?.length)} tasks):`);
+          for (const t of status.proposedTasks ?? []) io.out(`  ${t.id} [${t.taskClass}] ${t.title}`);
+          io.err(`waiting for your approval — run: aeos objective approve-plan ${id} --workspace ${workspaceId} --agent ${agentId}`);
+          return 4;
+        }
+        // a parked tool call: say so once, with the command that answers it
+        const agentState = await client.agentStatus(workspaceId, agentId).catch(() => undefined);
+        if (agentState?.status === 'blocked' && agentState.reason?.startsWith('approval requested') === true) {
+          for (const pending of await client.listApprovals()) {
+            if (announced.has(pending.requestId)) continue;
+            announced.add(pending.requestId);
+            io.err(`approval needed (${pending.tier}): ${pending.detail}\n  approve: aeos approvals approve ${pending.requestId}   deny: aeos approvals deny ${pending.requestId}`);
+          }
         }
         if (states.includes('blocked')) {
           io.err(`objective ${id} paused (blocked task)`);
@@ -391,6 +412,21 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         await delay(pollMs);
       }
+    }
+    if (group === 'approvals') {
+      if (action === undefined || action === 'list') {
+        const pending = await client.listApprovals();
+        if (pending.length === 0) io.out('no pending approvals');
+        for (const p of pending) io.out(`${p.requestId}  ${p.tier}  ${p.detail}  (expires ${p.expiresAt})`);
+        return 0;
+      }
+      if ((action === 'approve' || action === 'deny') && id !== undefined) {
+        const result = await client.resolveApproval(id, action);
+        io.out(result.resolved ? `${action === 'approve' ? 'approved' : 'denied'} ${id}` : `${id} was not pending`);
+        return result.resolved ? 0 : 1;
+      }
+      io.err('usage: aeos approvals [list] | aeos approvals approve|deny <requestId>');
+      return 2;
     }
     if (group === 'stop' && action === 'status') {
       io.out(JSON.stringify(await client.stopStatus()));

@@ -14,7 +14,8 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "@aeos/ade",
-    "@aeos/desktop"
+    "@aeos/desktop",
+    "@aeos/docs"
   ],
   "privatePackages": {
     "version": true,
