@@ -302,7 +302,7 @@ See `THIRD_PARTY_NOTICES.md`.
 - [x] **T4** Attention push: `<home>/notifications.yaml` webhooks in json, ntfy or slack format. *Accept: a blocked agent produces exactly one ntfy POST with a high-priority title.*
 **Exit gate:** Playwright T7 green in CI, and the full bar green.
 
-## Phase P3 — Autonomy (v0.3)  `[~]`
+## Phase P3 — Autonomy (v0.3)  `[x]`
 
 **Exit gate for the phase:** unattended demo — objective in, plan generated
 with task classes, tasks routed to different models by class, verification
@@ -349,7 +349,7 @@ already consumes this); delegation: a task may name another agent or a spawned
 specialist sub-session, coordinating via plan file + git only.
 - [x] **T1** Wakeup scheduler (cron + idle) with durable job persistence across daemon restarts. *Accept: job scheduled, daemon killed, job fires after restart.*
 - [x] **T2** Delegation: assign task → spawn/target other agent → integrate via plan+git. *Accept: multi-agent fixture objective completes with one delegated task.*
-**Exit gate = P3 exit gate** (top of this section).
+**Exit gate = P3 exit gate** (top of this section) — green 2026-09-26: `apps/aeosd/test/p3-exit.e2e.test.ts` (real daemon, unattended). `v0.3` tag is Gate 3 (Kabeer).
 
 ## Phase P4 — Scale + community (v0.4)  `[ ]`
 
