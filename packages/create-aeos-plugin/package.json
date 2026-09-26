@@ -1,6 +1,6 @@
 {
   "name": "create-aeos-plugin",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Scaffold an AEOS plugin (a working example provider that passes the adapter conformance suite).",
   "license": "MIT",
   "type": "module",
