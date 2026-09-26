@@ -1,8 +1,9 @@
 # Board — AEOS
 
 > **Generated view** — as of 2026-09-26, **P1 complete (`v0.1.0` tagged);
-> P2 complete (v0.2.0 release PR #120 awaits Gate 3); P3 and P4 complete on
-> code (v0.3.0 / v0.4.0 follow via Gate 2 → Gate 3); the repo is public
+> P2 complete (#120 merged to `main`; `v0.2.0` tag pending); P3 and P4
+> complete on code and on `main` via #126 (`v0.3.0` tag pending; v0.4.0
+> follows the Version PR); the repo is public
 > (P5.M4.T1 verified); P5 code-complete up to the human-only steps (rc/v1.0
 > tags, launch).**
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
@@ -14,8 +15,8 @@
 
 | | |
 |---|---|
-| **Now** | Every agent-doable v1 task is done. What remains needs Kabeer: Gate 3 merges/tags (#120 v0.2.0, then v0.3/v0.4/rc), manual sign-offs (P1.M4/M10 live smokes, P4.M3.T1 reboot, P5.M2.T2 blind test), beta announcement + launch. |
-| **Next** | After #120 merges: Gate 2 promotion #126 (P3+P4+P5 → `staging`) and the v0.3.0 / v0.4.0 release PRs; then tag `v1.0.0-rc.1` (release pipeline builds, signs and upgrade-tests it). |
+| **Now** | Kabeer: push tags `v0.2.0` (on `2f3ac73`, the #120 merge) and `v0.3.0` (on `f5c3820`, `main` today; this triggers `release.yml`), since the agent session's git proxy refuses tag pushes; enable GitHub Pages (Source: GitHub Actions) so the docs deploy on `main` works. Manual sign-offs: P1.M4/M10 live smokes, P4.M3.T1 reboot, P5.M2.T2 blind test. |
+| **Next** | P5.M6 public site/docs/install (#150–#154); v0.4.0 via the `changeset-release/develop` Version PR → `staging` → `main`; then tag `v1.0.0-rc.1` (release pipeline builds, signs and upgrade-tests it). |
 | **Later** | P5.M6 public site: React landing page, Starlight docs (with React islands) over `docs/` Markdown, one-line CLI install, desktop downloads, docs sweep → P5.M4 public beta (T3 weekly grooming) → P5.M5 GA (T1 blocker burn-down, T4 post-launch week). |
 
 ## Milestones
@@ -126,3 +127,4 @@ None.
 | D19 | 2026-09-26 | GitHub task issues (one per ROADMAP task) were never closed as tasks completed: 30 issues for `[x]` tasks (P2.M1/M6/M7/M8, all of P3, P4 except M3.T1/T3, P5.M2.T1/T3/T4) were still open; three done tasks also carried `good first issue` | **Fixed same day**: closed as completed — P2.M7→#114, P2.M8→#117, P3.M1→#118, M2→#121, M3→#122, M4→#123, M5→#124, P4.M1→#127, M2→#128, M3.T2→#129, M4→#131, P5.M2→#132 (P2.M1/M6 predate this log). Tasks at `[~]` (manual sign-off) stay open. Rule going forward: the PR completing a task closes its issue (`Closes #n`) |
 | D20 | 2026-09-26 | The BOARD totals paragraph still said 107 tasks / 67 done / 40 remaining after P2.M9 and P2.M10 were added and P2–P5 were worked through; the Now/Next rows still described P4 as underway | **Fixed same day**: recounted from ROADMAP checkboxes (114 tasks: 104 `[x]`, 6 `[~]`, 4 `[ ]`), rewrote the header and Now/Next/Later |
 | D21 | 2026-09-26 | The repo was already public, with Issues and Discussions on, while ROADMAP/BOARD still listed "repo flip" (P5.M4.T1) as Kabeer's open step; S16 also justified leaving out arm runners because the repo was private | **Fixed same day**: T1 verified post-flip (`main` protection with required `ci`, community profile 100%, gitleaks clean over full history) and flipped `[x]`, issue #85 closed. The arm-runner note stays accurate as history; re-check arm availability now that the repo is public |
+| D22 | 2026-09-26 | GitHub treats #120 (`staging`→`main`) and #126 (`develop`→`staging`) as a stack. When #120 merged, #126 was retargeted onto `main` and merged there, so `main` jumped straight to `develop`@`b4f1f47` (0.3.0, P3–P5) and skipped the Gate 2 hop; `staging` was left behind | **Fixed same day**: `staging` synced to `main` (#155). Rule going forward: don't open a Gate 2 PR while its `staging` is the head of an open Gate 3 PR; open it after the release merges. The v0.3.0 artifacts carry P4/P5 code the v0.3.0 notes don't describe; v0.4.0's notes cover it |
