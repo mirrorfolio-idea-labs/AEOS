@@ -56,7 +56,7 @@ jobs:
     steps:
       - name: system packages
         run: |
-          pacman -Syu --noconfirm --needed git rust nodejs pnpm python \
+          pacman -Syu --noconfirm --needed git rust python \
             webkit2gtk-4.1 gtk3 libsoup3 hicolor-icon-theme namcap \
             xorg-server-xvfb xorg-xauth dbus xdg-utils desktop-file-utils curl procps-ng
       - uses: actions/checkout@v4

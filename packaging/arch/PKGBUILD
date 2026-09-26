@@ -20,8 +20,7 @@ url='https://github.com/mirrorfolio-idea-labs/AEOS'
 license=('MIT')
 depends=('webkit2gtk-4.1' 'gtk3' 'glib2' 'cairo' 'pango' 'gdk-pixbuf2' 'libsoup3'
          'openssl' 'hicolor-icon-theme' 'git')
-makedepends=('rust' 'cargo' 'nodejs' 'pnpm' 'python')
-checkdepends=('nodejs')
+makedepends=('rust' 'cargo' 'python')
 optdepends=('xdg-utils: open aeos:// links from other apps'
             'libnotify: notification daemon support for agent alerts')
 provides=('aeos-desktop')
@@ -36,17 +35,35 @@ if [[ -n $_checkout && -z ${AEOS_GIT_URL:-} ]]; then
 fi
 source=("aeos::git+${AEOS_GIT_URL:-https://github.com/mirrorfolio-idea-labs/AEOS.git}#${AEOS_REF:-tag=v$pkgver}")
 sha256sums=('SKIP')
+# Built with the Node line the project targets (.nvmrc), not Arch's current
+# nodejs: native modules (better-sqlite3, node-pty) track Node 22's ABI, and the
+# daemon bundle ships the exact runtime it was built with. Pinned + checksummed.
+_node=22.23.3
+source_x86_64=("https://nodejs.org/dist/v$_node/node-v$_node-linux-x64.tar.xz")
+source_aarch64=("https://nodejs.org/dist/v$_node/node-v$_node-linux-arm64.tar.xz")
+sha256sums_x86_64=('df450af89261115ef9f9e3830c3eeb2cc9213b63c720b1af623cb5dcbe2e02de')
+sha256sums_aarch64=('a44aeb94849a299b22df10b9e622ec2f605c2183501bc40590705131de7c740f')
+
+_use_node22() {
+  local narch=x64
+  [[ $CARCH == aarch64 ]] && narch=arm64
+  export PATH="$srcdir/bin:$srcdir/node-v$_node-linux-$narch/bin:$PATH"
+  # pnpm via this Node's corepack, pinned by package.json's packageManager, so
+  # pnpm and node-gyp run on Node 22 (Arch's pnpm hard-wires /usr/bin/node)
+  export COREPACK_ENABLE_DOWNLOAD_PROMPT=0 COREPACK_HOME="$srcdir/corepack"
+  [[ -x $srcdir/bin/pnpm ]] || { mkdir -p "$srcdir/bin" && corepack enable --install-directory "$srcdir/bin" pnpm; }
+}
 
 prepare() {
+  _use_node22
   cd aeos
   export CARGO_HOME="$srcdir/cargo-home"
-  # the repo pins pnpm (packageManager); pnpm >= 10 switches to that exact
-  # version itself, which keeps `pnpm deploy` (used by the bundle) consistent
   pnpm install --frozen-lockfile
   cargo fetch --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
 }
 
 build() {
+  _use_node22
   cd aeos
   export CARGO_HOME="$srcdir/cargo-home"
   pnpm build
@@ -56,6 +73,7 @@ build() {
 }
 
 check() {
+  _use_node22
   cd aeos
   export CARGO_HOME="$srcdir/cargo-home"
   cargo test --frozen --release --manifest-path apps/desktop/src-tauri/Cargo.toml -- --test-threads=1
