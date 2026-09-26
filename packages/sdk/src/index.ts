@@ -5,6 +5,7 @@ export {
   type AgentStatusEntry,
   type AttentionAction,
   type InboxItem,
+  type MemoryProposalView,
   type DiffScope,
   type ObjectiveDiff,
   type ReviewComment,

@@ -25,6 +25,7 @@ export {
   applyProposals,
   enqueueProposal,
   listProposals,
+  rejectProposal,
   syncIndex,
   type ApplyResult,
   type MemoryProposal,

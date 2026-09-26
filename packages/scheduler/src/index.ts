@@ -37,3 +37,4 @@ export {
   type VerifyOutcome,
   type VerifyResult,
 } from './verify.js';
+export { runRetrospective, type RetrospectiveInput } from './retrospective.js';

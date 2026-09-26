@@ -85,6 +85,15 @@ export interface InboxItem extends AgentStatusEntry {
 
 export type AttentionAction = 'seen' | 'unread' | 'settle' | 'unsettle';
 
+export interface MemoryProposalView {
+  id: string;
+  op: 'write' | 'archive' | 'consolidate';
+  path: string;
+  title?: string;
+  hook?: string;
+  content?: string;
+}
+
 export interface EventStreamOptions {
   typePrefix?: string;
   agentId?: string;
@@ -260,6 +269,24 @@ export class AeosClient {
     verify?: string[];
   }): Promise<{ id: string }> {
     return this.request('POST', '/v1/objectives', input);
+  }
+
+  /** Queued memory proposals awaiting acceptance (retrospective, curator — P3.M4). */
+  memoryProposals(workspaceId: string, agentId: string): Promise<MemoryProposalView[]> {
+    return this.request('GET', `/v1/memory/proposals?workspaceId=${workspaceId}&agentId=${agentId}`);
+  }
+
+  /** Accept proposals (all, or `ids`) — they reach the NEXT session snapshot. */
+  applyMemoryProposals(
+    workspaceId: string,
+    agentId: string,
+    ids?: string[],
+  ): Promise<Array<{ id: string; status: 'applied' | 'failed'; error?: string }>> {
+    return this.request('POST', `/v1/memory/proposals/apply?workspaceId=${workspaceId}&agentId=${agentId}`, ids === undefined ? {} : { ids });
+  }
+
+  rejectMemoryProposal(workspaceId: string, agentId: string, id: string): Promise<{ rejected: string }> {
+    return this.request('POST', `/v1/memory/proposals/${id}/reject?workspaceId=${workspaceId}&agentId=${agentId}`, {});
   }
 
   /** Router decisions + realized cost per task attempt (P3.M2). */

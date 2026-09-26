@@ -505,6 +505,55 @@
         }
       }
     },
+    "/v1/memory/proposals": {
+      "get": {
+        "tags": [
+          "memory"
+        ],
+        "description": "Queued memory proposals (retrospective, curator, agents) awaiting acceptance.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/memory/proposals/apply": {
+      "post": {
+        "tags": [
+          "memory"
+        ],
+        "description": "Accept queued proposals (all, or `ids`) — they take effect in the NEXT session snapshot (spec §8 rule 2).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/memory/proposals/{id}/reject": {
+      "post": {
+        "tags": [
+          "memory"
+        ],
+        "description": "Reject (drop) one queued proposal; memory is untouched.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/v1/events": {
       "get": {
         "tags": [

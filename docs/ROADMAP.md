@@ -334,13 +334,13 @@ task type whose result gates progression and feeds checkpoint status.
 - [x] **T2** Planner emits verification tasks after each implement task. *Accept: generated plans interleave verify tasks; failed verify triggers 3-strike backoff.*
 **Exit gate:** induced verification failure blocks the plan exactly as specced.
 
-### M4 — Retrospective / self-learning loop  `[ ]`
+### M4 — Retrospective / self-learning loop  `[x]`
 **Context brief:** Spec §8.5. Post-objective retrospective diffs plan vs
 actuals (corrections, failures, re-dos) and writes `lessons/` +
 `preferences/` proposals via `memory.propose`; preferences feed every future
 frozen snapshot.
-- [ ] **T1** Retrospective job generating proposals from checkpoint/transcript diffs. *Accept: fixture objective produces the expected lesson files.*
-- [ ] **T2** Snapshot pipeline includes accepted preferences. *Accept: next-session snapshot provably contains the new preference (byte-level test).*
+- [x] **T1** Retrospective job generating proposals from checkpoint/transcript diffs. *Accept: fixture objective produces the expected lesson files.*
+- [x] **T2** Snapshot pipeline includes accepted preferences. *Accept: next-session snapshot provably contains the new preference (byte-level test).*
 **Exit gate:** two-objective fixture shows objective 2 benefiting from objective 1's lessons.
 
 ### M5 — Scheduler wakeups + delegation  `[ ]`

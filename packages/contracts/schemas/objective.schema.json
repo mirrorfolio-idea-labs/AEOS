@@ -22,6 +22,14 @@
         "repo": {
           "type": "string"
         },
+        "retrospective": {
+          "type": "string",
+          "enum": [
+            "propose",
+            "apply",
+            "off"
+          ]
+        },
         "verify": {
           "type": "array",
           "items": {
