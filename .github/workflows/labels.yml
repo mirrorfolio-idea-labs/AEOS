@@ -1,0 +1,18 @@
+name: labels
+# P5.M4.T2: .github/labels.yml is the source of truth for issue labels.
+on:
+  push:
+    branches: [main, develop]
+    paths: ['.github/labels.yml', '.github/workflows/labels.yml']
+  workflow_dispatch:
+permissions:
+  issues: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EndBug/label-sync@v2
+        with:
+          config-file: .github/labels.yml
+          delete-other-labels: false

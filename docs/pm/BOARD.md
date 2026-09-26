@@ -69,14 +69,14 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 deploy targets `[~]` | 1/3 (+2 `[~]`) | `aeos service install` (systemd user unit / LaunchAgent, `KillMode=process` so runners survive restarts); `docker compose` image + quickstart CI job; token gate scoped to `/v1` (constant-time, `/healthz`, token file) + ADE sign-in; `docs/deploy.md` TLS recipes. Reboot + VM TLS sign-off manual (guide) — 2026-09-26 |
 | M4 TCP + Kubernetes `[x]` | 2/2 | TLS-PSK runner transport (mutual auth, per-session 0600 key, endpoint in `runnerSocket` — contracts unchanged); re-adoption suite over unix + TCP, TLS wire fuzz; Helm chart (single-writer Deployment, PVC, kept token, hardened pod) + `helm-lint` on PRs + `nightly-k8s` kind golden path — 2026-09-26 |
 
-### P5 — v1.0 public release `[~]` — 7/18 tasks (+1 awaiting a human)
+### P5 — v1.0 public release `[~]` — 8/18 tasks (+1 awaiting a human)
 
 | Milestone | Tasks | Focus | Gate |
 |---|---|---|---|
 | M1 OSS readiness `[x]` | 4/4 | LICENSE ADR ✓, health files ✓, license audit ✓, history hygiene ✓ | done 2026-07-18 (early, per spine exception) |
 | M2 docs site + onboarding `[~]` | 3/4 (+1 `[~]`) | Starlight site generated from `docs/` (links rewritten, ADR index generated, built-site link+anchor check, Pages deploy on main); quickstart + first-agent tutorial executed by CI; reproducible screenshots + asciicast (`demo:assets`) | blind newcomer test manual |
 | M3 release engineering | 0/3 | changesets, signed CI-only artifacts + SBOM, compat policy | after M1–M2 |
-| M4 public beta | 0/3 | repo flip, triage workflow, feedback grooming | requires P4 exit |
+| M4 public beta `[~]` | 1/3 | triage live: `.github/labels.yml` + label-sync, SLA table in CONTRIBUTING, 11 seeded good-first issues (#134–#144); repo flip + beta grooming are Kabeer's | requires P4 exit |
 | M5 GA launch | 0/4 | blocker burn-down, v1.0.0, comms, post-launch week | = v1 |
 
 **Total defined work: 107 tasks** (44 P1 + 24 P2 + 11 P3 + 10 P4 + 18 P5)
@@ -119,3 +119,4 @@ None.
 | D16 | 2026-09-26 | Stray-branch sweep: `chore/aeos-m4-smoke-harness`, `feat/aeos-p1-m1-contracts`, `feat/aeos-p1-m3-runner`, `feat/p2-m6-codex` carry zero commits beyond `develop` (all merged via PRs) | **Logged**: no feature to rescue; remote deletion left to Kabeer (agent delete blocked by permission policy) |
 | D17 | 2026-09-26 | BOARD header + Now/Next rows still read "as of 2026-08-26 … P2 underway, M7 next" through P2 exit and P3.M1–M4 (R3 miss, same class as D13) | **Fixed same day** at the P3 exit commit: header and Now/Next regenerated |
 | D18 | 2026-09-26 | Spec §7 requires a transcript per session, but objective-run task sessions had no session record, so every event logged `TranscriptRoutingError` and no transcript was written (the canary e2e called it a "documented v0 deferral"); an errored objective run was also silent in the daemon log | **Fixed same day** (`fix/objective-transcripts`): scheduler `onSessionStarted/onSessionEnded` hooks register each task session (session.yaml + index, under the executing agent); canary e2e now asserts transcripts exist and never contain the canary; errored runs log to stderr |
+| D19 | 2026-09-26 | GitHub task issues (one per ROADMAP task) were never closed as tasks completed: 30 issues for `[x]` tasks (P2.M1/M6/M7/M8, all of P3, P4 except M3.T1/T3, P5.M2.T1/T3/T4) were still open; three done tasks also carried `good first issue` | **Fixed same day**: closed as completed — P2.M7→#114, P2.M8→#117, P3.M1→#118, M2→#121, M3→#122, M4→#123, M5→#124, P4.M1→#127, M2→#128, M3.T2→#129, M4→#131, P5.M2→#132 (P2.M1/M6 predate this log). Tasks at `[~]` (manual sign-off) stay open. Rule going forward: the PR completing a task closes its issue (`Closes #n`) |
