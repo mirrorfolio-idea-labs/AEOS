@@ -36,12 +36,28 @@ describe('supervisor PTY bridge (P2.M5.T2)', () => {
     });
   });
 
-  const started: string[] = [];
+  const started: Array<{ id: string; runnerPid?: number }> = [];
 
-  afterEach(() => {
+  const alive = (pid: number): boolean => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  afterEach(async () => {
     // detached runners outlive the supervisor by design (spec §10) and keep
-    // writing heartbeats/transcripts — stop them before deleting their dirs
-    for (const id of started.splice(0)) supervisor.stopSession(id, 'test teardown');
+    // writing heartbeats/transcripts — stop them and wait for them to EXIT
+    // before deleting their dirs (under CI load that can take seconds)
+    for (const session of started.splice(0)) {
+      supervisor.stopSession(session.id, 'test teardown');
+      const pid = session.runnerPid;
+      if (pid === undefined) continue;
+      for (let i = 0; i < 200 && alive(pid); i++) await new Promise((r) => setTimeout(r, 50));
+      if (alive(pid)) process.kill(pid, 'SIGKILL');
+    }
     supervisor.close();
     fs.rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
   });
@@ -60,7 +76,7 @@ describe('supervisor PTY bridge (P2.M5.T2)', () => {
         `let i=0; const t=setInterval(()=>{console.log('line-'+(++i)); if(i>=3) clearInterval(t);}, 100);`,
       ],
     });
-    started.push(record.id);
+    started.push(record);
 
     let ptyOut = '';
     const handle = await supervisor.attachPty(record.id, (data: string) => {
