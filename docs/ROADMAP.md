@@ -437,11 +437,11 @@ M1–M3 of this phase.
 - [ ] **T3** Feedback intake loop: beta findings groomed into this ROADMAP weekly. *Accept: at least one grooming pass recorded in the PM sprint log.*
 **Exit gate:** two weeks of beta with all P0/P1 bugs fixed, or ≥2 external PRs merged — whichever comes first.
 
-### M5 — v1.0 GA launch  `[ ]`
+### M5 — v1.0 GA launch  `[~]`
 **Context brief:** The release itself, then the first week of consequences.
 - [ ] **T1** Release-blocker burn-down. *Accept: zero known P0/P1 issues at cut time.*
-- [ ] **T2** `v1.0.0`: tag, artifacts, changelog, v0.x upgrade notes. *Accept: upgrade from v0.4 verified; artifacts installable.*
-- [ ] **T3** Launch comms: README final polish, blog post, Show HN + X + Reddit posts, awesome-list submissions. *Accept: announcement live and linked from README.*
+- [~] **T2** `v1.0.0`: tag, artifacts, changelog, v0.x upgrade notes. *Accept: upgrade from v0.4 verified; artifacts installable.* *(Upgrade test built — `scripts/release/upgrade-test.mjs`, run by `release.yml` against the previous tag + staging; verified from v0.1.0 and the v0.2 candidate. v1.0.0 notes drafted. The tag itself is Gate 3.)*
+- [~] **T3** Launch comms: README final polish, blog post, Show HN + X + Reddit posts, awesome-list submissions. *Accept: announcement live and linked from README.* *(Launch kit drafted in `notes/launch/` with the evidence for every claim; publishing is Kabeer's.)*
 - [ ] **T4** Post-launch week: issue triage per SLA, hotfix policy exercised (or dry-run). *Accept: retro written into the PM system; hotfix path proven.*
 **Exit gate = P5 exit gate = v1 shipped.**
 

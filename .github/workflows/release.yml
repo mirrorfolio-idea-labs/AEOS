@@ -35,6 +35,25 @@ jobs:
           v="$(node -p "require('./apps/aeosd/package.json').version")"
           test "v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != package version v$v"; exit 1; }
 
+  # P5.M5.T2: state written by earlier releases is read and resumed by this
+  # one (docs/compatibility.md) — the previous tag and the staging tier
+  upgrade:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: upgrade from the previous release and from staging
+        run: |
+          git fetch --tags --force origin
+          prev="$(git tag -l 'v*' --sort=-v:refname | grep -vx "${GITHUB_REF_NAME}" | head -1)"
+          node scripts/release/upgrade-test.mjs ${prev:+"$prev"} origin/staging
+
   bundles:
     needs: verify
     strategy:
@@ -87,7 +106,7 @@ jobs:
     uses: ./.github/workflows/desktop.yml
 
   sign-and-release:
-    needs: [bundles, npm-packages, desktop]
+    needs: [bundles, npm-packages, desktop, upgrade]
     runs-on: ubuntu-latest
     permissions:
       contents: write        # GitHub Release
