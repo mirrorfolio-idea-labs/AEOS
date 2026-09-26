@@ -34,7 +34,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[~]` — 19/24 tasks
+### P2 — Safety + polish (v0.2) `[~]` — 21/24 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
@@ -44,7 +44,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M4 memory curator `[x]` | 3/3 | idle-triggered dry-run scaffold, propose-pipeline ops (deterministic v0), own trail + never-delete proof; daemon stays dry-run-only for now — done 2026-08-25 (second overnight continuation) |
 | M5 PTY attach + co-edit guard `[x]` | 3/3 | runner PTY (minimal-env shell), WS attach gated to allow-tier + xterm Takeover tab, ADR-009 detect-and-pause guard (unwired by design until worktrees) — done 2026-08-25 (deps approved mid-session; third overnight continuation) |
 | M6 Codex adapter `[x]` | 2/2 | recorded-fixture translation (codex-cli 0.149.1), resume, conformance parity; capability matrix test-enforced incl. README — done 2026-08-26 |
-| M7 managed binaries | 0/2 | pin/verify, version-gated capabilities |
+| M7 managed binaries `[~]` | 2/2 | pinned npm-integrity installs sealed by tree hash, PATH never overrides a pin, typed version gates; exit gate = `pinned-harnesses` CI job — 2026-09-26 |
 | M8 Tauri wrapper | 0/3 | desktop shell, notifications, CI artifacts |
 
 ### P3 — Autonomy (v0.3) `[ ]` — 0/11 tasks
@@ -87,9 +87,8 @@ GitHub issue
 
 ## Active sprint
 
-[S10](sprints/S10.md) — P2.M6 Codex adapter, closed 2026-08-26 at the
-exit gate (all four adapters complete the same fixture objective).
-Next sprint opens on P2.M7 managed harness binaries.
+[S11](sprints/S11.md) — P2.M7 managed harness binaries (opened 2026-09-26);
+then P2.M9 herdr-derived agent runtime, P2.M8 Tauri → v0.2.
 
 ## Blockers
 

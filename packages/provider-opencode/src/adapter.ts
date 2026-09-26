@@ -45,6 +45,11 @@ export interface OpencodeAdapterOptions {
   /** Slot → persistent data home for subscription accounts (see profile.ts). */
   subscriptionHomeFor?: (slot: string) => string;
   runChild?: RunChild;
+  /**
+   * argv prefix resolver (P2.M7): pinned managed binary, BYO path or PATH
+   * name. Called per spawn so verification/gating errors fail that spawn.
+   */
+  resolveCommand?: () => readonly string[];
 }
 
 class OpencodeSessionHandle implements SessionHandle {
@@ -130,7 +135,7 @@ export class OpencodeAdapter implements HarnessAdapter {
 
   buildArgv(opts: SpawnOptions): string[] {
     return [
-      'opencode',
+      ...(this.opts.resolveCommand?.() ?? ['opencode']),
       'run',
       opts.objective,
       '--format',

@@ -36,6 +36,10 @@
             "version": {
               "type": "string"
             },
+            "binaryPath": {
+              "type": "string",
+              "minLength": 1
+            },
             "featureToggles": {
               "type": "object",
               "properties": {

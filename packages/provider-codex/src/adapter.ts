@@ -45,6 +45,11 @@ export interface CodexAdapterOptions {
   /** Slot → persistent login home for subscription accounts (see profile.ts). */
   subscriptionHomeFor?: (slot: string) => string;
   runChild?: RunChild;
+  /**
+   * argv prefix resolver (P2.M7): pinned managed binary, BYO path or PATH
+   * name. Called per spawn so verification/gating errors fail that spawn.
+   */
+  resolveCommand?: () => readonly string[];
 }
 
 class CodexSessionHandle implements SessionHandle {
@@ -136,7 +141,7 @@ export class CodexAdapter implements HarnessAdapter {
 
   buildArgv(opts: SpawnOptions): string[] {
     return [
-      'codex',
+      ...(this.opts.resolveCommand?.() ?? ['codex']),
       'exec',
       '--json',
       '--skip-git-repo-check',

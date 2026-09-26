@@ -20,7 +20,10 @@ export const AgentConfigSchema = z.object({
   avatar: z.string().optional(),
   harness: z.object({
     provider: z.enum(['claude-code', 'codex', 'opencode']),
+    /** Pinned harness version — resolved to a verified managed install (P2.M7). */
     version: z.string().optional(),
+    /** Bring-your-own executable, used when no version is pinned (P2.M7.T2). */
+    binaryPath: z.string().min(1).optional(),
     featureToggles: FeatureTogglesSchema,
   }),
   credentialProfileId: z.string().min(1),
