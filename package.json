@@ -14,7 +14,8 @@
     "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs",
     "changeset": "changeset",
     "changeset:version": "changeset version && pnpm install --lockfile-only",
-    "release:bundle": "node scripts/release/bundle.mjs"
+    "release:bundle": "node scripts/release/bundle.mjs",
+    "release:upgrade-test": "node scripts/release/upgrade-test.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
