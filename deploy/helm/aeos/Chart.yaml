@@ -1,0 +1,10 @@
+apiVersion: v2
+name: aeos
+description: AEOS — durable, resumable AI coding agents whose state lives as files (aeosd + web UI).
+type: application
+version: 0.4.0
+appVersion: "0.4.0"
+home: https://github.com/mirrorfolio-idea-labs/AEOS
+sources:
+  - https://github.com/mirrorfolio-idea-labs/AEOS
+keywords: [ai, agents, coding, aeos]

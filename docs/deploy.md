@@ -8,6 +8,7 @@ where the process runs changes (spec §16). Pick one:
 | [Your machine, as a service](#1-your-machine-as-a-user-service) | A laptop or workstation; you want AEOS always on | `aeos service install` |
 | [Docker Compose](#2-docker-compose) | A home server or VM; one command | `docker compose up -d` |
 | [Remote access](#3-remote-access-token--tls) | Using the web UI from another device | token + reverse proxy |
+| [Kubernetes](#4-kubernetes-helm) | A cluster you already run | `helm install aeos deploy/helm/aeos` |
 
 All state lives in `AEOS_HOME` (default `~/.aeos`) as plain files. Back up
 that directory and you have backed up AEOS.
@@ -121,3 +122,45 @@ server, and the web UI removes it from the address bar right away.
 
 Rotating the token means changing it and restarting aeosd; browsers then ask
 for the new token.
+
+## 4. Kubernetes (Helm)
+
+```bash
+kubectl create secret generic aeos-providers --from-literal=ANTHROPIC_API_KEY=sk-ant-...
+helm install aeos deploy/helm/aeos --set providerSecret=aeos-providers
+kubectl get secret aeos-token -o jsonpath='{.data.token}' | base64 -d; echo
+kubectl port-forward svc/aeos 7777:7777          # or enable the Ingress (values.yaml)
+```
+
+- **One replica, on purpose.** All AEOS state is files on one volume, so
+  the chart runs exactly one pod (`strategy: Recreate`) with a
+  `ReadWriteOnce` PVC. To scale, run more releases, for example one per
+  team.
+- **Token.** It is generated once and kept across `helm upgrade`. You can
+  also bring your own with `auth.existingSecret`.
+- **Security.** The pod runs non-root (uid 10001) with a read-only root
+  filesystem, all capabilities dropped and the RuntimeDefault seccomp
+  profile. `HOME` is on the volume.
+- **Tested nightly.** The nightly CI installs the chart on a `kind` cluster
+  and runs the golden path through the Service
+  (`.github/workflows/nightly-k8s.yml`). It also checks that an upgrade
+  keeps the token and the data.
+
+### Runners over TCP
+
+Coding sessions normally run in runner processes that the daemon reaches
+over a local Unix socket. To make runners reachable across hosts or pods,
+set:
+
+```bash
+AEOS_RUNNER_TRANSPORT=tcp AEOS_RUNNER_HOST=<interface to bind and dial>
+```
+
+The framed runner protocol then runs over **TLS with a per-session
+pre-shared key**:
+
+- Both sides must prove the key; a wrong key never completes a handshake.
+- Traffic is encrypted.
+- There are no certificates to manage.
+- The key lives only in a `0600` file next to the session. It never
+  appears in process arguments or the session record.

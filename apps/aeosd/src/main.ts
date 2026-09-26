@@ -66,6 +66,10 @@ async function main(): Promise<number> {
   const daemon = createDaemon({
     home: resolveHome(),
     ...(process.env['AEOS_WAKEUP_TICK_MS'] === undefined ? {} : { wakeupTickMs: Number(process.env['AEOS_WAKEUP_TICK_MS']) }),
+    // P4.M4: AEOS_RUNNER_TRANSPORT=tcp (+ AEOS_RUNNER_HOST, default 127.0.0.1)
+    ...(process.env['AEOS_RUNNER_TRANSPORT'] === 'tcp'
+      ? { runnerTransport: { kind: 'tcp' as const, host: process.env['AEOS_RUNNER_HOST'] ?? '127.0.0.1' } }
+      : {}),
     ...(apiConfig === undefined ? {} : { api: apiConfig }),
     // opt-in curator (P2.M4): dry-run idle trigger; apply mode lands in T2
     ...(process.env['AEOS_CURATOR'] !== '1'
