@@ -227,6 +227,7 @@ test('T8: deep link — ?agent=<ws>/<agent>&tab=approvals opens that agent on th
   await expect(page.getByTestId('credential-profile')).toBeVisible();
   await page.goto('/?agent=client-acme/ops-dev&tab=bogus');
   await expect(page.getByTestId('tab-objective')).toHaveAttribute('data-state', 'active');
+});
 
 test('T9: planner — auto-plan proposes a classed plan that waits for approval, then runs', async ({ page }) => {
   await page.goto('/');
