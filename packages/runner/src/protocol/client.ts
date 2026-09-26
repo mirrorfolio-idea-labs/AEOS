@@ -1,7 +1,7 @@
-import net from 'node:net';
 import type { AeosEvent } from '@aeos/contracts';
 import { PROTOCOL_VERSION } from '@aeos/contracts';
 import { encodeFrame, FrameDecoder } from './frames.js';
+import { connectEndpoint, formatEndpoint, type RunnerEndpoint } from './transport.js';
 import {
   parseWireMessage,
   SUPPORTED_VERSIONS,
@@ -11,7 +11,10 @@ import {
 } from './messages.js';
 
 export interface RunnerClientOptions {
-  socketPath: string;
+  /** Unix socket path — shorthand for `endpoint: { kind: 'unix', path }`. */
+  socketPath?: string;
+  /** Where the runner listens (unix socket, or TLS-PSK over TCP — P4.M4). */
+  endpoint?: RunnerEndpoint;
   sessionId: string;
   /** Replay starts after this seq (0 = everything retained). */
   fromSeq?: number;
@@ -52,7 +55,14 @@ export class RunnerConnectError extends Error {
  */
 export function connectRunner(options: RunnerClientOptions): Promise<RunnerClient> {
   return new Promise((resolve, reject) => {
-    const socket = net.connect(options.socketPath);
+    const endpoint: RunnerEndpoint | undefined =
+      options.endpoint ?? (options.socketPath === undefined ? undefined : { kind: 'unix', path: options.socketPath });
+    if (endpoint === undefined) {
+      reject(new RunnerConnectError('connectRunner needs a socketPath or an endpoint'));
+      return;
+    }
+    const where = formatEndpoint(endpoint);
+    const socket = connectEndpoint(endpoint);
     const decoder = new FrameDecoder();
     let settled = false;
     const pendingOpen: {
@@ -64,7 +74,7 @@ export function connectRunner(options: RunnerClientOptions): Promise<RunnerClien
       if (!settled) {
         settled = true;
         socket.destroy();
-        reject(new RunnerConnectError(`timed out connecting to ${options.socketPath}`));
+        reject(new RunnerConnectError(`timed out connecting to ${where}`));
       }
     }, options.connectTimeoutMs ?? 5000);
 
@@ -86,7 +96,7 @@ export function connectRunner(options: RunnerClientOptions): Promise<RunnerClien
       else fail(new RunnerConnectError('socket closed during handshake'));
     });
 
-    socket.once('connect', () => {
+    socket.once('ready', () => {
       socket.write(
         encodeFrame({
           t: 'hello',

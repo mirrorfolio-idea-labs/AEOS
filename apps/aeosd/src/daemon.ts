@@ -33,6 +33,11 @@ export interface DaemonConfig {
   curator?: CuratorModuleConfig;
   /** Wakeup scheduler tick (P3.M5, default 30s). Runs whenever the API is mounted. */
   wakeupTickMs?: number;
+  /**
+   * Runner transport (P4.M4): unix sockets (default) or TLS-PSK over TCP on
+   * `host` — for runners that must be reachable across hosts/pods.
+   */
+  runnerTransport?: { kind: 'unix' } | { kind: 'tcp'; host: string };
 }
 
 export interface CuratorModuleConfig {
@@ -169,7 +174,7 @@ export function createDaemon(config: DaemonConfig): Daemon {
     {
       name: 'supervisor',
       start: async () => {
-        supervisor = createSupervisor({ home, db: deps.db, bus: deps.bus });
+        supervisor = createSupervisor({ home, db: deps.db, bus: deps.bus, ...(config.runnerTransport === undefined ? {} : { transport: config.runnerTransport }) });
         await supervisor.adoptOrphans(); // boot-time re-adoption (spec §10)
       },
       stop: async () => {

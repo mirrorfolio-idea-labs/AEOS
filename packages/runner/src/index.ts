@@ -53,3 +53,14 @@ export {
   type ScreenChange,
   type ScreenDetectorOptions,
 } from './detect/screen.js';
+export {
+  PSK_BYTES,
+  PSK_CIPHERS,
+  connectEndpoint,
+  formatEndpoint,
+  listenEndpoint,
+  parseEndpoint,
+  readPskFile,
+  writePskFile,
+  type RunnerEndpoint,
+} from './protocol/transport.js';
