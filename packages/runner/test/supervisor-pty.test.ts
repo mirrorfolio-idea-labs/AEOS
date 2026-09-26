@@ -36,9 +36,14 @@ describe('supervisor PTY bridge (P2.M5.T2)', () => {
     });
   });
 
+  const started: string[] = [];
+
   afterEach(() => {
+    // detached runners outlive the supervisor by design (spec §10) and keep
+    // writing heartbeats/transcripts — stop them before deleting their dirs
+    for (const id of started.splice(0)) supervisor.stopSession(id, 'test teardown');
     supervisor.close();
-    fs.rmSync(home, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
   });
 
   it('refuses sessions without a live runner', async () => {
@@ -55,6 +60,7 @@ describe('supervisor PTY bridge (P2.M5.T2)', () => {
         `let i=0; const t=setInterval(()=>{console.log('line-'+(++i)); if(i>=3) clearInterval(t);}, 100);`,
       ],
     });
+    started.push(record.id);
 
     let ptyOut = '';
     const handle = await supervisor.attachPty(record.id, (data: string) => {
