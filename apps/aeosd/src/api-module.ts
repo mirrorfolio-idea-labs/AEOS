@@ -14,11 +14,16 @@ import {
   type HarnessAdapter,
   type ManagedHarness,
   type ResolvedHarness,
+  containerArgv,
+  currentUser,
+  homeLabelFor,
+  reapContainers,
+  type CommandContext,
 } from '@aeos/provider-core';
 import { ClaudeAdapter, type SecretResolver } from '@aeos/provider-claude';
 import { OpencodeAdapter } from '@aeos/provider-opencode';
 import { CodexAdapter } from '@aeos/provider-codex';
-import { createApprovalsRegistry } from '@aeos/policy';
+import { createApprovalsRegistry, type SandboxChoice } from '@aeos/policy';
 import { loadPolicyStack } from '@aeos/policy';
 import { secretEnvName, type SecretStore } from '@aeos/secrets';
 import {
@@ -132,9 +137,14 @@ export async function startApiModule(
   // P2.M7 managed harness binaries: pins resolve to verified installs only
   const binaries = createBinaryManager({ root: path.join(home, 'binaries') });
 
+  const homeLabel = homeLabelFor(home);
+  // P4.M1: containers of sessions that died with a previous daemon are never
+  // adopted in place (resume re-spawns from the checkpoint) — reap them
+  const reaped = reapContainers(homeLabel, config.env['AEOS_DOCKER'] ?? 'docker');
+  if (reaped.length > 0) console.error(`sandbox: reaped ${String(reaped.length)} orphaned container(s)`);
   const adapterFor = (
     agent: AgentConfig,
-    opts?: { provider?: 'claude-code' | 'codex' | 'opencode' },
+    opts?: { provider?: 'claude-code' | 'codex' | 'opencode'; sandbox?: SandboxChoice },
   ): HarnessAdapter => {
     // E2E override > router's per-class choice (P3.M2) > the agent's harness
     const provider = config.providerOverride ?? opts?.provider ?? agent.harness.provider;
@@ -186,7 +196,27 @@ export async function startApiModule(
       credential: (a: AgentConfig) => credentialFor(config, a),
       secrets,
       subscriptionHomeFor,
-      resolveCommand: () => resolve().command,
+      resolveCommand: (cmd: CommandContext): readonly string[] => {
+        const command = resolve().command;
+        const sandbox = opts?.sandbox;
+        if (sandbox === undefined || sandbox.tier !== 'container') return command;
+        // P4.M1 container tier: the harness sees the worktree, its profile and
+        // its own (read-only) binary — nothing else of this host
+        const binary = command[0];
+        const mounts =
+          binary !== undefined && path.isAbsolute(binary)
+            ? [{ host: binary.startsWith(path.join(home, 'binaries') + path.sep) ? path.join(home, 'binaries') : fs.realpathSync(binary), readOnly: true }]
+            : [];
+        const user = currentUser();
+        return containerArgv(command, cmd, {
+          image: sandbox.image,
+          network: sandbox.network,
+          homeLabel,
+          mounts,
+          ...(user === undefined ? {} : { user }),
+          ...(config.env['AEOS_DOCKER'] === undefined ? {} : { docker: config.env['AEOS_DOCKER'] }),
+        });
+      },
     };
     const gated = (adapter: HarnessAdapter, harness: ManagedHarness): HarnessAdapter =>
       gateAdapter(adapter, harness, knownVersion);

@@ -4,7 +4,7 @@ import websocket from '@fastify/websocket';
 import { openIndexDb, type EventBus, type IndexDb } from '@aeos/kernel';
 import type { AgentConfig, CredentialProfile, EffectivePolicy } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
-import type { ApprovalsRegistry } from '@aeos/policy';
+import type { ApprovalsRegistry, SandboxChoice } from '@aeos/policy';
 import type { LoadedPricing } from '@aeos/router';
 import { ApiError, sendError } from './envelope.js';
 import { registerWorkspaceRoutes } from './routes/workspaces.js';
@@ -45,7 +45,14 @@ export interface ApiServerOptions {
    * the fake. `provider` is the router's choice for a task class (P3.M2);
    * absent means the agent's own harness.
    */
-  adapterFor: (agent: AgentConfig, opts?: { provider?: 'claude-code' | 'codex' | 'opencode' }) => HarnessAdapter;
+  /**
+   * `sandbox` (P4.M1): the tier the task runs in — a `container` choice must
+   * come back as an adapter whose harness runs inside that container.
+   */
+  adapterFor: (
+    agent: AgentConfig,
+    opts?: { provider?: 'claude-code' | 'codex' | 'opencode'; sandbox?: SandboxChoice },
+  ) => HarnessAdapter;
   /**
    * Pricing index for token-derived USD (P3.M2). Defaults to the cached or
    * static index without touching the network; the daemon refreshes daily.

@@ -20,7 +20,7 @@ import {
   type ObjectiveOutcome,
   type ObjectiveWorktree,
 } from '@aeos/scheduler';
-import { compilePolicy, readObjectiveFile } from '@aeos/policy';
+import { compilePolicy, readObjectiveFile, sandboxFor, type SandboxChoice } from '@aeos/policy';
 import { applyProposals, initMemoryLayout } from '@aeos/memory';
 import {
   AeosEventSchema,
@@ -167,7 +167,7 @@ export function planningPolicy(effective: EffectivePolicy | undefined): Effectiv
   return { tiers, confirmTimeoutSeconds: effective?.confirmTimeoutSeconds ?? 300 };
 }
 
-const routeEvent = (agentId: string, taskId: string, decision: RouteDecision): AeosEvent =>
+const routeEvent = (agentId: string, taskId: string, decision: RouteDecision, sandbox?: SandboxChoice): AeosEvent =>
   AeosEventSchema.parse({
     v: 1,
     id: newEventId(),
@@ -184,6 +184,7 @@ const routeEvent = (agentId: string, taskId: string, decision: RouteDecision): A
       providerSource: decision.providerSource,
       modelSource: decision.modelSource,
       reason: decision.reason,
+      ...(sandbox === undefined ? {} : { sandbox: sandbox.tier }),
     },
   });
 
@@ -313,12 +314,23 @@ export function startObjectiveRun(
      * One policy-guarded adapter per (executing agent, provider). A delegated
      * task (P3.M5) runs under the DELEGATE's harness, credentials and policy.
      */
-    const adapterFor = async (provider: RoutedProvider, runAs: AgentConfig = agent): Promise<HarnessAdapter> => {
-      const key = `${runAs.id}:${provider}`;
+    const policyOf = async (runAs: AgentConfig): Promise<EffectivePolicy | undefined> =>
+      runAs.id === agent.id ? effective : await ctx.policyFor?.(runAs);
+    const adapterFor = async (
+      provider: RoutedProvider,
+      runAs: AgentConfig = agent,
+      sandbox?: SandboxChoice,
+    ): Promise<HarnessAdapter> => {
+      const contained = sandbox !== undefined && sandbox.tier === 'container';
+      const key = `${runAs.id}:${provider}:${contained ? `container:${sandbox.image}:${sandbox.network}` : 'none'}`;
       let cached = guarded.get(key);
       if (cached === undefined) {
-        const raw = provider === runAs.harness.provider ? ctx.adapterFor(runAs) : ctx.adapterFor(runAs, { provider });
-        const policy = runAs.id === agent.id ? effective : await ctx.policyFor?.(runAs);
+        const opts = {
+          ...(provider === runAs.harness.provider ? {} : { provider }),
+          ...(contained ? { sandbox } : {}),
+        };
+        const raw = Object.keys(opts).length === 0 ? ctx.adapterFor(runAs) : ctx.adapterFor(runAs, opts);
+        const policy = await policyOf(runAs);
         cached =
           policy === undefined
             ? raw
@@ -417,9 +429,12 @@ export function startObjectiveRun(
       selectExecution: async (task) => {
         const runAs = delegateFor(task);
         const decision = routeTask(runAs, task.taskClass, runAs.id === agent.id ? routing : loadRoutingPolicy(ctx.home, workspaceId));
-        const chosen = await adapterFor(decision.provider, runAs);
+        // P4.M1: the executing agent's policy picks the sandbox tier per task class
+        const runAsPolicy = await policyOf(runAs);
+        const sandbox = runAsPolicy === undefined ? undefined : sandboxFor(runAsPolicy, task.taskClass);
+        const chosen = await adapterFor(decision.provider, runAs, sandbox);
         decisions.set(task.id, { decision, adapter: chosen });
-        onEvent({ ...routeEvent(runAs.id, task.id, decision) });
+        onEvent({ ...routeEvent(runAs.id, task.id, decision, sandbox) });
         return { adapter: chosen, model: decision.model, ...(runAs.id === agent.id ? {} : { agent: runAs }) };
       },
       onTaskSettled: (task, result) => {

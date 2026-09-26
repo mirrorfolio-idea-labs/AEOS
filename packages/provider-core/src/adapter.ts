@@ -26,6 +26,17 @@ export interface HarnessProfile {
   argv: readonly string[];
 }
 
+/**
+ * Per-spawn context handed to an adapter's `resolveCommand` (P4.M1): what a
+ * wrapper (the container tier) needs to place the harness — the worktree,
+ * the profile whose env keys it must forward, and the session id.
+ */
+export interface CommandContext {
+  sessionId: string;
+  workdir: string;
+  profile: HarnessProfile;
+}
+
 export interface SpawnOptions {
   profile: HarnessProfile;
   /** AEOS session ULID — stamped onto every emitted event's `sessionId`. */
