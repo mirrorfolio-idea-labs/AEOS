@@ -1,0 +1,155 @@
+name: release
+# P5.M3.T2: everything ships from CI, nothing from laptops.
+#   tag vX.Y.Z (or vX.Y.Z-rc.N) on main → verify → build per-platform
+#   self-contained bundles + container image + npm packages → SBOMs (syft) →
+#   keyless signatures (cosign, GitHub OIDC) → GitHub Release (+ npm publish
+#   with provenance, + GHCR push).
+# workflow_dispatch and PRs touching the pipeline run the SAME steps as a
+# dry run (no publish, no push, no release).
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'scripts/release/**'
+      - 'docker/aeosd/**'
+permissions:
+  contents: read
+env:
+  PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') && 'true' || 'false' }}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build && pnpm typecheck && pnpm test && pnpm depcruise
+      - name: tag matches the package version
+        if: env.PUBLISH == 'true'
+        run: |
+          v="$(node -p "require('./apps/aeosd/package.json').version")"
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != package version v$v"; exit 1; }
+
+  bundles:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        # linux-arm64 bundles join once arm runners are available to this repo
+        os: [ubuntu-22.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node scripts/release/bundle.mjs release-out
+      - name: smoke-test the extracted bundle (no repo, minimal PATH)
+        run: |
+          mkdir -p /tmp/smoke && tar -xzf release-out/*.tar.gz -C /tmp/smoke
+          B="$(ls -d /tmp/smoke/aeos-*)"
+          env -i PATH=/usr/bin:/bin HOME=/tmp/smoke AEOS_HOME=/tmp/smoke/home AEOS_PORT=7799 AEOS_PROVIDER=fake "$B/bin/aeosd" run > /tmp/smoke/d.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:7799/healthz && break; sleep 1; done
+          env -i PATH=/usr/bin:/bin AEOS_API_URL=http://127.0.0.1:7799 "$B/bin/aeos" health
+          curl -sf -o /dev/null http://127.0.0.1:7799/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.os }}
+          path: release-out/*.tar.gz
+
+  npm-packages:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: pack every publishable package
+        run: |
+          mkdir -p npm-out
+          pnpm -r --filter './packages/*' --filter @aeos/cli exec pnpm pack --pack-destination "$GITHUB_WORKSPACE/npm-out"
+          ls -la npm-out
+      - uses: actions/upload-artifact@v4
+        with: { name: npm-packages, path: npm-out/*.tgz }
+
+  desktop:
+    needs: verify
+    uses: ./.github/workflows/desktop.yml
+
+  sign-and-release:
+    needs: [bundles, npm-packages, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # GitHub Release
+      id-token: write        # cosign keyless (Sigstore) + npm provenance
+      packages: write        # GHCR image
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: dist-artifacts, merge-multiple: true }
+      - uses: sigstore/cosign-installer@v3
+      - uses: anchore/sbom-action/download-syft@v0
+      - name: SBOMs (SPDX) for every artifact
+        run: |
+          cd dist-artifacts
+          shopt -s nullglob
+          for f in *.tar.gz *.tgz *.deb *.AppImage *.dmg; do syft scan "file:$f" -o spdx-json="$f.spdx.json" -q || syft scan "$f" -o spdx-json="$f.spdx.json" -q; done
+          sha256sum *.tar.gz *.tgz *.deb *.AppImage *.dmg *.spdx.json > SHA256SUMS
+          ls -la
+      - name: keyless signatures (cosign + GitHub OIDC)
+        # keyless signing writes to the PUBLIC Rekor transparency log —
+        # only real releases sign; dry runs must not publish anything
+        if: env.PUBLISH == 'true'
+        run: |
+          cd dist-artifacts
+          cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
+          shopt -s nullglob
+          for f in *.tar.gz *.deb *.AppImage *.dmg; do cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"; done
+      - name: container image (GHCR) — signed, with SBOM attestation
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/aeosd"
+          tag="${GITHUB_REF_NAME#v}"
+          [ "$PUBLISH" = true ] || tag="dryrun-${GITHUB_SHA::12}"
+          docker build -f docker/aeosd/Dockerfile -t "$image:$tag" .
+          syft scan "docker:$image:$tag" -o spdx-json=dist-artifacts/aeosd-image.spdx.json -q
+          if [ "$PUBLISH" = true ]; then
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker push "$image:$tag"
+            digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$image:$tag")"
+            cosign sign --yes "$digest"
+            cosign attest --yes --type spdxjson --predicate dist-artifacts/aeosd-image.spdx.json "$digest"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ github.run_id }}
+          path: dist-artifacts
+      - name: GitHub Release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prerelease=""; case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease";; esac
+          notes="notes/release-${GITHUB_REF_NAME}.md"
+          [ -f "$notes" ] || notes=/dev/null
+          gh release create "$GITHUB_REF_NAME" $prerelease --title "AEOS ${GITHUB_REF_NAME}" --notes-file "$notes" dist-artifacts/*
+      - uses: actions/setup-node@v4
+        if: env.PUBLISH == 'true'
+        with: { node-version: 22, registry-url: 'https://registry.npmjs.org' }
+      - name: npm publish (with provenance)
+        if: env.PUBLISH == 'true' && env.NPM_TOKEN != ''
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          tagflag=""; case "$GITHUB_REF_NAME" in *-*) tagflag="--tag next";; esac
+          for f in dist-artifacts/*.tgz; do npm publish "$f" --provenance --access public $tagflag; done

@@ -27,3 +27,6 @@ apps/desktop/src-tauri/gen/schemas/
 # docker compose secrets (P4.M3)
 /secrets/
 .env
+
+# release bundles (scripts/release)
+release-out/

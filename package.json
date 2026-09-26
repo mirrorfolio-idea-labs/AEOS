@@ -3,15 +3,21 @@
   "license": "MIT",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "build": "pnpm -r --filter '!@aeos/docs' build",
     "test": "vitest run",
     "typecheck": "pnpm -r typecheck",
-    "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs"
+    "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs",
+    "changeset": "changeset",
+    "changeset:version": "changeset version && pnpm install --lockfile-only",
+    "release:bundle": "node scripts/release/bundle.mjs"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "dependency-cruiser": "^16.8.0",
     "typescript": "~5.6.3",
     "vitest": "^2.1.8"

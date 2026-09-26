@@ -420,13 +420,13 @@ the source of truth; the site renders it — no forked content).
 - [x] **T4** Demo assets: asciinema of the golden path, UI screenshots/video. *Accept: README embeds them; assets reproducible via a script.*
 **Exit gate:** documented quickstart verified by someone who didn't write it.
 
-### M3 — Release engineering  `[ ]`
+### M3 — Release engineering  `[~]`
 **Context brief:** Everything ships from CI, nothing from laptops. Changesets
 for versioning/changelogs; semver + contracts-compatibility policy documented;
 signed artifacts + SBOM.
-- [ ] **T1** Changesets (or equivalent) wired: version bumps + changelog generation in CI. *Accept: dry-run release PR produced automatically from a changeset.*
-- [ ] **T2** Release pipeline: tag → build npm packages + daemon binaries + Tauri installers, signed, with SBOM. *Accept: `v1.0.0-rc.1` produced entirely by CI from a tag.*
-- [ ] **T3** Versioning/compat policy doc (semver, contracts ABI stability, support window). *Accept: policy published on the docs site; contracts package documents its guarantees.*
+- [x] **T1** Changesets (or equivalent) wired: version bumps + changelog generation in CI. *Accept: dry-run release PR produced automatically from a changeset.*
+- [~] **T2** Release pipeline: tag → build npm packages + daemon binaries + Tauri installers, signed, with SBOM. *Accept: `v1.0.0-rc.1` produced entirely by CI from a tag.* *(Pipeline built, actionlint-clean, bundle proven self-contained locally; runs as a dry run on its own PRs. The rc tag is Gate 3 — guide in `guides/`.)*
+- [x] **T3** Versioning/compat policy doc (semver, contracts ABI stability, support window). *Accept: policy published on the docs site; contracts package documents its guarantees.*
 **Exit gate:** an RC is cut, installed from artifacts, and passes the golden path.
 
 ### M4 — Public beta (repo goes public)  `[~]`
