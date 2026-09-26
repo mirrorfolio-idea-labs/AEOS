@@ -327,11 +327,11 @@ overrides; decisions + realized costs logged per task.
 - [x] **T3** Decision + realized-cost logging. *Accept: every routed task has a queryable route/cost record; audit shows decision inputs.*
 **Exit gate:** integration test proves plan tasks of different classes hit different (fake) providers per policy.
 
-### M3 — Verification task type  `[ ]`
+### M3 — Verification task type  `[x]`
 **Context brief:** Spec §12. Verification (tests/lint/build) is a first-class
 task type whose result gates progression and feeds checkpoint status.
-- [ ] **T1** Verification runner (command classes, result parsing, typed outcomes). *Accept: pass/fail/flaky outcomes distinguished in checkpoints.*
-- [ ] **T2** Planner emits verification tasks after each implement task. *Accept: generated plans interleave verify tasks; failed verify triggers 3-strike backoff.*
+- [x] **T1** Verification runner (command classes, result parsing, typed outcomes). *Accept: pass/fail/flaky outcomes distinguished in checkpoints.*
+- [x] **T2** Planner emits verification tasks after each implement task. *Accept: generated plans interleave verify tasks; failed verify triggers 3-strike backoff.*
 **Exit gate:** induced verification failure blocks the plan exactly as specced.
 
 ### M4 — Retrospective / self-learning loop  `[ ]`

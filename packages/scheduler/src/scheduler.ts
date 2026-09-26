@@ -13,6 +13,19 @@ import type { Objective, PlanTask } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
 import { parsePlan, serializePlan, withTaskStatus, type ParsedPlan } from './plan.js';
 import { readCheckpoints, resolveNextTask, writeCheckpoint } from './checkpoint.js';
+import type { VerifyResult } from './verify.js';
+
+const CODE_CLASSES = new Set(['implement', 'refactor', 'rename']);
+
+/** The code task a verify task checks: the nearest earlier implement/refactor/rename. */
+function verifiedTaskFor(plan: ParsedPlan, verifyTask: PlanTask): PlanTask | undefined {
+  const index = plan.tasks.findIndex((t) => t.id === verifyTask.id);
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const candidate = plan.tasks[i] as PlanTask;
+    if (CODE_CLASSES.has(candidate.taskClass)) return candidate;
+  }
+  return index > 0 ? plan.tasks[index - 1] : undefined;
+}
 
 export interface RunObjectiveOptions {
   /** Directory holding `plan.md` and `checkpoints/`. */
@@ -64,6 +77,14 @@ export interface RunObjectiveOptions {
    * and model run this task. Defaults to `adapter` with the harness model.
    */
   selectExecution?: (task: PlanTask) => Promise<{ adapter: HarnessAdapter; model?: string | undefined }>;
+  /**
+   * Runs a `verify` task (P3.M3) — daemon-side commands, not a harness
+   * session. Pass/flaky completes it; fail takes a strike and re-opens the
+   * code task it verifies with the failure notes; `fatal` blocks at once.
+   */
+  runVerify?: (task: PlanTask) => Promise<VerifyResult>;
+  /** Called with the re-opened code task so its next session sees the failure. */
+  onVerifyFailed?: (target: PlanTask, verifyTask: PlanTask, result: VerifyResult) => Promise<void>;
   /** Realized outcome + spend of every task attempt (route/cost records). */
   onTaskSettled?: (task: PlanTask, result: TaskSettlement) => void | Promise<void>;
 }
@@ -180,6 +201,60 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       costs: { usd: 0, tokens: 0 },
       ...(resumeToken === undefined ? {} : { providerResumeToken: resumeToken }),
     });
+
+    if (task.taskClass === 'verify' && opts.runVerify !== undefined) {
+      const result = await opts.runVerify(task);
+      const verification = { outcome: result.outcome, commands: result.commands };
+      if (result.fatal !== undefined) {
+        await writeCheckpoint(opts.objectiveDir, {
+          taskId: task.id,
+          status: 'blocked',
+          attempts,
+          summary: `verification cannot run: ${result.fatal}`,
+          costs: { usd: 0, tokens: 0 },
+          verification,
+        });
+        continue; // resolveNextTask now reports it blocked → pause + approval.request
+      }
+      if (result.outcome !== 'fail') {
+        await writeCheckpoint(opts.objectiveDir, {
+          taskId: task.id,
+          status: 'completed',
+          attempts: attempts + 1,
+          summary: result.outcome === 'flaky' ? 'verification passed on retry (flaky)' : 'verification passed',
+          costs: { usd: 0, tokens: 0 },
+          verification,
+        });
+        await savePlan(opts.objectiveDir, withTaskStatus(plan, task.id, 'completed'));
+        continue;
+      }
+      const strikes = attempts + 1;
+      const exhausted = strikes >= maxAttempts;
+      await writeCheckpoint(opts.objectiveDir, {
+        taskId: task.id,
+        status: exhausted ? 'blocked' : 'pending',
+        attempts: strikes,
+        summary: `verification failed (strike ${String(strikes)} of ${String(maxAttempts)})`,
+        costs: { usd: 0, tokens: 0 },
+        verification,
+      });
+      const target = verifiedTaskFor(plan, task);
+      if (!exhausted && target !== undefined) {
+        // re-open the code task: a fresh session (no resume token) with the failure as notes
+        await opts.onVerifyFailed?.(target, task, result);
+        await writeCheckpoint(opts.objectiveDir, {
+          taskId: target.id,
+          status: 'pending',
+          attempts: 0,
+          summary: `re-opened by ${task.id} verification failure`,
+          costs: { usd: 0, tokens: 0 },
+        });
+        plan = withTaskStatus(plan, target.id, 'pending');
+      }
+      await savePlan(opts.objectiveDir, withTaskStatus(plan, task.id, exhausted ? 'blocked' : 'pending'));
+      if (!exhausted) await backoff(strikes);
+      continue;
+    }
 
     // co-edit baseline: everything already dirty here counts as known state
     const baselineStatus =

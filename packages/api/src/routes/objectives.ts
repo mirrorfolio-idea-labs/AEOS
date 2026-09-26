@@ -9,7 +9,10 @@ import {
   composePlanningPrompt,
   ensureObjectiveWorktree,
   generatePlan,
+  interleaveVerify,
   parsePlan,
+  renderVerifyFailure,
+  runVerification,
   readCheckpoints,
   renderPlanMarkdown,
   runObjective,
@@ -65,6 +68,8 @@ const CreateObjective = ObjectiveRef.extend({
   definitionOfDone: z.string().min(1).optional(),
   /** Repo binding id — the objective runs in its own worktree of that repo (spec §10). */
   repo: z.string().min(1).optional(),
+  /** Verification commands overriding the repo binding's (P3.M3). */
+  verify: z.array(z.string().min(1)).optional(),
 }).refine((body) => body.tasks.length > 0 || body.autoPlan, {
   message: 'give at least one task, or set autoPlan: true to have the planner write the plan',
 });
@@ -83,6 +88,13 @@ async function objectiveTitle(dir: string, fallback: string): Promise<string> {
   if (file !== undefined) return file.title;
   const md = await readFile(path.join(dir, 'objective.md'), 'utf8').catch(() => '');
   return /^#\s+(.+)$/m.exec(md)?.[1]?.trim() ?? fallback;
+}
+
+/** Verification commands of record: objective override, else the repo binding's. */
+export function verifyCommandsFor(agent: AgentConfig, objective: { repo?: string | undefined; verify?: string[] | undefined } | undefined): string[] {
+  if (objective?.verify !== undefined) return objective.verify;
+  if (objective?.repo === undefined) return [];
+  return agent.repos?.find((r) => r.id === objective.repo)?.verify ?? [];
 }
 
 /** The worktree an objective runs in, created on first run (idempotent). */
@@ -126,6 +138,8 @@ interface PlanPhaseInput {
   title: string;
   definitionOfDone: string | undefined;
   worktree: ObjectiveWorktree | undefined;
+  /** Verification commands — when present the plan gets verify tasks (P3.M3.T2). */
+  verifyCommands: string[];
   /** UNGUARDED adapter factory — planning applies its own read-only policy. */
   rawAdapterFor: (provider: RoutedProvider) => HarnessAdapter;
   routePlan: RouteDecision;
@@ -214,7 +228,8 @@ async function planIfNeeded(input: PlanPhaseInput): Promise<'ready' | ObjectiveO
       permissionPolicy: compilePolicy(readOnly),
       onEvent,
     });
-    proposed = renderPlanMarkdown(input.title, generated.tasks, `_Proposed by the planner for objective \`${objectiveId}\`._`);
+    const tasks = input.verifyCommands.length > 0 && input.worktree !== undefined ? interleaveVerify(generated.tasks) : generated.tasks;
+    proposed = renderPlanMarkdown(input.title, tasks, `_Proposed by the planner for objective \`${objectiveId}\`._`);
     await writeFileAtomic(proposedPlanPath(dir), proposed);
   }
   const tasks = parsePlan(proposed).tasks;
@@ -325,6 +340,7 @@ export function startObjectiveRun(
       title,
       definitionOfDone: objective?.definitionOfDone,
       worktree,
+      verifyCommands: verifyCommandsFor(agent, objective),
       rawAdapterFor,
       routePlan: routeTask(agent, 'plan', routing),
       effective,
@@ -359,6 +375,19 @@ export function startObjectiveRun(
               }),
           }),
       ...(permissionPolicy === undefined ? {} : { permissionPolicy }),
+      runVerify: (task) =>
+        worktree === undefined
+          ? Promise.resolve({
+              outcome: 'fail' as const,
+              commands: [],
+              fatal: `verify task ${task.id} needs a repo worktree (create the objective with a repo binding)`,
+            })
+          : runVerification({ cwd: worktree.dir, commands: verifyCommandsFor(agent, objective) }),
+      onVerifyFailed: async (target, verifyTask, result) => {
+        await mkdir(path.join(dir, 'tasks'), { recursive: true });
+        const previous = await readFile(taskNotesPath(dir, target.id), 'utf8').catch(() => '');
+        await writeFileAtomic(taskNotesPath(dir, target.id), `${renderVerifyFailure(verifyTask.id, result)}\n${previous}`);
+      },
       selectExecution: (task) => {
         const decision = routeTask(agent, task.taskClass, routing);
         const chosen = adapterFor(decision.provider);
@@ -473,6 +502,7 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
         title: body.title,
         ...(body.definitionOfDone === undefined ? {} : { definitionOfDone: body.definitionOfDone }),
         ...(body.repo === undefined ? {} : { repo: body.repo }),
+        ...(body.verify === undefined ? {} : { verify: body.verify }),
         ...(body.budgetUsd === undefined ? {} : { budgetUsd: body.budgetUsd }),
         ...(body.budgetTokens === undefined ? {} : { budgetTokens: body.budgetTokens }),
       });
@@ -585,6 +615,9 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
     handler: async (request) => {
       const { workspaceId, agentId } = ObjectiveRef.parse(request.query);
       const dir = objectiveDirFor(ctx.home, workspaceId, agentId, request.params.id);
+      // snapshot BEFORE reading files: `running: false` then guarantees the
+      // files read below are final (a stale `true` only costs a re-poll)
+      const isRunning = running.has(dir);
       let planRaw: string;
       try {
         planRaw = await readFile(path.join(dir, 'plan.md'), 'utf8');
@@ -595,7 +628,7 @@ export function registerObjectiveRoutes(app: FastifyInstance, ctx: ApiContext): 
       const checkpoints = await readCheckpoints(dir);
       const proposed = await readFile(proposedPlanPath(dir), 'utf8').catch(() => undefined);
       return ok({
-        running: running.has(dir),
+        running: isRunning,
         tasks: plan.tasks,
         checkpoints: [...checkpoints.values()],
         ...(proposed === undefined ? {} : { proposedTasks: parsePlan(proposed).tasks }),

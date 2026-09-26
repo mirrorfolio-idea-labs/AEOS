@@ -29,3 +29,11 @@ export {
   type GeneratedPlan,
   type PlanningPromptInput,
 } from './planner.js';
+export {
+  renderVerifyFailure,
+  runVerification,
+  type RunVerificationOptions,
+  type Verification,
+  type VerifyOutcome,
+  type VerifyResult,
+} from './verify.js';

@@ -106,6 +106,13 @@
               "baseRef": {
                 "type": "string",
                 "minLength": 1
+              },
+              "verify": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
               }
             },
             "required": [
