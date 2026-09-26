@@ -1,0 +1,56 @@
+name: nightly-k8s
+# P4.M4.T2 accept: the AEOS golden path on a kind cluster, installed with
+# the Helm chart exactly as documented — nightly, on demand, and on PRs
+# that touch the chart or the image.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'deploy/helm/**'
+      - 'docker/aeosd/**'
+      - '.github/workflows/nightly-k8s.yml'
+jobs:
+  kind-golden-path:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @aeos/sdk... build
+      - uses: azure/setup-helm@v4
+      - uses: helm/kind-action@v1
+        with: { cluster_name: aeos }
+      - name: build + load the aeosd image
+        run: |
+          docker build -f docker/aeosd/Dockerfile -t aeos/aeosd:ci .
+          kind load docker-image aeos/aeosd:ci --name aeos
+      - name: helm install (demo provider — no model account)
+        run: |
+          helm install aeos deploy/helm/aeos --wait --timeout 5m \
+            --set image.repository=aeos/aeosd --set image.tag=ci --set image.pullPolicy=Never \
+            --set extraEnv.AEOS_PROVIDER=fake --set persistence.size=1Gi
+      - name: golden path through the Service
+        run: |
+          kubectl get secret aeos-token -o jsonpath='{.data.token}' | base64 -d > /tmp/aeos-token
+          kubectl port-forward svc/aeos 7777:7777 > /tmp/pf.log 2>&1 &
+          node docker/compose-smoke.mjs http://127.0.0.1:7777 /tmp/aeos-token
+      - name: upgrade keeps the token and the data
+        run: |
+          helm upgrade aeos deploy/helm/aeos --wait --timeout 5m --reuse-values
+          test "$(kubectl get secret aeos-token -o jsonpath='{.data.token}' | base64 -d)" = "$(cat /tmp/aeos-token)"
+          kubectl rollout status deploy/aeos
+          pkill -f 'port-forward' || true
+          kubectl port-forward svc/aeos 7778:7777 > /tmp/pf2.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:7778/healthz && break; sleep 1; done
+          curl -sf -H "Authorization: Bearer $(cat /tmp/aeos-token)" http://127.0.0.1:7778/v1/workspaces | grep -q quickstart
+      - name: diagnostics on failure
+        if: failure()
+        run: |
+          kubectl get all,pvc,secret -o wide || true
+          kubectl describe pods || true
+          kubectl logs deploy/aeos --tail=200 || true

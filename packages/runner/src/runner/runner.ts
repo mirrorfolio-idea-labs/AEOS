@@ -14,6 +14,7 @@ import {
   type WireMessage,
 } from '../protocol/messages.js';
 import { RingBuffer } from './ring-buffer.js';
+import { formatEndpoint, listenEndpoint, readPskFile, type RunnerEndpoint } from '../protocol/transport.js';
 
 export interface RunnerOptions {
   sessionId: string;
@@ -31,6 +32,13 @@ export interface RunnerOptions {
   /** STOP files checked every heartbeat tick (spec §17.5). */
   stopFilePaths?: string[];
   ringCapacity?: number;
+  /**
+   * Listen on TLS-PSK over TCP instead of the unix socket (P4.M4). The key
+   * is read from `pskFile` (0600), the PSK identity is the session id, and
+   * the bound endpoint (`tcp://host:port`) is written to
+   * `<sessionDir>/runner.endpoint` once listening.
+   */
+  tcp?: { host: string; port?: number; pskFile: string };
 }
 
 interface Connection {
@@ -258,16 +266,20 @@ export class Runner {
 
   // ── socket server ──────────────────────────────────────────────────────
 
-  private listen(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const server = net.createServer((socket) => this.onConnection(socket));
-      this.server = server;
-      server.once('error', reject);
-      server.listen(this.opts.socketPath, () => {
-        server.removeListener('error', reject);
-        resolve();
-      });
-    });
+  private async listen(): Promise<void> {
+    const tcp = this.opts.tcp;
+    const endpoint: RunnerEndpoint =
+      tcp === undefined
+        ? { kind: 'unix', path: this.opts.socketPath }
+        : { kind: 'tcp', host: tcp.host, port: tcp.port ?? 0, psk: readPskFile(tcp.pskFile), identity: this.opts.sessionId };
+    const { server, endpoint: bound } = await listenEndpoint(endpoint, (socket) => this.onConnection(socket));
+    this.server = server;
+    if (bound.kind === 'tcp') {
+      // publish the actual port for the supervisor (write-then-rename: never half a line)
+      const file = path.join(this.opts.sessionDir, 'runner.endpoint');
+      fs.writeFileSync(`${file}.tmp`, `${formatEndpoint(bound)}\n`);
+      fs.renameSync(`${file}.tmp`, file);
+    }
   }
 
   private onConnection(socket: net.Socket): void {

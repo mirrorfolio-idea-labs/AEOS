@@ -1,6 +1,6 @@
 {
   "name": "@aeos/api",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,6 +10,20 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "files": [
+    "dist",
+    "openapi.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mirrorfolio-idea-labs/AEOS.git",
+    "directory": "packages/api"
+  },
+  "homepage": "https://github.com/mirrorfolio-idea-labs/AEOS",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -23,6 +37,7 @@
     "@aeos/memory": "workspace:*",
     "@aeos/policy": "workspace:*",
     "@aeos/provider-core": "workspace:*",
+    "@aeos/router": "workspace:*",
     "@aeos/runner": "workspace:*",
     "@aeos/scheduler": "workspace:*",
     "@fastify/swagger": "^9.4.0",

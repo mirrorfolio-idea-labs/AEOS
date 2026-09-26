@@ -1,0 +1,15 @@
+{
+  "name": "__NAME__",
+  "version": "0.1.0",
+  "description": "An AEOS provider plugin (scaffolded by create-aeos-plugin).",
+  "license": "MIT",
+  "type": "module",
+  "files": ["src"],
+  "aeos": {
+    "contract": "^1",
+    "entry": "./src/index.js",
+    "contributes": [
+      { "kind": "provider", "id": "__ID__", "description": "Example provider: echoes the objective back." }
+    ]
+  }
+}

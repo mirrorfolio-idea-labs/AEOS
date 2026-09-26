@@ -39,6 +39,9 @@ export async function composeSessionBrief(input: SessionBriefInput): Promise<str
     lines.push(input.taskNotes.trimEnd(), '');
   }
   lines.push('---', '## AEOS context', '');
+  if (task.agent !== undefined && task.agent !== input.agent.id) {
+    lines.push(`- Delegated: you are ${task.agent}, doing this task for ${input.agent.id}'s objective. Coordinate only through the plan and the shared branch.`);
+  }
   lines.push(`- Objective: ${input.objectiveTitle}`);
   if (input.objective?.definitionOfDone !== undefined) {
     lines.push(`- Definition of done: ${input.objective.definitionOfDone}`);

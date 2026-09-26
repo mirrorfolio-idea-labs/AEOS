@@ -228,3 +228,51 @@ test('T8: deep link — ?agent=<ws>/<agent>&tab=approvals opens that agent on th
   await page.goto('/?agent=client-acme/ops-dev&tab=bogus');
   await expect(page.getByTestId('tab-objective')).toHaveAttribute('data-state', 'active');
 });
+
+test('T9: planner — auto-plan proposes a classed plan that waits for approval, then runs', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('agent-name').fill('Planner Dev');
+  await page.getByTestId('create-agent').click();
+  await page.getByTestId('agent-planner-dev').click();
+  await page.getByTestId('objective-id').fill('obj-plan');
+  await page.getByTestId('objective-title').fill('Ship CSV export');
+  await page.getByTestId('objective-autoplan').check();
+  await page.getByTestId('run-objective').click();
+
+  await expect(page.getByTestId('proposed-plan')).toContainText('[architect] Outline the approach', { timeout: 15_000 });
+  await page.getByTestId('tab-approvals').click();
+  await expect(page.getByTestId('approvals-row').first()).toContainText('run_plan');
+  await page.locator('[data-testid^="approval-approve-"]').first().click();
+  // the plan's own tool calls then park under the default posture — approve until done
+  for (let i = 0; i < 2; i++) {
+    await page.locator('[data-testid^="approval-approve-"]').first().click({ timeout: 15_000 });
+  }
+  await page.getByTestId('tab-objective').click();
+  await expect(page.getByTestId('task-class-T1')).toHaveText('architect', { timeout: 15_000 });
+  await expect(page.getByTestId('task-status-T2')).toHaveText('completed', { timeout: 15_000 });
+});
+
+test('T10: remote posture — a token-protected daemon asks for its token, rejects a wrong one, then works', async ({ page, request }) => {
+  const remote = 'http://127.0.0.1:7778';
+  // the API refuses unauthenticated calls; the UI shell and /healthz do not
+  expect((await request.get(`${remote}/v1/workspaces`)).status()).toBe(401);
+  expect((await request.get(`${remote}/healthz`)).status()).toBe(200);
+  expect((await request.get(`${remote}/`)).status()).toBe(200);
+
+  await page.goto(remote);
+  await expect(page.getByRole('form', { name: 'Sign in to AEOS' })).toBeVisible();
+  await page.getByLabel('API token').fill('wrong-token-wrong-token');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page.getByText('That token was not accepted.')).toBeVisible();
+
+  await page.getByLabel('API token').fill('playwright-remote-token-0123456789');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page.getByRole('form', { name: 'Sign in to AEOS' })).toBeHidden();
+  await expect(page.getByText('Create a workspace and an agent to begin')).toBeVisible();
+  // and a one-time #token= link signs in without the form (stripped from the URL)
+  await page.evaluate(() => window.localStorage.clear());
+  await page.goto('about:blank'); // a fresh document, as when opening the link
+  await page.goto(`${remote}/#token=playwright-remote-token-0123456789`);
+  await expect(page.getByText('Create a workspace and an agent to begin')).toBeVisible();
+  expect(page.url()).not.toContain('token=');
+});

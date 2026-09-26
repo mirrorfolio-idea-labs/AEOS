@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aeos.fullname" . }}
+  labels: {{- include "aeos.labels" . | nindent 4 }}
+spec:
+  replicas: 1                # state is files on one volume — never more than one writer
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {{- include "aeos.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "aeos.selector" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: aeosd
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - { name: http, containerPort: 7777, protocol: TCP }
+          env:
+            - { name: AEOS_HOME, value: /data }
+            # the root filesystem is read-only: tools that write to $HOME (npm for
+            # `aeos harness install`, harness caches) get a home on the volume
+            - { name: HOME, value: /data/.home }
+            - { name: AEOS_HOST, value: 0.0.0.0 }
+            - { name: AEOS_PORT, value: "7777" }
+            - { name: AEOS_API_TOKEN_FILE, value: /run/secrets/aeos/token }
+            {{- range $k, $v := .Values.extraEnv }}
+            - { name: {{ $k }}, value: {{ $v | quote }} }
+            {{- end }}
+          {{- with .Values.providerSecret }}
+          envFrom:
+            - secretRef: { name: {{ . }} }
+          {{- end }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: home, mountPath: /data }
+            - { name: token, mountPath: /run/secrets/aeos, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-home" (include "aeos.fullname" .)) }}
+        - name: token
+          secret:
+            secretName: {{ include "aeos.tokenSecret" . }}
+            items:
+              - { key: {{ .Values.auth.existingSecretKey }}, path: token }
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}

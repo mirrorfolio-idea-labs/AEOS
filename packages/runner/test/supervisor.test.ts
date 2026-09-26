@@ -48,7 +48,12 @@ function countingChild(lines: number, everyMs: number): string[] {
   ];
 }
 
-describe('supervisor', () => {
+// P4.M4.T1 accept: the whole suite — re-adoption flagship included — runs
+// over the unix socket AND over TLS-PSK TCP
+describe.each([
+  { transport: { kind: 'unix' as const } },
+  { transport: { kind: 'tcp' as const, host: '127.0.0.1' } },
+])('supervisor over $transport.kind', ({ transport }) => {
   let home: string;
   let db: IndexDb;
   let supervisors: Supervisor[];
@@ -84,6 +89,7 @@ describe('supervisor', () => {
       heartbeatMs: 50,
       connectTimeoutMs: 5000,
       exitGraceMs: 500,
+      transport,
     });
     supervisors.push(supervisor);
     return supervisor;
@@ -102,6 +108,17 @@ describe('supervisor', () => {
     expect(record.state).toBe('running');
     expect(record.runnerPid).toBeTypeOf('number');
     expect(record.runnerSocket).toBeTruthy();
+    if (transport.kind === 'tcp') {
+      expect(record.runnerSocket).toMatch(/^tcp:\/\/127\.0\.0\.1:\d+$/);
+      // the per-session key lives only in a 0600 file — never in argv or session.yaml
+      const pskFile = path.join(path.dirname(transcriptPath(home, WS, AGENT, record.id)), 'runner.psk');
+      const psk = fs.readFileSync(pskFile, 'utf8').trim();
+      expect((fs.statSync(pskFile).mode & 0o777).toString(8)).toBe('600');
+      expect(JSON.stringify(readSessionYaml(home, WS, AGENT, record.id))).not.toContain(psk);
+      if (process.platform === 'linux') {
+        expect(fs.readFileSync(`/proc/${String(record.runnerPid)}/cmdline`, 'utf8')).not.toContain(psk);
+      }
+    }
     expect(supervisorA.hasLiveRunner(sessionId)).toBe(true);
 
     const seenByA: AeosEvent[] = [];

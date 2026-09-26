@@ -2,7 +2,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AeosClient } from '@aeos/sdk';
-import { DEFAULT_PINS, createBinaryManager, type ManagedHarness } from '@aeos/provider-core';
+import { spawnSync } from 'node:child_process';
+import type { ProviderId } from '@aeos/contracts';
+import { DEFAULT_PINS, createBinaryManager, dockerAvailable, type ManagedHarness } from '@aeos/provider-core';
+import { RUNNER_DOCKERFILE } from './runner-dockerfile.js';
+import { applyPlan, currentPlatform, currentUser, planInstall, planUninstall, resolveAeosd } from './service.js';
+import { PluginError, installPlugin, listInstalledPlugins, removePlugin } from '@aeos/plugins';
 
 export interface CliIo {
   out: (line: string) => void;
@@ -45,17 +50,27 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
 
   aeos health
   aeos workspace create <id> --name <name>
-  aeos agent create <id> --workspace <ws> --name <name> [--provider claude-code] [--credential-profile <cp>]
+  aeos agent create <id> --workspace <ws> --name <name> [--provider claude-code|codex|opencode|plugin:<id>] [--credential-profile <cp>]
                    [--harness-version <pinned>] [--binary-path <byo executable>]
   aeos agent switch-credential <id> --workspace <ws> --profile <credentialProfileId>
   aeos agent status <id> --workspace <ws>
   aeos agent wait <id> --workspace <ws> [--until blocked,done] [--timeout-ms 30000] [--after-seq <n>]
   aeos agent seen|unread|settle|unsettle <id> --workspace <ws>
   aeos inbox               # every agent, attention-sorted (blocked first)
-  aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main]
+  aeos approvals [list] | aeos approvals approve|deny <requestId>   # parked actions waiting for you
+  aeos memory proposals --workspace <ws> --agent <agent>        # queued lessons/preferences
+  aeos memory accept [<id>] --workspace <ws> --agent <agent>    # all, or one
+  aeos memory reject <id> --workspace <ws> --agent <agent>
+  aeos job add <id> --cron "0 3 * * *" --workspace <ws> --agent <agent> --objective <obj>   # UTC
+  aeos job add <id> --idle-ms 600000 [--min-interval-ms 3600000] --curator
+  aeos job list | aeos job rm <id>
+  aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main] [--verify "pnpm test" ...]
   aeos repo unbind <id> --workspace <ws> --agent <agent>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
-                        [--repo <binding>] [--done "definition of done"]
+                        [--repo <binding>] [--done "definition of done"] [--verify "cmd" ...]
+  aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --auto-plan   # planner writes the plan
+  aeos objective approve-plan <id> --workspace <ws> --agent <agent>
+  aeos objective routes <id> --workspace <ws> --agent <agent>   # router decisions + realized cost
   aeos objective diff <id> --workspace <ws> --agent <agent> [--scope branch|uncommitted|last-commit]
   aeos objective review <id> --workspace <ws> --agent <agent> --comment "src/a.ts:12: rename this" [--comment ...]
   aeos objective run <id> --workspace <ws> --agent <agent> [--poll-ms 250] [--timeout-ms 120000]
@@ -65,6 +80,13 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos stop status
   aeos resume-ops          # lifts the kill switch
   aeos harness pins        # pinned harness releases of record
+  aeos service install [--aeosd <main.js>] [--port 7777] [--host 0.0.0.0 --token-file <f>] [--dry-run]
+                       # run aeosd as a user service (systemd user unit / launchd agent)
+  aeos service uninstall | aeos service status
+  aeos plugin install <npm-spec|./plugin.tgz>   # third-party plugin (no install scripts run; restart aeosd to load)
+  aeos plugin list | aeos plugin remove <package>
+  aeos sandbox build [--tag aeos-runner:local]   # container-tier runtime image (P4.M1)
+  aeos sandbox status
   aeos harness install <harness>@<version>   # fetch + integrity-check + seal (local, AEOS_HOME)
   aeos harness verify <harness>@<version>    # re-hash an install against its seal
   aeos harness list`;
@@ -119,6 +141,9 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
 
   try {
     if (group === 'harness') return await runHarnessCommand(action, id, io);
+    if (group === 'sandbox') return runSandboxCommand(action, parsed, io);
+    if (group === 'plugin') return runPluginCommand(action, id, io);
+    if (group === 'service') return runServiceCommand(action, parsed, io);
     if (group === 'health') {
       io.out(JSON.stringify(await client.health()));
       return 0;
@@ -134,10 +159,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         workspaceId: need(parsed, 'workspace'),
         name: need(parsed, 'name'),
         harness: {
-          provider: (parsed.flags.get('provider')?.[0] ?? 'claude-code') as
-            | 'claude-code'
-            | 'codex'
-            | 'opencode',
+          // a builtin or `plugin:<id>` — the daemon validates it (P4.M2)
+          provider: (parsed.flags.get('provider')?.[0] ?? 'claude-code') as ProviderId,
           ...(parsed.flags.get('harness-version')?.[0] === undefined
             ? {}
             : { version: parsed.flags.get('harness-version')?.[0] as string }),
@@ -197,6 +220,63 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       io.out(`${item.agentId}: ${item.settled ? 'settled' : item.unseen ? 'unseen' : 'seen'}`);
       return 0;
     }
+    if (group === 'memory' && (action === 'proposals' || action === 'accept' || action === 'reject')) {
+      const workspaceId = need(parsed, 'workspace');
+      const agentId = need(parsed, 'agent');
+      if (action === 'proposals') {
+        for (const p of await client.memoryProposals(workspaceId, agentId)) {
+          io.out(`${p.id}  ${p.op} ${p.path}${p.hook === undefined ? '' : `  — ${p.hook}`}`);
+        }
+        return 0;
+      }
+      if (action === 'reject') {
+        if (id === undefined) throw new Error('usage: aeos memory reject <id> …');
+        await client.rejectMemoryProposal(workspaceId, agentId, id);
+        io.out(`rejected ${id}`);
+        return 0;
+      }
+      for (const r of await client.applyMemoryProposals(workspaceId, agentId, id === undefined ? undefined : [id])) {
+        io.out(`${r.id}: ${r.status}${r.error === undefined ? '' : ` (${r.error})`}`);
+      }
+      return 0;
+    }
+    if (group === 'job' && action === 'list') {
+      for (const job of await client.listJobs()) {
+        const when = job.kind === 'cron' ? `cron "${job.cron ?? ''}"` : `idle ${String(job.idleMs)}ms`;
+        const what = job.action.type === 'curator' ? 'curator' : `start ${job.action.workspaceId}/${job.action.agentId}/${job.action.objectiveId}`;
+        io.out(
+          `${job.id}  ${when}  → ${what}${job.enabled ? '' : ' (disabled)'}  last=${job.lastRunAt ?? 'never'}${job.lastError === undefined ? '' : `  error: ${job.lastError}`}`,
+        );
+      }
+      return 0;
+    }
+    if (group === 'job' && action === 'rm' && id !== undefined) {
+      await client.deleteJob(id);
+      io.out(`job ${id} deleted`);
+      return 0;
+    }
+    if (group === 'job' && action === 'add' && id !== undefined) {
+      const cron = parsed.flags.get('cron')?.[0];
+      const idleMs = parsed.flags.get('idle-ms')?.[0];
+      if ((cron === undefined) === (idleMs === undefined)) throw new Error('aeos job add needs exactly one of --cron or --idle-ms');
+      const minInterval = parsed.flags.get('min-interval-ms')?.[0];
+      const job = await client.saveJob({
+        id,
+        ...(cron === undefined ? { kind: 'idle' as const, idleMs: Number(idleMs) } : { kind: 'cron' as const, cron }),
+        ...(minInterval === undefined ? {} : { minIntervalMs: Number(minInterval) }),
+        action:
+          parsed.flags.has('curator')
+            ? { type: 'curator' }
+            : {
+                type: 'start-objective',
+                workspaceId: need(parsed, 'workspace'),
+                agentId: need(parsed, 'agent'),
+                objectiveId: need(parsed, 'objective'),
+              },
+      });
+      io.out(`job ${job.id} saved (${job.kind})`);
+      return 0;
+    }
     if (group === 'inbox') {
       const marks = ['!', '*', '~', ' ', '-'];
       for (const item of await client.inbox()) {
@@ -219,6 +299,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         id,
         path: path.resolve(need(parsed, 'path')),
         ...(baseRef === undefined ? {} : { baseRef }),
+        ...(parsed.flags.get('verify') === undefined ? {} : { verify: parsed.flags.get('verify') as string[] }),
       });
       io.out(`repo ${id} bound to ${agentId} — objectives with --repo ${id} run in their own worktree`);
       return 0;
@@ -244,7 +325,23 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       io.out(`review sent as task ${result.taskId}: ${result.title}${result.started ? ' — objective restarted' : ''}`);
       return 0;
     }
+    if (group === 'objective' && action === 'routes' && id !== undefined) {
+      for (const r of await client.objectiveRoutes(need(parsed, 'workspace'), need(parsed, 'agent'), id)) {
+        const usd = r.realized.derivedUsd ?? r.realized.usd;
+        io.out(
+          `${r.taskId} [${r.decision.taskClass}] ${r.decision.provider}/${r.decision.model ?? 'default'}  ${r.realized.status}  $${usd.toFixed(4)}${r.realized.derivedUsd === undefined ? '' : ' (token-priced)'}`,
+        );
+      }
+      return 0;
+    }
+    if (group === 'objective' && action === 'approve-plan' && id !== undefined) {
+      const result = await client.approvePlan(need(parsed, 'workspace'), need(parsed, 'agent'), id);
+      for (const task of result.tasks) io.out(`  ${task.id} [${task.taskClass ?? 'implement'}] ${task.title}`);
+      io.out(`plan approved — objective ${id} started`);
+      return 0;
+    }
     if (group === 'objective' && action === 'create' && id !== undefined) {
+      const autoPlan = parsed.flags.get('auto-plan') !== undefined;
       const tasks = (parsed.flags.get('task') ?? []).map((spec) => {
         const colon = spec.indexOf(':');
         if (colon === -1) throw new Error(`--task must look like "T1: title" (got "${spec}")`);
@@ -256,12 +353,14 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         id,
         title: need(parsed, 'title'),
         tasks,
+        ...(autoPlan ? { autoPlan: true } : {}),
+        ...(parsed.flags.get('verify') === undefined ? {} : { verify: parsed.flags.get('verify') as string[] }),
         ...(parsed.flags.get('repo')?.[0] === undefined ? {} : { repo: parsed.flags.get('repo')?.[0] as string }),
         ...(parsed.flags.get('done')?.[0] === undefined
           ? {}
           : { definitionOfDone: parsed.flags.get('done')?.[0] as string }),
       });
-      io.out(`objective ${id} created with ${tasks.length} tasks`);
+      io.out(autoPlan ? `objective ${id} created — the planner proposes tasks on start` : `objective ${id} created with ${tasks.length} tasks`);
       return 0;
     }
     if (group === 'objective' && (action === 'run' || action === 'status') && id !== undefined) {
@@ -275,13 +374,33 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       const pollMs = Number(parsed.flags.get('poll-ms')?.[0] ?? 250);
       const timeoutMs = Number(parsed.flags.get('timeout-ms')?.[0] ?? 120_000);
       const deadline = Date.now() + timeoutMs;
+      const announced = new Set<string>();
+      let lastLine = '';
       for (;;) {
         const status = await client.objectiveStatus(workspaceId, agentId, id);
         const states = status.tasks.map((t) => t.status);
-        io.out(`tasks: ${states.join(', ')}`);
-        if (states.every((s) => s === 'completed')) {
+        const line = `tasks: ${states.join(', ')}`;
+        if (line !== lastLine) io.out(line);
+        lastLine = line;
+        if (states.length > 0 && states.every((s) => s === 'completed')) {
           io.out(`objective ${id} completed`);
           return 0;
+        }
+        // a planner proposal waits for a human (P3.M1 run_plan tier)
+        if (!status.running && (status.proposedTasks?.length ?? 0) > 0) {
+          io.out(`plan proposed (${String(status.proposedTasks?.length)} tasks):`);
+          for (const t of status.proposedTasks ?? []) io.out(`  ${t.id} [${t.taskClass}] ${t.title}`);
+          io.err(`waiting for your approval — run: aeos objective approve-plan ${id} --workspace ${workspaceId} --agent ${agentId}`);
+          return 4;
+        }
+        // a parked tool call: say so once, with the command that answers it
+        const agentState = await client.agentStatus(workspaceId, agentId).catch(() => undefined);
+        if (agentState?.status === 'blocked' && agentState.reason?.startsWith('approval requested') === true) {
+          for (const pending of await client.listApprovals()) {
+            if (announced.has(pending.requestId)) continue;
+            announced.add(pending.requestId);
+            io.err(`approval needed (${pending.tier}): ${pending.detail}\n  approve: aeos approvals approve ${pending.requestId}   deny: aeos approvals deny ${pending.requestId}`);
+          }
         }
         if (states.includes('blocked')) {
           io.err(`objective ${id} paused (blocked task)`);
@@ -293,6 +412,21 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         await delay(pollMs);
       }
+    }
+    if (group === 'approvals') {
+      if (action === undefined || action === 'list') {
+        const pending = await client.listApprovals();
+        if (pending.length === 0) io.out('no pending approvals');
+        for (const p of pending) io.out(`${p.requestId}  ${p.tier}  ${p.detail}  (expires ${p.expiresAt})`);
+        return 0;
+      }
+      if ((action === 'approve' || action === 'deny') && id !== undefined) {
+        const result = await client.resolveApproval(id, action);
+        io.out(result.resolved ? `${action === 'approve' ? 'approved' : 'denied'} ${id}` : `${id} was not pending`);
+        return result.resolved ? 0 : 1;
+      }
+      io.err('usage: aeos approvals [list] | aeos approvals approve|deny <requestId>');
+      return 2;
     }
     if (group === 'stop' && action === 'status') {
       io.out(JSON.stringify(await client.stopStatus()));
@@ -334,4 +468,107 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     io.err(error instanceof Error ? error.message : String(error));
     return 1;
   }
+}
+
+/**
+ * `aeos sandbox build|status` (P4.M1): the container tier's runtime image.
+ * The Dockerfile ships inside the CLI (drift-tested against
+ * docker/runner/Dockerfile) so a fresh install can build it anywhere.
+ */
+function runSandboxCommand(action: string | undefined, parsed: Parsed, io: CliIo): number {
+  const tag = parsed.flags.get('tag')?.[0] ?? 'aeos-runner:local';
+  if (!dockerAvailable()) {
+    io.err('docker is not reachable — the container sandbox tier needs a running docker daemon');
+    return 1;
+  }
+  if (action === 'status') {
+    const image = spawnSync('docker', ['image', 'inspect', '--format', '{{.Id}}', tag], { encoding: 'utf8' });
+    io.out(`docker: ok\nimage ${tag}: ${image.status === 0 ? image.stdout.trim() : 'missing — run `aeos sandbox build`'}`);
+    return image.status === 0 ? 0 : 1;
+  }
+  if (action === 'build') {
+    const result = spawnSync('docker', ['build', '-t', tag, '-'], { input: RUNNER_DOCKERFILE, stdio: ['pipe', 'inherit', 'inherit'] });
+    if (result.status !== 0) return result.status ?? 1;
+    io.out(`built ${tag}`);
+    return 0;
+  }
+  io.err('usage: aeos sandbox build [--tag <image>] | aeos sandbox status');
+  return 2;
+}
+
+/** `aeos plugin install|list|remove` (P4.M2) — local to AEOS_HOME, like `aeos harness`. */
+function runPluginCommand(action: string | undefined, arg: string | undefined, io: CliIo): number {
+  const home = process.env['AEOS_HOME'] ?? path.join(os.homedir(), '.aeos');
+  try {
+    if (action === 'install' && arg !== undefined) {
+      const plugin = installPlugin(home, arg);
+      const provides = plugin.manifest.contributes.map((c) => `${c.kind}:${c.id}`).join(', ');
+      io.out(`installed ${plugin.name}@${plugin.version} (${provides}) — restart aeosd to load it`);
+      return 0;
+    }
+    if (action === 'list') {
+      for (const p of listInstalledPlugins(home)) {
+        const provides = p.manifest.contributes.map((c) => `${c.kind}:${c.id}`).join(', ');
+        io.out(`${p.name}@${p.version}  ${provides}${p.error === undefined ? '' : `  NOT LOADABLE (${p.error.code}): ${p.error.message}`}`);
+      }
+      return 0;
+    }
+    if (action === 'remove' && arg !== undefined) {
+      io.out(removePlugin(home, arg) ? `removed ${arg}` : `${arg} is not installed`);
+      return 0;
+    }
+  } catch (error) {
+    io.err(error instanceof PluginError ? `${error.code}: ${error.message}` : String(error));
+    return 1;
+  }
+  io.err('usage: aeos plugin install <spec> | aeos plugin list | aeos plugin remove <package>');
+  return 2;
+}
+
+/** `aeos service install|uninstall|status` (P4.M3.T1). */
+function runServiceCommand(action: string | undefined, parsed: Parsed, io: CliIo): number {
+  const platform = currentPlatform();
+  if (platform === undefined) {
+    io.err(`aeos service supports Linux (systemd) and macOS (launchd); on ${process.platform} run aeosd under your own supervisor`);
+    return 1;
+  }
+  const flag = (name: string): string | undefined => parsed.flags.get(name)?.[0];
+  const home = process.env['AEOS_HOME'] ?? path.join(os.homedir(), '.aeos');
+  const user = currentUser();
+  if (action === 'install') {
+    const host = flag('host');
+    const tokenFile = flag('token-file');
+    if (host !== undefined && !['127.0.0.1', 'localhost', '::1'].includes(host) && tokenFile === undefined) {
+      io.err(`binding ${host} requires --token-file (aeosd refuses non-loopback binds without a token)`);
+      return 2;
+    }
+    const plan = planInstall(
+      {
+        node: process.execPath,
+        aeosd: resolveAeosd(flag('aeosd')),
+        home,
+        port: Number(flag('port') ?? 7777),
+        ...(host === undefined ? {} : { host }),
+        ...(tokenFile === undefined ? {} : { tokenFile: path.resolve(tokenFile) }),
+      },
+      platform,
+      os.homedir(),
+      user,
+    );
+    if (parsed.flags.has('dry-run')) {
+      io.out(`# ${plan.file}\n${plan.content}`);
+      for (const c of plan.commands) io.out(`$ ${c.argv.join(' ')}${c.optional === true ? '   # optional' : ''}`);
+      return 0;
+    }
+    return applyPlan(plan, io, false);
+  }
+  if (action === 'uninstall') return applyPlan(planUninstall(platform, os.homedir(), user), io, true);
+  if (action === 'status') {
+    const argv = platform === 'linux' ? ['systemctl', '--user', 'status', 'aeosd.service', '--no-pager'] : ['launchctl', 'print', `gui/${String(user.uid)}/dev.aeos.aeosd`];
+    const result = spawnSync(argv[0] as string, argv.slice(1), { encoding: 'utf8' });
+    io.out((result.stdout || result.stderr || '').trimEnd());
+    return result.status === 0 ? 0 : 1;
+  }
+  io.err('usage: aeos service install [--dry-run] | uninstall | status');
+  return 2;
 }

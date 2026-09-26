@@ -25,6 +25,11 @@ export interface FakeScript {
   failureReason?: string;
   /** Delay between replayed events — lets tests exercise kill()/pacing. */
   paceMs?: number;
+  /**
+   * Scripted "model": given the spawn prompt, an optional assistant reply
+   * inserted before `turn.completed` (lets the fake answer planner calls).
+   */
+  respond?: (prompt: string) => string | undefined;
 }
 
 const envelope = (sessionId: string) => ({
@@ -92,6 +97,21 @@ class FakeSessionHandle implements SessionHandle {
           id: newEventId(),
           type: 'session.failed',
           payload: { reason: script.failureReason ?? 'fake failure' },
+        }),
+      );
+    }
+    const reply = script.respond?.(opts.objective);
+    if (reply !== undefined) {
+      const at = sequence.findIndex((e) => e.type === 'turn.completed');
+      const template = sequence[0] as AeosEvent;
+      sequence.splice(
+        at < 0 ? sequence.length : at,
+        0,
+        AeosEventSchema.parse({
+          ...template,
+          id: newEventId(),
+          type: 'item.message',
+          payload: { role: 'assistant', text: reply },
         }),
       );
     }

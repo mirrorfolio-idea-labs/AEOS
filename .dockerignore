@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/.playwright-home*
+**/test-results
+apps/desktop/src-tauri/target
+.git
+guides

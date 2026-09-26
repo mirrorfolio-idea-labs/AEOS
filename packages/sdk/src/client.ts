@@ -31,10 +31,20 @@ export interface AeosClientOptions {
   fetchImpl?: typeof fetch;
 }
 
+export interface PlanTaskView {
+  id: string;
+  title: string;
+  status: string;
+  taskClass?: string;
+  agent?: string;
+}
+
 export interface ObjectiveStatus {
   running: boolean;
-  tasks: Array<{ id: string; title: string; status: string }>;
-  checkpoints: Array<{ taskId: string; status: string; attempts: number }>;
+  tasks: PlanTaskView[];
+  checkpoints: Array<{ taskId: string; status: string; attempts: number; commit?: string }>;
+  /** Planner proposal awaiting approval (P3.M1). */
+  proposedTasks?: PlanTaskView[];
 }
 
 export type DiffScope = 'uncommitted' | 'branch' | 'last-commit';
@@ -74,6 +84,31 @@ export interface InboxItem extends AgentStatusEntry {
 }
 
 export type AttentionAction = 'seen' | 'unread' | 'settle' | 'unsettle';
+
+export interface MemoryProposalView {
+  id: string;
+  op: 'write' | 'archive' | 'consolidate';
+  path: string;
+  title?: string;
+  hook?: string;
+  content?: string;
+}
+
+export type JobActionView = { type: 'start-objective'; workspaceId: string; agentId: string; objectiveId: string } | { type: 'curator' };
+
+/** A durable wakeup job (P3.M5). */
+export interface JobView {
+  id: string;
+  kind: 'cron' | 'idle';
+  cron?: string;
+  idleMs?: number;
+  minIntervalMs?: number;
+  action: JobActionView;
+  enabled: boolean;
+  createdAt: string;
+  lastRunAt?: string;
+  lastError?: string;
+}
 
 export interface EventStreamOptions {
   typePrefix?: string;
@@ -238,14 +273,78 @@ export class AeosClient {
     agentId: string;
     id: string;
     title: string;
-    tasks: Array<{ id: string; title: string }>;
+    /** Omit (with `autoPlan: true`) to have the planner write the plan. */
+    tasks?: Array<{ id: string; title: string }>;
+    autoPlan?: boolean;
     budgetUsd?: number;
     budgetTokens?: number;
     definitionOfDone?: string;
     /** Repo binding id — the objective runs in its own worktree (P2.M9). */
     repo?: string;
+    /** Verification commands overriding the repo binding's (P3.M3); `[]` disables. */
+    verify?: string[];
+    /** Post-run retrospective: queue proposals (default), accept them at once, or skip (P3.M4). */
+    retrospective?: 'propose' | 'apply' | 'off';
   }): Promise<{ id: string }> {
     return this.request('POST', '/v1/objectives', input);
+  }
+
+  /** Queued memory proposals awaiting acceptance (retrospective, curator — P3.M4). */
+  memoryProposals(workspaceId: string, agentId: string): Promise<MemoryProposalView[]> {
+    return this.request('GET', `/v1/memory/proposals?workspaceId=${workspaceId}&agentId=${agentId}`);
+  }
+
+  /** Accept proposals (all, or `ids`) — they reach the NEXT session snapshot. */
+  applyMemoryProposals(
+    workspaceId: string,
+    agentId: string,
+    ids?: string[],
+  ): Promise<Array<{ id: string; status: 'applied' | 'failed'; error?: string }>> {
+    return this.request('POST', `/v1/memory/proposals/apply?workspaceId=${workspaceId}&agentId=${agentId}`, ids === undefined ? {} : { ids });
+  }
+
+  rejectMemoryProposal(workspaceId: string, agentId: string, id: string): Promise<{ rejected: string }> {
+    return this.request('POST', `/v1/memory/proposals/${id}/reject?workspaceId=${workspaceId}&agentId=${agentId}`, {});
+  }
+
+  /** Durable wakeup jobs — cron (UTC) or idle; survive daemon restarts (P3.M5). */
+  listJobs(): Promise<JobView[]> {
+    return this.request('GET', '/v1/jobs');
+  }
+
+  saveJob(job: Omit<JobView, 'createdAt' | 'lastRunAt' | 'lastError' | 'enabled'> & { enabled?: boolean }): Promise<JobView> {
+    return this.request('POST', '/v1/jobs', job);
+  }
+
+  deleteJob(id: string): Promise<{ deleted: string }> {
+    return this.request('DELETE', `/v1/jobs/${id}`);
+  }
+
+  /** Router decisions + realized cost per task attempt (P3.M2). */
+  objectiveRoutes(
+    workspaceId: string,
+    agentId: string,
+    objectiveId: string,
+  ): Promise<
+    Array<{
+      ts: string;
+      taskId: string;
+      decision: { taskClass: string; provider: string; model?: string; thinking?: string; reason: string };
+      pricingSource: string;
+      pricingStale: boolean;
+      realized: { status: string; usd: number; tokens: { input: number; output: number }; derivedUsd?: number };
+    }>
+  > {
+    return this.request('GET', `/v1/objectives/${objectiveId}/routes?workspaceId=${workspaceId}&agentId=${agentId}`);
+  }
+
+  /** Approve a planner-proposed plan and start the objective (P3.M1). */
+  approvePlan(workspaceId: string, agentId: string, objectiveId: string): Promise<{ approved: boolean; tasks: PlanTaskView[] }> {
+    return this.request(
+      'POST',
+      `/v1/objectives/${objectiveId}/plan/approve?workspaceId=${workspaceId}&agentId=${agentId}`,
+      {},
+    );
   }
 
   startObjective(workspaceId: string, agentId: string, objectiveId: string): Promise<{ started: boolean }> {

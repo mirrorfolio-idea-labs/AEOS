@@ -133,17 +133,26 @@ describe('Runner process', () => {
 
   it('a STOP file gracefully stops the child within one heartbeat (spec §17.5)', async () => {
     const stopFile = path.join(os.tmpdir(), `aeos-stop-${process.pid}-${Date.now()}`);
+    const ready = `${stopFile}.ready`;
     const r = makeRunner(
-      [process.execPath, '-e', 'process.on("SIGTERM", () => process.exit(0)); setInterval(() => {}, 1000);'],
+      [
+        process.execPath,
+        '-e',
+        `process.on("SIGTERM", () => process.exit(0)); require("fs").writeFileSync(${JSON.stringify(ready)}, ""); setInterval(() => {}, 1000);`,
+      ],
       { stopFilePaths: [stopFile] },
     );
     await r.start();
     try {
+      // under load the child may not have installed its SIGTERM handler yet;
+      // a STOP before that would kill it by signal rather than a clean exit
+      for (let i = 0; i < 200 && !fs.existsSync(ready); i++) await new Promise((res) => setTimeout(res, 25));
       fs.writeFileSync(stopFile, '');
       const code = await r.waitForChildExit();
       expect(code).toBe(0);
     } finally {
       fs.rmSync(stopFile, { force: true });
+      fs.rmSync(ready, { force: true });
     }
   });
 

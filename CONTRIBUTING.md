@@ -82,10 +82,31 @@ discussion to end in an ADR under `docs/adr/` before code lands.
 
 Do **not** open a public issue — see [SECURITY.md](SECURITY.md).
 
-## Response expectations
+## Triage and response times
 
-Maintainers triage new issues and PRs within **3 business days**. Pings are
-welcome after that.
+Every new issue starts as `needs-triage`. Within **3 business days** a
+maintainer does four things:
+
+1. Gives the issue a type (`bug`, `enhancement`, `docs`, `question`) and an
+   `area:…` label.
+2. Sets a priority for bugs and anything security-adjacent.
+3. Moves it to `accepted`, or to `needs-repro` (with what is missing), or
+   closes it with the reason.
+4. Marks scoped, well-understood work as `good first issue` or
+   `help wanted`.
+
+| Priority | Meaning | First response | Target fix |
+|---|---|---|---|
+| `P0` | Data loss, a security hole, or AEOS unusable | **24 hours**, 7 days a week | A hotfix release (see `docs/RELEASE.md`) |
+| `P1` | A major feature is broken with no workaround | 1 business day | The next patch release |
+| `P2` | Broken but with a workaround, or an important gap | 3 business days | A planned minor release |
+| `P3` | Minor or cosmetic | 3 business days | When someone picks it up |
+
+Pull requests get a first review within **3 business days**. If nobody
+has responded by then, you're welcome to ping. Label definitions live in
+[`.github/labels.yml`](.github/labels.yml).
+
+A release never ships with a known open `P0` or `P1`.
 
 ## License
 
