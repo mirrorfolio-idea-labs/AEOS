@@ -89,6 +89,20 @@ export interface RunObjectiveOptions {
   onVerifyFailed?: (target: PlanTask, verifyTask: PlanTask, result: VerifyResult) => Promise<void>;
   /** Realized outcome + spend of every task attempt (route/cost records). */
   onTaskSettled?: (task: PlanTask, result: TaskSettlement) => void | Promise<void>;
+  /**
+   * A task's harness session is about to start / has ended (spec §7): lets
+   * the host register the session (session.yaml + index) so its events
+   * route to a transcript, then record the final state.
+   */
+  onSessionStarted?: (session: SessionInfo) => void | Promise<void>;
+  onSessionEnded?: (session: SessionInfo & { state: 'completed' | 'failed' | 'paused'; providerSessionId?: string }) => void | Promise<void>;
+}
+
+export interface SessionInfo {
+  sessionId: string;
+  /** The agent the session runs as (the delegate, for a delegated task). */
+  agent: AgentConfig;
+  task: PlanTask;
 }
 
 export interface TaskSettlement {
@@ -264,10 +278,13 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
 
     const execution = (await opts.selectExecution?.(task)) ?? { adapter: opts.adapter };
     // delegation (P3.M5): a task may run as another agent — its profile, not ours
-    const profile = await execution.adapter.createProfile(execution.agent ?? opts.agent);
+    const runAs = execution.agent ?? opts.agent;
+    const profile = await execution.adapter.createProfile(runAs);
+    const sessionId = nextSessionId();
+    await opts.onSessionStarted?.({ sessionId, agent: runAs, task });
     const handle = execution.adapter.spawn({
       profile,
-      sessionId: nextSessionId(),
+      sessionId,
       objective: opts.composePrompt === undefined ? task.title : await opts.composePrompt(task, plan),
       ...(opts.workdir === undefined ? {} : { workdir: opts.workdir }),
       ...(execution.model === undefined ? {} : { model: execution.model }),
@@ -317,6 +334,14 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
         failureReason = event.payload.reason;
       }
     }
+
+    await opts.onSessionEnded?.({
+      sessionId,
+      agent: runAs,
+      task,
+      state: budgetStop !== null ? 'paused' : terminal === 'completed' ? 'completed' : 'failed',
+      ...(handle.providerSessionId === undefined ? {} : { providerSessionId: handle.providerSessionId }),
+    });
 
     const settle = (status: TaskSettlement['status']): Promise<void> | void =>
       opts.onTaskSettled?.(task, { status, usd, tokens: { input: inputTokens, output: outputTokens } });
