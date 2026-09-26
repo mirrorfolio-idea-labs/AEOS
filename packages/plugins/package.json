@@ -1,14 +1,16 @@
 {
-  "name": "@aeos/cli",
+  "name": "@aeos/plugins",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
-  "private": true,
-  "bin": {
-    "aeos": "./dist/main.js"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
@@ -16,13 +18,10 @@
   },
   "dependencies": {
     "@aeos/contracts": "workspace:*",
-    "@aeos/plugins": "workspace:*",
     "@aeos/provider-core": "workspace:*",
-    "@aeos/sdk": "workspace:*"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@aeos/api": "workspace:*",
-    "@aeos/kernel": "workspace:*",
     "@types/node": "^22",
     "vitest": "^2.1.8"
   }

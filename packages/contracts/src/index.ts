@@ -5,9 +5,15 @@ export { WorkspaceSchema, SLUG_REGEX, type Workspace } from './domain/workspace.
 export { CredentialProfileSchema, type CredentialProfile } from './domain/credential.js';
 export {
   AgentConfigSchema,
+  BUILTIN_PROVIDERS,
   FeatureTogglesSchema,
+  PLUGIN_PROVIDER_REGEX,
+  ProviderIdSchema,
   RepoBindingSchema,
   type AgentConfig,
+  type BuiltinProvider,
+  type PluginProviderId,
+  type ProviderId,
   type RepoBinding,
 } from './domain/agent.js';
 export {
@@ -51,3 +57,11 @@ export {
   type NativeFlags,
   type HarnessId,
 } from './domain/compiled-policy.js';
+export {
+  PLUGIN_ABI_VERSION,
+  PLUGIN_KINDS,
+  PluginKindSchema,
+  PluginManifestSchema,
+  type PluginKind,
+  type PluginManifest,
+} from './domain/plugin.js';

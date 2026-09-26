@@ -1,0 +1,21 @@
+{
+  "name": "create-aeos-plugin",
+  "version": "0.1.0",
+  "description": "Scaffold an AEOS plugin (a working example provider that passes the adapter conformance suite).",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "create-aeos-plugin": "./bin/create-aeos-plugin.mjs" },
+  "files": ["bin", "template"],
+  "scripts": {
+    "build": "node -e \"\"",
+    "typecheck": "node -e \"\"",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@aeos/contracts": "workspace:*",
+    "@aeos/plugins": "workspace:*",
+    "@aeos/provider-core": "workspace:*",
+    "@types/node": "^22",
+    "vitest": "^2.1.8"
+  }
+}

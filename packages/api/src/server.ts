@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import swagger from '@fastify/swagger';
 import websocket from '@fastify/websocket';
 import { openIndexDb, type EventBus, type IndexDb } from '@aeos/kernel';
-import type { AgentConfig, CredentialProfile, EffectivePolicy } from '@aeos/contracts';
+import type { AgentConfig, CredentialProfile, EffectivePolicy, ProviderId } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
 import type { ApprovalsRegistry, SandboxChoice } from '@aeos/policy';
 import type { LoadedPricing } from '@aeos/router';
@@ -51,7 +51,7 @@ export interface ApiServerOptions {
    */
   adapterFor: (
     agent: AgentConfig,
-    opts?: { provider?: 'claude-code' | 'codex' | 'opencode'; sandbox?: SandboxChoice },
+    opts?: { provider?: ProviderId; sandbox?: SandboxChoice },
   ) => HarnessAdapter;
   /**
    * Pricing index for token-derived USD (P3.M2). Defaults to the cached or
