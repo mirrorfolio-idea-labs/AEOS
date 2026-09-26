@@ -53,3 +53,23 @@ jobs:
           pnpm -F @aeos/provider-claude test
           pnpm -F @aeos/provider-codex test
           pnpm -F @aeos/provider-opencode test
+  # P4.M1 exit gate: build the container-tier runtime image and run the
+  # container golden path + escape canary against IT (the main `ci` job runs
+  # the same e2e against a stock node image).
+  sandbox-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: build aeos-runner image (via the CLI, embedded Dockerfile)
+        run: node apps/cli/dist/main.js sandbox build && node apps/cli/dist/main.js sandbox status
+      - name: runner image carries the harness runtime
+        run: docker run --rm aeos-runner:local sh -c 'node --version && git --version && rg --version | head -1'
+      - name: container golden path + escape canary on aeos-runner
+        env:
+          AEOS_SANDBOX_E2E_IMAGE: aeos-runner:local
+        run: pnpm -F @aeos/aeosd exec vitest run test/sandbox-container.e2e.test.ts

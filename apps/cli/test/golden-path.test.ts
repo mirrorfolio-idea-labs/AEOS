@@ -106,3 +106,13 @@ describe('CLI golden path (T4 / M7 exit gate)', () => {
     expect(err[0]).toContain('aeos —');
   });
 });
+
+describe('sandbox image (P4.M1)', () => {
+  it('the CLI-embedded Dockerfile matches docker/runner/Dockerfile', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const { RUNNER_DOCKERFILE } = await import('../src/runner-dockerfile.js');
+    const repoFile = fileURLToPath(new URL('../../../docker/runner/Dockerfile', import.meta.url));
+    expect(RUNNER_DOCKERFILE).toBe(readFileSync(repoFile, 'utf8'));
+  });
+});

@@ -351,18 +351,18 @@ specialist sub-session, coordinating via plan file + git only.
 - [x] **T2** Delegation: assign task → spawn/target other agent → integrate via plan+git. *Accept: multi-agent fixture objective completes with one delegated task.*
 **Exit gate = P3 exit gate** (top of this section) — green 2026-09-26: `apps/aeosd/test/p3-exit.e2e.test.ts` (real daemon, unattended). `v0.3` tag is Gate 3 (Kabeer).
 
-## Phase P4 — Scale + community (v0.4)  `[ ]`
+## Phase P4 — Scale + community (v0.4)  `[~]`
 
 **Exit gate for the phase:** every deploy target has a tested quickstart; a
 third-party plugin can be built and installed without touching core; `v0.4`
 tagged. (Multi-user RBAC is **post-v1** per spec §14 — see backlog.)
 
-### M1 — Docker sandbox tier  `[ ]`
+### M1 — Docker sandbox tier  `[x]`
 **Context brief:** Spec §10. `container` tier: runner + harness in a
 per-project container with mounted worktree; sibling containers via mounted
 docker socket or rootless nesting; harness-native sandboxes compose inside.
-- [ ] **T1** Container runner image + spawn/adopt path. *Accept: golden-path objective completes fully inside a container.*
-- [ ] **T2** Tier selection per agent/action-class in policy. *Accept: policy fixture switches tiers; escape-canary test (host file outside worktree untouchable) green.*
+- [x] **T1** Container runner image + spawn/adopt path. *Accept: golden-path objective completes fully inside a container.*
+- [x] **T2** Tier selection per agent/action-class in policy. *Accept: policy fixture switches tiers; escape-canary test (host file outside worktree untouchable) green.*
 **Exit gate:** container golden path + escape canary in CI.
 
 ### M2 — Public plugin API  `[ ]`

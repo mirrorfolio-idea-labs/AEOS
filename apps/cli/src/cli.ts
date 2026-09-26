@@ -2,7 +2,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AeosClient } from '@aeos/sdk';
-import { DEFAULT_PINS, createBinaryManager, type ManagedHarness } from '@aeos/provider-core';
+import { spawnSync } from 'node:child_process';
+import { DEFAULT_PINS, createBinaryManager, dockerAvailable, type ManagedHarness } from '@aeos/provider-core';
+import { RUNNER_DOCKERFILE } from './runner-dockerfile.js';
 
 export interface CliIo {
   out: (line: string) => void;
@@ -74,6 +76,8 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos stop status
   aeos resume-ops          # lifts the kill switch
   aeos harness pins        # pinned harness releases of record
+  aeos sandbox build [--tag aeos-runner:local]   # container-tier runtime image (P4.M1)
+  aeos sandbox status
   aeos harness install <harness>@<version>   # fetch + integrity-check + seal (local, AEOS_HOME)
   aeos harness verify <harness>@<version>    # re-hash an install against its seal
   aeos harness list`;
@@ -128,6 +132,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
 
   try {
     if (group === 'harness') return await runHarnessCommand(action, id, io);
+    if (group === 'sandbox') return runSandboxCommand(action, parsed, io);
     if (group === 'health') {
       io.out(JSON.stringify(await client.health()));
       return 0;
@@ -419,4 +424,30 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     io.err(error instanceof Error ? error.message : String(error));
     return 1;
   }
+}
+
+/**
+ * `aeos sandbox build|status` (P4.M1): the container tier's runtime image.
+ * The Dockerfile ships inside the CLI (drift-tested against
+ * docker/runner/Dockerfile) so a fresh install can build it anywhere.
+ */
+function runSandboxCommand(action: string | undefined, parsed: Parsed, io: CliIo): number {
+  const tag = parsed.flags.get('tag')?.[0] ?? 'aeos-runner:local';
+  if (!dockerAvailable()) {
+    io.err('docker is not reachable — the container sandbox tier needs a running docker daemon');
+    return 1;
+  }
+  if (action === 'status') {
+    const image = spawnSync('docker', ['image', 'inspect', '--format', '{{.Id}}', tag], { encoding: 'utf8' });
+    io.out(`docker: ok\nimage ${tag}: ${image.status === 0 ? image.stdout.trim() : 'missing — run `aeos sandbox build`'}`);
+    return image.status === 0 ? 0 : 1;
+  }
+  if (action === 'build') {
+    const result = spawnSync('docker', ['build', '-t', tag, '-'], { input: RUNNER_DOCKERFILE, stdio: ['pipe', 'inherit', 'inherit'] });
+    if (result.status !== 0) return result.status ?? 1;
+    io.out(`built ${tag}`);
+    return 0;
+  }
+  io.err('usage: aeos sandbox build [--tag <image>] | aeos sandbox status');
+  return 2;
 }
