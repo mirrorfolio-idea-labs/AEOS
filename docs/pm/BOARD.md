@@ -1,7 +1,7 @@
 # Board — AEOS
 
-> **Generated view** — as of 2026-08-25 (`fceb790`), **P1 complete (`v0.1.0`
-> tagged); P2 underway — M1–M5 done, M6 next (needs Codex CLI).**
+> **Generated view** — as of 2026-08-26 (`3c6063d`), **P1 complete (`v0.1.0`
+> tagged); P2 underway — M1–M6 done, M7 next.**
 > Facts are owned by [ROADMAP](../ROADMAP.md) (build tasks) and
 > [sprint files](sprints/) (PM tasks). Regenerate on every status-changing
 > commit per [README R3](README.md#sync-protocol-self-healing-rules); never
@@ -11,8 +11,8 @@
 
 | | |
 |---|---|
-| **Now** | P2 underway: **M1–M5 complete** (policy/approvals, budgets/audit, secrets, memory curator, PTY takeover + co-edit guard) as of 2026-08-25 (overnight session + two continuations). S09 closed at the M5 exit gate. |
-| **Next** | P2.M6 Codex adapter — **blocked on tooling**: the `codex` CLI isn't installed, and T1's accept requires fixtures recorded from real runs (spec §18). Install Codex CLI or approve spec-derived fixtures before starting. M4/M10 native-host live smokes remain open, non-blocking. |
+| **Now** | P2 underway: **M1–M6 complete** — policy/approvals, budgets/audit, secrets, curator, PTY takeover + co-edit guard, Codex adapter (2026-08-25/26; three-harness conformance parity). S10 closed at the M6 exit gate. |
+| **Next** | P2.M7 managed harness binaries (pin/verify, version-gated capabilities) — unblocked, no new dependencies. M4/M10 native-host live smokes remain open, non-blocking. |
 | **Later** | P2 (v0.2 safety) → P3 (v0.3 autonomy) → P4 (v0.4 scale) → P5 (v1.0 launch). P5.M2 (docs site) may run in parallel from P2 onward. |
 
 ## Milestones
@@ -34,7 +34,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[~]` — 17/25 tasks
+### P2 — Safety + polish (v0.2) `[~]` — 19/25 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
@@ -43,7 +43,8 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 secrets store `[x]` | 3/3 | age-encrypted store (keychain-ready interface), policy-gated injection, pipeline-wide redaction; canary exit gate green — done 2026-08-25 (evening continuation) |
 | M4 memory curator `[x]` | 3/3 | idle-triggered dry-run scaffold, propose-pipeline ops (deterministic v0), own trail + never-delete proof; daemon stays dry-run-only for now — done 2026-08-25 (second overnight continuation) |
 | M5 PTY attach + co-edit guard `[x]` | 3/3 | runner PTY (minimal-env shell), WS attach gated to allow-tier + xterm Takeover tab, ADR-009 detect-and-pause guard (unwired by design until worktrees) — done 2026-08-25 (deps approved mid-session; third overnight continuation) |
-| M6 Codex adapter | 0/2 | conformance parity — **blocked on `codex` CLI for fixture recording** |
+| M6 Codex adapter `[x]` | 2/2 | recorded-fixture translation (codex-cli 0.149.1), resume, conformance parity; capability matrix test-enforced incl. README — done 2026-08-26 |
+| M7 managed binaries | 0/2 | pin/verify, version-gated capabilities |
 | M6 Codex adapter | 0/2 | conformance parity (OpenCode moved to P1.M10) |
 | M7 managed binaries | 0/2 | pin/verify, version-gated capabilities |
 | M8 Tauri wrapper | 0/3 | desktop shell, notifications, CI artifacts |
@@ -80,18 +81,17 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 **Total defined work: 107 tasks** (44 P1 + 24 P2 + 11 P3 + 10 P4 + 18 P5)
 across 32 milestones, plus 4 tracked post-v1 backlog items (scope change
 2026-07-19: +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
-retired). Every task has an accept criterion in the ROADMAP; 65 are done
+retired). Every task has an accept criterion in the ROADMAP; 67 are done
 (P1 M1–M8 + M10 code-complete — M4/M10 gated only on Kabeer's manual
-smokes — plus P5.M1 and P2.M1–M5), 42 remain to v1 — each open task has a matching
+smokes — plus P5.M1 and P2.M1–M6), 40 remain to v1 — each open task has a matching
 GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
 ## Active sprint
 
-None open — [S09](sprints/S09.md) closed 2026-08-25 at the P2.M5 exit
-gate (mid-session takeover + clean handback demonstrated). Next sprint
-opens on P2.M6 **after** the fixture-recording question is resolved
-(`codex` CLI installed, or explicit approval for spec-derived fixtures).
+[S10](sprints/S10.md) — P2.M6 Codex adapter, closed 2026-08-26 at the
+exit gate (all four adapters complete the same fixture objective).
+Next sprint opens on P2.M7 managed harness binaries.
 
 ## Blockers
 

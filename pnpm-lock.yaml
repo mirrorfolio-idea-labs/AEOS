@@ -123,6 +123,9 @@ importers:
       '@aeos/provider-claude':
         specifier: workspace:*
         version: link:../../packages/provider-claude
+      '@aeos/provider-codex':
+        specifier: workspace:*
+        version: link:../../packages/provider-codex
       '@aeos/provider-core':
         specifier: workspace:*
         version: link:../../packages/provider-core
@@ -300,6 +303,25 @@ importers:
         version: 2.1.9(@types/node@22.20.1)
 
   packages/provider-claude:
+    dependencies:
+      '@aeos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@aeos/provider-core':
+        specifier: workspace:*
+        version: link:../provider-core
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
+  packages/provider-codex:
     dependencies:
       '@aeos/contracts':
         specifier: workspace:*

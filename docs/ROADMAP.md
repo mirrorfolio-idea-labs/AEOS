@@ -234,15 +234,15 @@ only for PTY) + spec §20 OQ1 (human edits agent worktree — resolve by ADR her
 - [x] **T3** Co-edit detection ADR + guard (dirty-worktree check → pause + notify). *Accept: human edit in agent worktree pauses the task with an `approval.request`.*
 **Exit gate:** mid-session human takeover and clean handback demonstrated.
 
-### M6 — Codex adapter  `[ ]`
+### M6 — Codex adapter  `[x]`
 **Context brief:** Spec §9. Hermetic profile (`CODEX_HOME` + generated
 `config.toml`); translate `thread/turn/item` and SSE into the canonical
 taxonomy; resume support; passes the M4(P1) conformance suite.
-- [ ] **T1** Codex adapter (profile, spawn, translate, resume). *Accept: recorded-fixture translation byte-identical; conformance green.*
+- [x] **T1** Codex adapter (profile, spawn, translate, resume). *Accept: recorded-fixture translation byte-identical; conformance green.*
 > **T2 moved** (2026-07-19 scope change): the OpenCode adapter was pulled
 > forward to **P1.M10** — Kabeer needs a second harness in v0.1. The task ID
 > `AEOS-P2.M6.T2` is retired, never reused.
-- [ ] **T3** Cross-harness capability matrix + docs. *Accept: matrix asserted by conformance tests, not hand-maintained.*
+- [x] **T3** Cross-harness capability matrix + docs. *Accept: matrix asserted by conformance tests, not hand-maintained.*
 **Exit gate:** the same fixture objective completes on all adapters (fake, Claude, OpenCode from P1.M10, Codex).
 
 ### M7 — Managed harness binaries  `[ ]`
