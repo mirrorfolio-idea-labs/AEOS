@@ -23,7 +23,19 @@ export class RegistryError extends Error {
 }
 
 /** Ephemeral / machine-specific dirs stay out of the agent's git history. */
-const AGENT_GITIGNORE = 'sessions/\nworktrees/\nharness/\n';
+const AGENT_GITIGNORE_ENTRIES = ['sessions/', 'worktrees/', 'harness/', 'status.json', 'attention.json'];
+const AGENT_GITIGNORE = AGENT_GITIGNORE_ENTRIES.map((e) => `${e}\n`).join('');
+
+/** Agents created before an entry existed get it appended (runtime files stay out of history). */
+function ensureAgentGitignore(dir: string): void {
+  const file = path.join(dir, '.gitignore');
+  const current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  const have = new Set(current.split('\n').map((l) => l.trim()));
+  const missing = AGENT_GITIGNORE_ENTRIES.filter((e) => !have.has(e));
+  if (missing.length > 0) {
+    writeFileAtomic(file, `${current}${current === '' || current.endsWith('\n') ? '' : '\n'}${missing.join('\n')}\n`);
+  }
+}
 
 function mtime(filePath: string): number {
   return Math.floor(fs.statSync(filePath).mtimeMs);
@@ -101,6 +113,7 @@ export function updateAgent(
     throw new RegistryError('agent id / workspaceId are immutable');
   }
   writeAgentYaml(home, workspaceId, agentId, validated);
+  ensureAgentGitignore(agentDir(home, workspaceId, agentId));
   const changed = Object.keys(patch).sort().join(', ');
   commitAll(agentDir(home, workspaceId, agentId), `chore: update ${changed}`);
   indexAgent(db, validated, mtime(agentYaml(home, workspaceId, agentId)));

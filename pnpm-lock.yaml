@@ -197,6 +197,9 @@ importers:
       '@aeos/provider-core':
         specifier: workspace:*
         version: link:../provider-core
+      '@aeos/runner':
+        specifier: workspace:*
+        version: link:../runner
       '@aeos/scheduler':
         specifier: workspace:*
         version: link:../scheduler
@@ -383,9 +386,15 @@ importers:
       '@aeos/kernel':
         specifier: workspace:*
         version: link:../kernel
+      '@xterm/headless':
+        specifier: ^6.0.0
+        version: 6.0.0
       node-pty:
         specifier: ^1.1.0
         version: 1.1.0
+      smol-toml:
+        specifier: ^1.9.0
+        version: 1.9.0
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -1309,6 +1318,9 @@ packages:
 
   '@xterm/addon-fit@0.11.0':
     resolution: {integrity: sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g==}
+
+  '@xterm/headless@6.0.0':
+    resolution: {integrity: sha512-5Yj1QINYCyzrZtf8OFIHi47iQtI+0qYFPHmouEfG8dHNxbZ9Tb9YGSuLcsEwj9Z+OL75GJqPyJbyoFer80a2Hw==}
 
   '@xterm/xterm@6.0.0':
     resolution: {integrity: sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg==}
@@ -2238,6 +2250,10 @@ packages:
 
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
+
+  smol-toml@1.9.0:
+    resolution: {integrity: sha512-hpd+HLON7HdZXqYchMM/+LaTTbdK0AU3NngIJ4KVyWbY9bfQqdL9cD+4yf6dUoU2Ap4VsU0JkQi6FxAI1B2mXQ==}
+    engines: {node: '>= 18'}
 
   sonic-boom@4.2.1:
     resolution: {integrity: sha512-w6AxtubXa2wTXAUsZMMWERrsIRAdrK0Sc+FUytWvYAhBJLyuI4llrMIC1DtlNSdI99EI86KZum2MMq3EAZlF9Q==}
@@ -3238,6 +3254,8 @@ snapshots:
 
   '@xterm/addon-fit@0.11.0': {}
 
+  '@xterm/headless@6.0.0': {}
+
   '@xterm/xterm@6.0.0': {}
 
   abstract-logging@2.0.1: {}
@@ -4166,6 +4184,8 @@ snapshots:
       simple-concat: 1.0.1
 
   sisteransi@1.0.5: {}
+
+  smol-toml@1.9.0: {}
 
   sonic-boom@4.2.1:
     dependencies:

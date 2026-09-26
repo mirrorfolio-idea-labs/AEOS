@@ -6,3 +6,6 @@ export {
   startObjectiveRun,
   stopFilePath,
 } from './routes/objectives.js';
+export { AgentStatusTracker, statusTrackerFor, type AgentStatusEntry } from './status.js';
+export { attachNotifier, loadNotificationsConfig, renderNotification, type NotificationsConfig } from './notify.js';
+export { inboxItem, sortInbox, type InboxItem } from './routes/runtime.js';

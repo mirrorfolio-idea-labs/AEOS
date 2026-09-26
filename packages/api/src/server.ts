@@ -10,10 +10,13 @@ import { registerWorkspaceRoutes } from './routes/workspaces.js';
 import { registerAgentRoutes } from './routes/agents.js';
 import { registerObjectiveRoutes } from './routes/objectives.js';
 import { registerReviewRoutes } from './routes/review.js';
+import { registerRuntimeRoutes } from './routes/runtime.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
 import { registerAttachRoute } from './routes/attach.js';
+import { attachNotifier } from './notify.js';
+import { statusTrackerFor } from './status.js';
 
 /** Daemon-side PTY handle for one takeover session (P2.M5). */
 export interface PtyHandle {
@@ -59,6 +62,11 @@ export interface ApiServerOptions {
   resolveAgent?: (sessionId: string) => AgentConfig | undefined;
   /** Live-runner PTY bridge for `/v1/sessions/:id/attach` (P2.M5). */
   attachPty?: PtyBridge;
+  /**
+   * Attention push to `<home>/notifications.yaml` webhooks (P2.M10).
+   * On by default; tests inject `fetchImpl` or pass `false`.
+   */
+  notify?: false | { fetchImpl?: typeof fetch; onError?: (error: unknown, url: string) => void };
 }
 
 export interface ApiContext extends ApiServerOptions {
@@ -116,12 +124,24 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
   registerAgentRoutes(app, ctx);
   registerObjectiveRoutes(app, ctx);
   registerReviewRoutes(app, ctx);
+  registerRuntimeRoutes(app, ctx);
   registerMemoryRoutes(app, ctx);
   registerEventRoutes(app, ctx);
   registerApprovalRoutes(app, ctx);
   registerAttachRoute(app, ctx);
 
+  const detachNotifier =
+    opts.notify === false
+      ? () => undefined
+      : attachNotifier({
+          home: opts.home,
+          tracker: statusTrackerFor(opts.home, opts.bus),
+          ...(opts.notify?.fetchImpl === undefined ? {} : { fetchImpl: opts.notify.fetchImpl }),
+          ...(opts.notify?.onError === undefined ? {} : { onError: opts.notify.onError }),
+        });
+
   app.addHook('onClose', (_instance, done) => {
+    detachNotifier();
     ctx.db.close();
     done();
   });

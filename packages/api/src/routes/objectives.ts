@@ -14,6 +14,7 @@ import {
 import { compilePolicy, readObjectiveFile } from '@aeos/policy';
 import { ObjectiveSchema, type AgentConfig, type CompiledPolicy } from '@aeos/contracts';
 import { composeSessionBrief, taskNotesPath } from '../brief.js';
+import { statusTrackerFor } from '../status.js';
 import { guardAdapter } from '../policy-gate.js';
 import { ApiError, ok } from '../envelope.js';
 import type { ApiContext } from '../server.js';
@@ -90,6 +91,10 @@ export function startObjectiveRun(
   const agent = getAgent(ctx.home, workspaceId, agentId);
   const dir = objectiveDirFor(ctx.home, workspaceId, agentId, objectiveId);
   if (running.has(dir)) return;
+  // P2.M10 attention status: every run event folds into the agent's status
+  const tracker = statusTrackerFor(ctx.home, ctx.bus);
+  const ref = { workspaceId, id: agentId };
+  tracker.set(ref, 'working', { via: 'events', reason: `objective ${objectiveId} started` });
   const run = (async () => {
     let adapter = ctx.adapterFor(agent);
     let permissionPolicy: CompiledPolicy | undefined;
@@ -133,6 +138,7 @@ export function startObjectiveRun(
       ...(permissionPolicy === undefined ? {} : { permissionPolicy }),
       onEvent: (event) => {
         ctx.bus?.publish(event);
+        tracker.observe(ref, event);
         // files are truth for spend too: every cost.usage lands in costs.ndjson
         if (event.type === 'cost.usage') {
           void appendFile(path.join(dir, 'costs.ndjson'), JSON.stringify(event) + '\n');
@@ -140,6 +146,23 @@ export function startObjectiveRun(
       },
     });
   })()
+    .then(
+      (outcome) => {
+        if (outcome.status === 'completed') {
+          tracker.set(ref, 'done', { via: 'events', reason: `objective ${objectiveId} completed` });
+        } else {
+          tracker.set(ref, 'blocked', { via: 'events', reason: `objective ${objectiveId} paused: ${outcome.reason}` });
+        }
+        return outcome;
+      },
+      (error: unknown) => {
+        tracker.set(ref, 'blocked', {
+          via: 'events',
+          reason: `objective ${objectiveId} errored: ${error instanceof Error ? error.message : String(error)}`,
+        });
+        throw error;
+      },
+    )
     .finally(() => running.delete(dir));
   running.set(dir, run);
   run.catch(() => undefined); // surfaced via status; never an unhandled rejection

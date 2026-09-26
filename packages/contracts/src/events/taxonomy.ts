@@ -8,6 +8,15 @@ const ev = <T extends string, P extends z.ZodTypeAny>(type: T, payload: P) =>
 
 const empty = z.object({}).strict();
 
+/**
+ * Attention-level agent status (P2.M10, idea from herdr): `working` while a
+ * session makes progress, `blocked` when it needs a human (approval, budget
+ * stop, a permission prompt on screen), `done` when the last session ended,
+ * `idle` when nothing has run, `unknown` when a screen cannot be classified.
+ */
+export const AgentStatusSchema = z.enum(['idle', 'working', 'blocked', 'done', 'unknown']);
+export type AgentStatus = z.infer<typeof AgentStatusSchema>;
+
 export const AeosEventSchema = z.discriminatedUnion('type', [
   ev('session.created', empty),
   ev('session.state_changed', z.object({ from: SessionStateSchema, to: SessionStateSchema })),
@@ -54,6 +63,21 @@ export const AeosEventSchema = z.discriminatedUnion('type', [
     }),
   ),
   ev('memory.written', z.object({ path: z.string(), bytes: z.number().int().nonnegative() })),
+  ev(
+    'agent.status_changed',
+    z.object({
+      workspaceId: z.string(),
+      status: AgentStatusSchema,
+      previous: AgentStatusSchema,
+      /** Monotonic per agent — inbox "unseen" compares against it. */
+      seq: z.number().int().positive(),
+      /** `events` = derived from the canonical stream; `screen` = PTY screen rules. */
+      via: z.enum(['events', 'screen']),
+      reason: z.string().optional(),
+      /** Screen rule id that matched (for `aeos agent explain`-style debugging). */
+      rule: z.string().optional(),
+    }),
+  ),
 ]);
 
 export type AeosEvent = z.infer<typeof AeosEventSchema>;

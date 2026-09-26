@@ -273,6 +273,19 @@ adapts herdr-reviewr (MIT).
 - [x] **T3** Review pane: worktree diff by scope (whole objective, last task, uncommitted) in API, SDK, CLI and ADE; line comments go back to the agent as an `R<n>` task. *Accept: a Playwright round-trip covering bind → run → diff → comment → send creates the R1 task.*
 **Exit gate:** the fake-harness objective completes inside a worktree through the UI, and a review round-trip is green in CI (Playwright T6).
 
+### M10 — Agent runtime: status, wait, inbox, notifications  `[x]`
+**Context brief:** Added 2026-09-26 at Kabeer's request to adopt what is
+usable from [herdr](https://github.com/herdrdev/herdr), "the runtime your
+coding agents live on". herdr's detection manifests are Apache-2.0 and were
+copied with attribution. The ideas from herdr-agent-inbox and herdr-reviewr
+(both MIT) and herdr-remote (AGPL) were reimplemented, with no code copied.
+See `THIRD_PARTY_NOTICES.md`.
+- [x] **T1** Agent attention status (`idle | working | blocked | done | unknown`), derived from each run's canonical events and, for PTY takeovers, from herdr screen manifests evaluated over a headless xterm. Emitted as the new `agent.status_changed` event. *Accept: approval → blocked, run end → done, and a Claude permission prompt on a takeover screen → blocked via rule `bash_permission_prompt`.*
+- [x] **T2** Race-free wait primitive: `GET /v1/agents/:id/wait?until=&afterSeq=`, `aeos agent wait`, SDK `waitForAgent`. *Accept: a wait resolves on the matching transition after `afterSeq`, and a timeout returns `matched:false`.*
+- [x] **T3** Attention inbox: `/v1/inbox` ordered blocked → finished-unseen → working → idle → settled, with seen / unread / settle triage, where new activity lifts a settle; ADE sidebar inbox and status dots. *Accept: ordering fixture plus a Playwright round-trip (blocked → approve → finished → settle).*
+- [x] **T4** Attention push: `<home>/notifications.yaml` webhooks in json, ntfy or slack format. *Accept: a blocked agent produces exactly one ntfy POST with a high-priority title.*
+**Exit gate:** Playwright T7 green in CI, and the full bar green.
+
 ## Phase P3 — Autonomy (v0.3)  `[ ]`
 
 **Exit gate for the phase:** unattended demo — objective in, plan generated

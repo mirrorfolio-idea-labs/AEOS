@@ -34,3 +34,22 @@ export {
   type VersionRange,
   type WireMessage,
 } from './protocol/messages.js';
+export {
+  compileManifest,
+  detect as detectScreenState,
+  extractRegion,
+  parseManifest,
+  rustRegex,
+  type CompiledManifest,
+  type Detection,
+  type Manifest,
+  type ScreenInput,
+  type ScreenState,
+} from './detect/rules.js';
+export {
+  BUNDLED_MANIFEST_DIR,
+  ScreenStateDetector,
+  loadManifest,
+  type ScreenChange,
+  type ScreenDetectorOptions,
+} from './detect/screen.js';
