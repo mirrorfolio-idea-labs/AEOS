@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=AEOS
+GenericName=AI coding agents
+Comment=Durable AI coding agents, local-first
+Exec=aeos-desktop %u
+Icon=aeos
+Terminal=false
+Categories=Development;
+Keywords=agents;ai;coding;claude;
+MimeType=x-scheme-handler/aeos;
+StartupNotify=true

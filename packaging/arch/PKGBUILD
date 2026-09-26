@@ -1,0 +1,93 @@
+# Maintainer: Mirrorfolio Idea Labs <kabeer@mirrorfolio.com>
+#
+# AEOS for Arch Linux: the desktop app (Tauri shell) plus the daemon and CLI
+# it drives. It is built from source against Arch's own WebKitGTK, because
+# an AppImage built on an older distro can break on Arch's newer system
+# libraries.
+#
+#   cd packaging/arch && makepkg -si
+#
+# Run inside a clone, it builds that clone's checked-out commit. Copied out
+# on its own (e.g. to the AUR), it builds the v$pkgver release tag. Both can
+# be overridden:
+#   AEOS_GIT_URL=file:///path/to/checkout AEOS_REF=commit=<sha> makepkg
+pkgname=aeos
+pkgver=0.3.0
+pkgrel=1
+pkgdesc='Durable, resumable AI coding agents, local-first: desktop app, daemon and CLI'
+arch=('x86_64' 'aarch64')
+url='https://github.com/mirrorfolio-idea-labs/AEOS'
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'glib2' 'cairo' 'pango' 'gdk-pixbuf2' 'libsoup3'
+         'openssl' 'hicolor-icon-theme' 'git')
+makedepends=('rust' 'cargo' 'nodejs' 'pnpm' 'python')
+checkdepends=('nodejs')
+optdepends=('xdg-utils: open aeos:// links from other apps'
+            'libnotify: notification daemon support for agent alerts')
+provides=('aeos-desktop')
+conflicts=('aeos-desktop' 'aeos-bin')
+# rust + node-gyp (node-pty) builds do not take makepkg's LTO flags well;
+# the bundled node runtime must not be stripped
+options=('!lto' '!strip' '!debug')
+_checkout=$(git -C "${startdir:-.}/../.." rev-parse --show-toplevel 2>/dev/null)
+if [[ -n $_checkout && -z ${AEOS_GIT_URL:-} ]]; then
+  AEOS_GIT_URL="file://$_checkout"
+  : "${AEOS_REF:=commit=$(git -C "$_checkout" rev-parse HEAD)}"
+fi
+source=("aeos::git+${AEOS_GIT_URL:-https://github.com/mirrorfolio-idea-labs/AEOS.git}#${AEOS_REF:-tag=v$pkgver}")
+sha256sums=('SKIP')
+
+prepare() {
+  cd aeos
+  export CARGO_HOME="$srcdir/cargo-home"
+  # the repo pins pnpm (packageManager); pnpm >= 10 switches to that exact
+  # version itself, which keeps `pnpm deploy` (used by the bundle) consistent
+  pnpm install --frozen-lockfile
+  cargo fetch --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
+}
+
+build() {
+  cd aeos
+  export CARGO_HOME="$srcdir/cargo-home"
+  pnpm build
+  # self-contained daemon + CLI + web UI, carrying the node runtime it was built with
+  node scripts/release/bundle.mjs "$srcdir/out"
+  pnpm -F @aeos/desktop tauri build --no-bundle
+}
+
+check() {
+  cd aeos
+  export CARGO_HOME="$srcdir/cargo-home"
+  cargo test --frozen --release --manifest-path apps/desktop/src-tauri/Cargo.toml -- --test-threads=1
+}
+
+package() {
+  cd aeos
+  # bundle.mjs leaves exactly one aeos-<version>-linux-<arch>.tar.gz; refuse
+  # anything else rather than unpacking the wrong thing (or nothing)
+  local tarballs=("$srcdir"/out/aeos-*-linux-*.tar.gz)
+  if (( ${#tarballs[@]} != 1 )) || [[ ! -f ${tarballs[0]} ]]; then
+    echo "expected one daemon bundle in $srcdir/out, found: ${tarballs[*]}" >&2
+    return 1
+  fi
+  install -d "$pkgdir/opt/aeos"
+  tar -xzf "${tarballs[0]}" -C "$pkgdir/opt/aeos" --strip-components=1 --no-same-owner
+  [[ -x $pkgdir/opt/aeos/bin/aeosd ]]
+
+  install -Dm755 apps/desktop/src-tauri/target/release/aeos-desktop "$pkgdir/usr/bin/aeos-desktop"
+  # wrappers, not symlinks: the bundle's launchers resolve lib/ from their own path
+  for bin in aeosd aeos; do
+    install -Dm755 /dev/stdin "$pkgdir/usr/bin/$bin" <<EOF
+#!/bin/sh
+exec /opt/aeos/bin/$bin "\$@"
+EOF
+  done
+
+  install -Dm644 packaging/arch/aeos.desktop "$pkgdir/usr/share/applications/aeos.desktop"
+  local icons=apps/desktop/src-tauri/icons
+  install -Dm644 "$icons/32x32.png" "$pkgdir/usr/share/icons/hicolor/32x32/apps/aeos.png"
+  install -Dm644 "$icons/64x64.png" "$pkgdir/usr/share/icons/hicolor/64x64/apps/aeos.png"
+  install -Dm644 "$icons/128x128.png" "$pkgdir/usr/share/icons/hicolor/128x128/apps/aeos.png"
+  install -Dm644 "$icons/128x128@2x.png" "$pkgdir/usr/share/icons/hicolor/256x256/apps/aeos.png"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -3,7 +3,7 @@ name: desktop
 # Unsigned until P5.M3 (signing identities are Kabeer-held secrets).
 on:
   pull_request:
-    paths: ['apps/desktop/**', '.github/workflows/desktop.yml']
+    paths: ['apps/desktop/**', 'packaging/arch/**', '.github/workflows/desktop.yml']
   push:
     branches: [main, staging]
   workflow_dispatch:
@@ -46,3 +46,63 @@ jobs:
             apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
             apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
           if-no-files-found: error
+
+  # Arch Linux: rolling WebKitGTK, so the desktop app is built from source by
+  # packaging/arch/PKGBUILD. Build it from this commit in a clean Arch
+  # container, lint, install with pacman, and smoke-test what users run.
+  arch:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: system packages
+        run: |
+          pacman -Syu --noconfirm --needed git rust nodejs pnpm python \
+            webkit2gtk-4.1 gtk3 libsoup3 hicolor-icon-theme namcap \
+            xorg-server-xvfb xorg-xauth dbus xdg-utils desktop-file-utils curl procps-ng
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: makepkg (unprivileged, from this commit)
+        run: |
+          useradd -m builder
+          cp -r packaging/arch /home/builder/pkg
+          chown -R builder /home/builder/pkg
+          sudo -u builder git config --global --add safe.directory '*'
+          cd /home/builder/pkg
+          sudo -u builder env AEOS_GIT_URL="file://$GITHUB_WORKSPACE" AEOS_REF="commit=$GITHUB_SHA" \
+            makepkg --noconfirm --cleanbuild
+      - name: namcap (advisory)
+        run: |
+          namcap /home/builder/pkg/PKGBUILD || true
+          namcap /home/builder/pkg/aeos-*.pkg.tar.zst || true
+      - name: install with pacman
+        run: pacman -U --noconfirm /home/builder/pkg/aeos-*.pkg.tar.zst
+      - name: aeos:// is registered to the packaged desktop entry
+        run: |
+          desktop-file-validate /usr/share/applications/aeos.desktop
+          test "$(sudo -u builder xdg-mime query default x-scheme-handler/aeos)" = aeos.desktop
+      - name: daemon + CLI from the package
+        run: |
+          sudo -u builder env AEOS_HOME=/tmp/aeos-home AEOS_PROVIDER=fake aeosd run > /tmp/aeosd.log 2>&1 &
+          for _ in $(seq 60); do curl -sf http://127.0.0.1:7777/healthz && break; sleep 1; done
+          sudo -u builder aeos health
+      - name: desktop shell starts and reuses the daemon (Xvfb)
+        run: |
+          # WebKitGTK's bubblewrap sandbox cannot create namespaces inside a CI
+          # container; this only affects the CI smoke, not installed use
+          sudo -u builder env WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 \
+            dbus-run-session -- xvfb-run -a aeos-desktop > /tmp/desktop.log 2>&1 &
+          sleep 20
+          cat /tmp/desktop.log
+          pgrep -x aeos-desktop
+          ! grep -Ei 'panicked|could not start aeosd|did not become healthy|segmentation' /tmp/desktop.log
+          # the shell reused the running daemon instead of starting a second one
+          test "$(pgrep -fc '^/opt/aeos/bin/node .*/aeosd/dist/main\.js')" = 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aeos-arch-package
+          path: |
+            /home/builder/pkg/aeos-*.pkg.tar.zst
+            /tmp/aeosd.log
+            /tmp/desktop.log
+          if-no-files-found: warn
