@@ -34,7 +34,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M9 E2E + hardening | `[x]` | 4/4 | [plan](../superpowers/plans/2026-07-20-aeos-p1-m9-hardening.md) | merged PR #110; 10x-green golden-path E2E; **v0.1.0 tagged** |
 | M10 OpenCode adapter | `[~]` | 3/3 | [plan](../superpowers/plans/2026-07-19-aeos-p1-m10-opencode.md) | T1–T3 merged (PR #105); exit gate = manual live smoke (guide in `guides/`) |
 
-### P2 — Safety + polish (v0.2) `[~]` — 24/27 tasks
+### P2 — Safety + polish (v0.2) `[~]` — 28/31 tasks
 
 | Milestone | Tasks | Focus |
 |---|---|---|
@@ -46,6 +46,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M6 Codex adapter `[x]` | 2/2 | recorded-fixture translation (codex-cli 0.149.1), resume, conformance parity; capability matrix test-enforced incl. README — done 2026-08-26 |
 | M7 managed binaries `[x]` | 2/2 | pinned npm-integrity installs sealed by tree hash, PATH never overrides a pin, typed version gates; exit gate green: `pinned-harnesses` CI job (PR #114) — 2026-09-26 |
 | M8 Tauri wrapper | 0/3 | desktop shell, notifications, CI artifacts |
+| M10 agent runtime `[x]` | 4/4 | status (events + herdr screen manifests), race-free wait, attention inbox, webhook/ntfy/slack push; fixed resume tokens being dropped under policy — added and done 2026-09-26 |
 | M9 repos + worktrees + brief `[x]` | 3/3 | repo bindings, worktree per objective with agent-authored task commits, session brief with memory snapshot, review pane (herdr-reviewr idea) — added and done 2026-09-26 |
 
 ### P3 — Autonomy (v0.3) `[ ]` — 0/11 tasks
@@ -88,8 +89,8 @@ GitHub issue
 
 ## Active sprint
 
-[S12](sprints/S12.md) — P2.M9 repos, worktrees and session brief (2026-09-26);
-next is P2.M10, the herdr-derived agent runtime, then P2.M8 Tauri → v0.2.
+[S13](sprints/S13.md) — P2.M10 herdr-derived agent runtime (2026-09-26);
+next is P2.M8 Tauri → v0.2.
 
 ## Blockers
 

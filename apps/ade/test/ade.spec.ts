@@ -196,3 +196,26 @@ test('T6: review pane — bind a repo, run in a worktree, comment on a diff line
   await page.getByTestId('review-send').click();
   await expect(page.getByTestId('review-sent')).toContainText('R1');
 });
+
+test('T7: attention inbox — a parked agent shows as blocked, then finished, then settles away', async ({ page }) => {
+  await page.goto('/');
+  // a fresh agent keeps the default posture (T5 relaxed backend-dev's policy)
+  await page.getByTestId('agent-name').fill('Ops Dev');
+  await page.getByTestId('create-agent').click();
+  await page.getByTestId('agent-ops-dev').click();
+  await page.getByTestId('objective-id').fill('obj-inbox');
+  await page.getByTestId('objective-tasks').fill('T1: check the servers');
+  await page.getByTestId('run-objective').click();
+
+  await expect(page.getByTestId('agent-status-ops-dev')).toHaveAttribute('data-status', 'blocked', { timeout: 15_000 });
+  await expect(page.getByTestId('inbox-ops-dev')).toContainText('needs you');
+
+  await page.getByTestId('tab-approvals').click();
+  await page.locator('[data-testid^="approval-approve-"]').first().click();
+
+  await expect(page.getByTestId('agent-status-ops-dev')).toHaveAttribute('data-status', 'done', { timeout: 15_000 });
+  await expect(page.getByTestId('inbox-ops-dev')).toContainText('finished');
+  await page.getByTestId('inbox-ops-dev').hover();
+  await page.getByTestId('inbox-settle-ops-dev').click();
+  await expect(page.getByTestId('inbox-ops-dev')).toHaveCount(0);
+});

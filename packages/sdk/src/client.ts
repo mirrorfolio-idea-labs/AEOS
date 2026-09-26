@@ -2,6 +2,7 @@ import {
   AeosEventSchema,
   type AeosEvent,
   type AgentConfig,
+  type AgentStatus,
   type RepoBinding,
   type Workspace,
 } from '@aeos/contracts';
@@ -51,6 +52,28 @@ export interface ReviewComment {
   line?: number;
   body: string;
 }
+
+export interface AgentStatusEntry {
+  workspaceId: string;
+  agentId: string;
+  status: AgentStatus;
+  seq: number;
+  since: string;
+  via: 'events' | 'screen';
+  reason?: string;
+  rule?: string;
+  sessionId?: string;
+}
+
+export interface InboxItem extends AgentStatusEntry {
+  name: string;
+  unseen: boolean;
+  settled: boolean;
+  /** 0 blocked · 1 finished-unseen · 2 working · 3 idle/seen · 4 settled. */
+  bucket: number;
+}
+
+export type AttentionAction = 'seen' | 'unread' | 'settle' | 'unsettle';
 
 export interface EventStreamOptions {
   typePrefix?: string;
@@ -164,6 +187,35 @@ export class AeosClient {
       'GET',
       `/v1/objectives/${objectiveId}/diff?workspaceId=${workspaceId}&agentId=${agentId}&scope=${scope}`,
     );
+  }
+
+  agentStatus(workspaceId: string, agentId: string): Promise<AgentStatusEntry> {
+    return this.request('GET', `/v1/agents/${agentId}/status?workspaceId=${workspaceId}`);
+  }
+
+  /**
+   * Long-poll until the agent reaches one of `until`. Pass `afterSeq` from
+   * a prior `agentStatus()` to require a NEW transition (act, then wait).
+   */
+  waitForAgent(
+    workspaceId: string,
+    agentId: string,
+    opts: { until?: AgentStatus[]; timeoutMs?: number; afterSeq?: number } = {},
+  ): Promise<{ matched: boolean; entry: AgentStatusEntry }> {
+    const query = new URLSearchParams({ workspaceId });
+    if (opts.until !== undefined) query.set('until', opts.until.join(','));
+    if (opts.timeoutMs !== undefined) query.set('timeoutMs', String(opts.timeoutMs));
+    if (opts.afterSeq !== undefined) query.set('afterSeq', String(opts.afterSeq));
+    return this.request('GET', `/v1/agents/${agentId}/wait?${query.toString()}`);
+  }
+
+  /** Every agent, attention-sorted (herdr-agent-inbox idea). */
+  inbox(): Promise<InboxItem[]> {
+    return this.request('GET', '/v1/inbox');
+  }
+
+  setAttention(workspaceId: string, agentId: string, action: AttentionAction): Promise<InboxItem> {
+    return this.request('POST', `/v1/agents/${agentId}/attention?workspaceId=${workspaceId}`, { action });
   }
 
   /** Send review comments back to the agent as a new R<n> task (herdr-reviewr idea). */

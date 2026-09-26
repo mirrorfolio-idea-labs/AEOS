@@ -48,6 +48,10 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos agent create <id> --workspace <ws> --name <name> [--provider claude-code] [--credential-profile <cp>]
                    [--harness-version <pinned>] [--binary-path <byo executable>]
   aeos agent switch-credential <id> --workspace <ws> --profile <credentialProfileId>
+  aeos agent status <id> --workspace <ws>
+  aeos agent wait <id> --workspace <ws> [--until blocked,done] [--timeout-ms 30000] [--after-seq <n>]
+  aeos agent seen|unread|settle|unsettle <id> --workspace <ws>
+  aeos inbox               # every agent, attention-sorted (blocked first)
   aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main]
   aeos repo unbind <id> --workspace <ws> --agent <agent>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
@@ -160,6 +164,46 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         need(parsed, 'profile'),
       );
       io.out(`agent ${agent.id} now uses credential profile ${agent.credentialProfileId}`);
+      return 0;
+    }
+    if (group === 'agent' && action === 'status' && id !== undefined) {
+      const entry = await client.agentStatus(need(parsed, 'workspace'), id);
+      io.out(`${entry.agentId} ${entry.status} (seq ${String(entry.seq)}, via ${entry.via})${entry.reason === undefined ? '' : ` — ${entry.reason}`}`);
+      return 0;
+    }
+    if (group === 'agent' && action === 'wait' && id !== undefined) {
+      const until = (parsed.flags.get('until')?.[0] ?? 'blocked,done').split(',') as Array<
+        'idle' | 'working' | 'blocked' | 'done' | 'unknown'
+      >;
+      const afterSeq = parsed.flags.get('after-seq')?.[0];
+      const result = await client.waitForAgent(need(parsed, 'workspace'), id, {
+        until,
+        timeoutMs: Number(parsed.flags.get('timeout-ms')?.[0] ?? 30_000),
+        ...(afterSeq === undefined ? {} : { afterSeq: Number(afterSeq) }),
+      });
+      io.out(`${result.entry.agentId} ${result.entry.status}${result.entry.reason === undefined ? '' : ` — ${result.entry.reason}`}`);
+      if (!result.matched) {
+        io.err(`timed out waiting for ${until.join('|')}`);
+        return 4;
+      }
+      return 0;
+    }
+    if (
+      group === 'agent' &&
+      (action === 'seen' || action === 'unread' || action === 'settle' || action === 'unsettle') &&
+      id !== undefined
+    ) {
+      const item = await client.setAttention(need(parsed, 'workspace'), id, action);
+      io.out(`${item.agentId}: ${item.settled ? 'settled' : item.unseen ? 'unseen' : 'seen'}`);
+      return 0;
+    }
+    if (group === 'inbox') {
+      const marks = ['!', '*', '~', ' ', '-'];
+      for (const item of await client.inbox()) {
+        io.out(
+          `${marks[item.bucket] ?? ' '} ${item.workspaceId}/${item.agentId}  ${item.status}${item.unseen ? ' (new)' : ''}${item.reason === undefined ? '' : `  ${item.reason}`}`,
+        );
+      }
       return 0;
     }
     if (group === 'repo' && (action === 'bind' || action === 'unbind') && id !== undefined) {

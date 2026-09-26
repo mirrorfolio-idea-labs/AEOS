@@ -224,6 +224,21 @@ aeos objective diff feat-x --workspace ws --agent dev --scope branch
 aeos objective review feat-x --workspace ws --agent dev --comment "src/export.ts:40: handle empty rows"
 ```
 
+**Who needs you (agent runtime).** Every agent has a live attention status:
+`working`, `blocked` (an approval, a budget stop, or a permission prompt on a
+takeover screen), `done` or `idle`. The ADE sidebar orders agents by
+attention (blocked first, then finished-but-unseen), and you can mark items
+seen or unread, or settle them. Scripts can wait on an agent without racing
+it. To get a push to your phone, drop a `notifications.yaml` in `AEOS_HOME`.
+Screen-state detection uses [herdr](https://github.com/herdrdev/herdr)'s
+detection manifests (Apache-2.0, see `THIRD_PARTY_NOTICES.md`).
+
+```bash
+aeos inbox                                         # ! blocked  * finished-unseen  ~ working
+aeos agent wait dev --workspace ws --until blocked,done --timeout-ms 600000
+printf 'webhooks:\n  - url: https://ntfy.sh/my-aeos\n    format: ntfy\n' > ~/.aeos/notifications.yaml
+```
+
 ---
 
 ## Repository

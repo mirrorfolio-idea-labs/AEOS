@@ -338,6 +338,88 @@
         }
       }
     },
+    "/v1/agents/{id}/status": {
+      "get": {
+        "tags": [
+          "runtime"
+        ],
+        "description": "Current attention status of one agent (idle | working | blocked | done | unknown).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/wait": {
+      "get": {
+        "tags": [
+          "runtime"
+        ],
+        "description": "Long-poll until the agent reaches one of `until` (default blocked,done). Pass `afterSeq` (from a prior status read) to require a NEW transition — race-free act-then-wait.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/inbox": {
+      "get": {
+        "tags": [
+          "runtime"
+        ],
+        "description": "Every agent, attention-sorted: blocked → finished-unseen → working → idle → settled.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/attention": {
+      "post": {
+        "tags": [
+          "runtime"
+        ],
+        "description": "Triage: seen (clear unseen), unread (force unseen), settle (sink until new activity), unsettle.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/v1/memory/index": {
       "get": {
         "tags": [
