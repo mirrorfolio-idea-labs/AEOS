@@ -73,3 +73,27 @@ jobs:
         env:
           AEOS_SANDBOX_E2E_IMAGE: aeos-runner:local
         run: pnpm -F @aeos/aeosd exec vitest run test/sandbox-container.e2e.test.ts
+  # P4.M3.T2 exit gate: the docker compose quickstart, exactly as documented,
+  # on a clean runner — build, start, token-gated API, one objective (fake
+  # provider, no model account), teardown.
+  compose-quickstart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @aeos/sdk... build
+      - name: docker compose up (quickstart steps 1–2)
+        env:
+          AEOS_PROVIDER: fake
+        run: |
+          mkdir -p secrets && openssl rand -hex 32 > secrets/aeos_api_token
+          docker compose up -d --build --wait
+      - name: quickstart smoke
+        run: node docker/compose-smoke.mjs http://127.0.0.1:7777 secrets/aeos_api_token
+      - name: logs on failure
+        if: failure()
+        run: docker compose logs --no-color | tail -200
+      - run: docker compose down -v

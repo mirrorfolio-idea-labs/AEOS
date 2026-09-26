@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import swagger from '@fastify/swagger';
 import websocket from '@fastify/websocket';
@@ -112,23 +113,38 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
   app.setErrorHandler((error, _request, reply) => sendError(reply, error));
 
   if (opts.token !== undefined) {
-    const token = opts.token;
+    const expected = Buffer.from(opts.token);
+    // constant-time compare: a token must not be guessable byte by byte
+    const matches = (candidate: string | null | undefined): boolean => {
+      if (candidate === null || candidate === undefined) return false;
+      const given = Buffer.from(candidate);
+      return given.length === expected.length && timingSafeEqual(given, expected);
+    };
     app.addHook('onRequest', (request, reply, done) => {
-      // Browsers cannot set headers on WebSocket upgrades — the attach route
-      // additionally accepts ?token= (scoped to that route only)
-      const queryToken = request.url.startsWith('/v1/sessions/') && request.url.includes('/attach')
-        ? new URL(request.url, 'http://localhost').searchParams.get('token')
-        : null;
-      if (
-        request.headers.authorization === `Bearer ${token}` ||
-        (queryToken !== null && queryToken === token)
-      ) {
+      const url = new URL(request.url, 'http://localhost');
+      // only the API is protected: the ADE shell (static assets) carries no
+      // data and must load so it can ask for the token; /healthz is a bare
+      // liveness probe for proxies and orchestrators
+      if (!url.pathname.startsWith('/v1/')) {
+        done();
+        return;
+      }
+      // Browsers cannot set headers on WebSocket upgrades or EventSource —
+      // the attach and event-stream routes additionally accept ?token=
+      const queryAllowed = (url.pathname.startsWith('/v1/sessions/') && url.pathname.endsWith('/attach')) || url.pathname === '/v1/events';
+      const bearer = request.headers.authorization?.startsWith('Bearer ') === true ? request.headers.authorization.slice(7) : undefined;
+      if (matches(bearer) || (queryAllowed && matches(url.searchParams.get('token')))) {
         done();
         return;
       }
       sendError(reply, new ApiError(401, 'missing or invalid bearer token'));
     });
   }
+
+  app.get('/healthz', {
+    schema: { hide: true },
+    handler: () => ({ status: 'ok' }),
+  });
 
   app.get('/v1/health', {
     schema: {
