@@ -343,12 +343,12 @@ frozen snapshot.
 - [x] **T2** Snapshot pipeline includes accepted preferences. *Accept: next-session snapshot provably contains the new preference (byte-level test).*
 **Exit gate:** two-objective fixture shows objective 2 benefiting from objective 1's lessons.
 
-### M5 — Scheduler wakeups + delegation  `[ ]`
+### M5 — Scheduler wakeups + delegation  `[x]`
 **Context brief:** Spec §12. Cron-like + idle-triggered durable jobs (curator
 already consumes this); delegation: a task may name another agent or a spawned
 specialist sub-session, coordinating via plan file + git only.
-- [ ] **T1** Wakeup scheduler (cron + idle) with durable job persistence across daemon restarts. *Accept: job scheduled, daemon killed, job fires after restart.*
-- [ ] **T2** Delegation: assign task → spawn/target other agent → integrate via plan+git. *Accept: multi-agent fixture objective completes with one delegated task.*
+- [x] **T1** Wakeup scheduler (cron + idle) with durable job persistence across daemon restarts. *Accept: job scheduled, daemon killed, job fires after restart.*
+- [x] **T2** Delegation: assign task → spawn/target other agent → integrate via plan+git. *Accept: multi-agent fixture objective completes with one delegated task.*
 **Exit gate = P3 exit gate** (top of this section).
 
 ## Phase P4 — Scale + community (v0.4)  `[ ]`

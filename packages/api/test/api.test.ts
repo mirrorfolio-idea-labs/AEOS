@@ -155,13 +155,14 @@ describe('resource routes (T2)', () => {
     expect(started.json().data.started).toBe(true);
 
     let status: Record<string, unknown> = {};
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 200; i++) {
       const response = await app.inject({
         url: '/v1/objectives/obj1?workspaceId=ws1&agentId=agent1',
       });
       status = response.json().data;
       const tasks = status['tasks'] as Array<{ status: string }>;
-      if (tasks.every((t) => t.status === 'completed')) break;
+      // wait for the whole run (incl. the post-run retrospective) — not just the tasks
+      if (tasks.every((t) => t.status === 'completed') && status['running'] === false) break;
       await delay(20);
     }
     const tasks = status['tasks'] as Array<{ status: string }>;
