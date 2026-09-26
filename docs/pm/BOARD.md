@@ -49,7 +49,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M10 agent runtime `[x]` | 4/4 | status (events + herdr screen manifests), race-free wait, attention inbox, webhook/ntfy/slack push; fixed resume tokens being dropped under policy — added and done 2026-09-26 |
 | M9 repos + worktrees + brief `[x]` | 3/3 | repo bindings, worktree per objective with agent-authored task commits, session brief with memory snapshot, review pane (herdr-reviewr idea) — added and done 2026-09-26 |
 
-### P3 — Autonomy (v0.3) `[~]` — 9/11 tasks
+### P3 — Autonomy (v0.3) `[~]` — 11/11 tasks (exit gate pending)
 
 | Milestone | Tasks | Focus |
 |---|---|---|
@@ -57,7 +57,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M2 model router `[x]` | 3/3 | new `@aeos/router`: OpenRouter-backed pricing index (daily refresh, stale-but-served offline, static first-party table); layered `routing.yaml` class → provider/model/thinking (agent prefs > workspace > home > built-in Opus/Sonnet/Haiku split); `route.decided` audited + `routes.ndjson` realized cost incl. token-priced USD for Codex — 2026-09-26 |
 | M3 verification task type `[x]` | 2/2 | `verify` tasks run repo-binding/objective commands in the worktree (pass/fail/flaky, timeout kills the process group); a failure re-opens the verified code task with the output as notes and strikes the verify task (3 → blocked); planner interleaves verify tasks — 2026-09-26 |
 | M4 retrospective loop `[x]` | 2/2 | deterministic post-objective retrospective: verification failures/flakes → `lessons/`, re-dos → `mistakes/`, human review comments → `preferences/`, via `memory.propose` (accept/reject in ADE/CLI/API, or `retrospective: apply` unattended); next brief carries them byte-for-byte — 2026-09-26 |
-| M5 wakeups + delegation | 0/2 | durable cron/idle jobs, multi-agent |
+| M5 wakeups + delegation `[x]` | 2/2 | durable `<home>/jobs/*.yaml` cron (UTC, `cron-parser`) + idle jobs, `lastRunAt` written before the action, a slot missed while down fires once on boot; `/v1/jobs`, `aeos job add|list|rm`; `@agent` tasks run as that agent (own policy/routing/profile) in the owner's worktree, committed under the delegate's name — 2026-09-26 |
 
 ### P4 — Scale + community (v0.4) `[ ]` — 0/10 tasks
 
@@ -89,7 +89,7 @@ GitHub issue
 
 ## Active sprint
 
-[S15](sprints/S15.md) — P3 autonomy (2026-09-26); M1–M4 are done; M5 (wakeups and delegation) and the P3 exit gate are next.
+[S15](sprints/S15.md) — P3 autonomy (2026-09-26); M1–M5 are done; the P3 exit gate (unattended demo e2e) is next.
 P2 is closed: S14 plus the Gate 2 promotion PR #119, with v0.2.0 awaiting Gate 3.
 
 ## Blockers

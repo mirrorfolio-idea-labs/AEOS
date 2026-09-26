@@ -6,6 +6,8 @@ export {
   type AttentionAction,
   type InboxItem,
   type MemoryProposalView,
+  type JobView,
+  type JobActionView,
   type DiffScope,
   type ObjectiveDiff,
   type ReviewComment,

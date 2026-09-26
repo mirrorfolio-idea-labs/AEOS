@@ -12,6 +12,7 @@ import { registerAgentRoutes } from './routes/agents.js';
 import { registerObjectiveRoutes } from './routes/objectives.js';
 import { registerReviewRoutes } from './routes/review.js';
 import { registerRuntimeRoutes } from './routes/runtime.js';
+import { registerJobRoutes } from './routes/jobs.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
@@ -135,6 +136,7 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
   registerObjectiveRoutes(app, ctx);
   registerReviewRoutes(app, ctx);
   registerRuntimeRoutes(app, ctx);
+  registerJobRoutes(app, ctx);
   registerMemoryRoutes(app, ctx);
   registerEventRoutes(app, ctx);
   registerApprovalRoutes(app, ctx);

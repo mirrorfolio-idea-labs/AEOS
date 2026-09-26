@@ -94,6 +94,22 @@ export interface MemoryProposalView {
   content?: string;
 }
 
+export type JobActionView = { type: 'start-objective'; workspaceId: string; agentId: string; objectiveId: string } | { type: 'curator' };
+
+/** A durable wakeup job (P3.M5). */
+export interface JobView {
+  id: string;
+  kind: 'cron' | 'idle';
+  cron?: string;
+  idleMs?: number;
+  minIntervalMs?: number;
+  action: JobActionView;
+  enabled: boolean;
+  createdAt: string;
+  lastRunAt?: string;
+  lastError?: string;
+}
+
 export interface EventStreamOptions {
   typePrefix?: string;
   agentId?: string;
@@ -287,6 +303,19 @@ export class AeosClient {
 
   rejectMemoryProposal(workspaceId: string, agentId: string, id: string): Promise<{ rejected: string }> {
     return this.request('POST', `/v1/memory/proposals/${id}/reject?workspaceId=${workspaceId}&agentId=${agentId}`, {});
+  }
+
+  /** Durable wakeup jobs — cron (UTC) or idle; survive daemon restarts (P3.M5). */
+  listJobs(): Promise<JobView[]> {
+    return this.request('GET', '/v1/jobs');
+  }
+
+  saveJob(job: Omit<JobView, 'createdAt' | 'lastRunAt' | 'lastError' | 'enabled'> & { enabled?: boolean }): Promise<JobView> {
+    return this.request('POST', '/v1/jobs', job);
+  }
+
+  deleteJob(id: string): Promise<{ deleted: string }> {
+    return this.request('DELETE', `/v1/jobs/${id}`);
   }
 
   /** Router decisions + realized cost per task attempt (P3.M2). */

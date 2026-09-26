@@ -76,7 +76,9 @@ export interface RunObjectiveOptions {
    * Per-task execution choice (P3.M2 router): which adapter (provider)
    * and model run this task. Defaults to `adapter` with the harness model.
    */
-  selectExecution?: (task: PlanTask) => Promise<{ adapter: HarnessAdapter; model?: string | undefined }>;
+  selectExecution?: (
+    task: PlanTask,
+  ) => Promise<{ adapter: HarnessAdapter; model?: string | undefined; agent?: AgentConfig | undefined }>;
   /**
    * Runs a `verify` task (P3.M3) — daemon-side commands, not a harness
    * session. Pass/flaky completes it; fail takes a strike and re-opens the
@@ -261,7 +263,8 @@ export async function runObjective(opts: RunObjectiveOptions): Promise<Objective
       opts.watchedRepo !== undefined ? await worktreeStatus(opts.watchedRepo) : undefined;
 
     const execution = (await opts.selectExecution?.(task)) ?? { adapter: opts.adapter };
-    const profile = await execution.adapter.createProfile(opts.agent);
+    // delegation (P3.M5): a task may run as another agent — its profile, not ours
+    const profile = await execution.adapter.createProfile(execution.agent ?? opts.agent);
     const handle = execution.adapter.spawn({
       profile,
       sessionId: nextSessionId(),

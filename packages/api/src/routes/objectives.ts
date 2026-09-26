@@ -30,6 +30,7 @@ import {
   type AgentConfig,
   type CompiledPolicy,
   type EffectivePolicy,
+  type PlanTask,
   PERMISSION_TIERS,
 } from '@aeos/contracts';
 import type { HarnessAdapter } from '@aeos/provider-core';
@@ -133,6 +134,9 @@ export const objectiveDirFor = (
 const running = new Map<string, Promise<unknown>>();
 
 export const stopFilePath = (home: string): string => path.join(home, 'STOP');
+
+/** How many objective runs are in flight (wakeup idle detection, P3.M5). */
+export const runningObjectiveCount = (): number => running.size;
 
 interface PlanPhaseInput {
   ctx: ApiContext;
@@ -304,22 +308,37 @@ export function startObjectiveRun(
     // P3.M2 router: one (policy-guarded) adapter per provider the plan routes to
     const rawAdapterFor = (provider: RoutedProvider): HarnessAdapter =>
       provider === agent.harness.provider ? ctx.adapterFor(agent) : ctx.adapterFor(agent, { provider });
-    const guarded = new Map<RoutedProvider, HarnessAdapter>();
-    const adapterFor = (provider: RoutedProvider): HarnessAdapter => {
-      let cached = guarded.get(provider);
+    const guarded = new Map<string, HarnessAdapter>();
+    /**
+     * One policy-guarded adapter per (executing agent, provider). A delegated
+     * task (P3.M5) runs under the DELEGATE's harness, credentials and policy.
+     */
+    const adapterFor = async (provider: RoutedProvider, runAs: AgentConfig = agent): Promise<HarnessAdapter> => {
+      const key = `${runAs.id}:${provider}`;
+      let cached = guarded.get(key);
       if (cached === undefined) {
+        const raw = provider === runAs.harness.provider ? ctx.adapterFor(runAs) : ctx.adapterFor(runAs, { provider });
+        const policy = runAs.id === agent.id ? effective : await ctx.policyFor?.(runAs);
         cached =
-          effective === undefined
-            ? rawAdapterFor(provider)
-            : guardAdapter(rawAdapterFor(provider), effective, {
+          policy === undefined
+            ? raw
+            : guardAdapter(raw, policy, {
                 ...(ctx.approvals === undefined ? {} : { registry: ctx.approvals }),
                 ...(ctx.injectSecrets === undefined ? {} : { inject: ctx.injectSecrets }),
               });
-        guarded.set(provider, cached);
+        guarded.set(key, cached);
       }
       return cached;
     };
-    const adapter = adapterFor(agent.harness.provider);
+    const delegateFor = (task: PlanTask): AgentConfig => {
+      if (task.agent === undefined || task.agent === agent.id) return agent;
+      try {
+        return getAgent(ctx.home, workspaceId, task.agent);
+      } catch {
+        throw new ApiError(409, `task ${task.id} delegates to "${task.agent}", which is not an agent in workspace ${workspaceId}`);
+      }
+    };
+    const adapter = await adapterFor(agent.harness.provider);
     const routing = loadRoutingPolicy(ctx.home, workspaceId);
     const pricing: LoadedPricing = await (ctx.pricing?.() ?? loadPricingIndex({ home: ctx.home, offline: true }));
     const decisions = new Map<string, { decision: RouteDecision; adapter: HarnessAdapter }>();
@@ -372,11 +391,14 @@ export function startObjectiveRun(
         ? {}
         : {
             workdir: worktree.dir,
-            commitTask: (task) =>
-              commitTaskWork(worktree.dir, `${task.id}: ${task.title}\n\nAEOS objective ${objectiveId}`, {
-                name: agent.name,
-                email: `${agent.id}@agents.aeos.local`,
-              }),
+            commitTask: (task) => {
+              const author = delegateFor(task);
+              return commitTaskWork(
+                worktree.dir,
+                `${task.id}: ${task.title}\n\nAEOS objective ${objectiveId}${author.id === agent.id ? '' : ` (delegated by ${agent.id})`}`,
+                { name: author.name, email: `${author.id}@agents.aeos.local` },
+              );
+            },
           }),
       ...(permissionPolicy === undefined ? {} : { permissionPolicy }),
       runVerify: (task) =>
@@ -392,12 +414,13 @@ export function startObjectiveRun(
         const previous = await readFile(taskNotesPath(dir, target.id), 'utf8').catch(() => '');
         await writeFileAtomic(taskNotesPath(dir, target.id), `${renderVerifyFailure(verifyTask.id, result)}\n${previous}`);
       },
-      selectExecution: (task) => {
-        const decision = routeTask(agent, task.taskClass, routing);
-        const chosen = adapterFor(decision.provider);
+      selectExecution: async (task) => {
+        const runAs = delegateFor(task);
+        const decision = routeTask(runAs, task.taskClass, runAs.id === agent.id ? routing : loadRoutingPolicy(ctx.home, workspaceId));
+        const chosen = await adapterFor(decision.provider, runAs);
         decisions.set(task.id, { decision, adapter: chosen });
-        onEvent({ ...routeEvent(agent.id, task.id, decision) });
-        return Promise.resolve({ adapter: chosen, model: decision.model });
+        onEvent({ ...routeEvent(runAs.id, task.id, decision) });
+        return { adapter: chosen, model: decision.model, ...(runAs.id === agent.id ? {} : { agent: runAs }) };
       },
       onTaskSettled: (task, result) => {
         const routed = decisions.get(task.id);

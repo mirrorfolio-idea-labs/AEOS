@@ -38,3 +38,17 @@ export {
   type VerifyResult,
 } from './verify.js';
 export { runRetrospective, type RetrospectiveInput } from './retrospective.js';
+export {
+  JobActionSchema,
+  JobSchema,
+  createWakeupScheduler,
+  deleteJob,
+  isJobDue,
+  jobsDir,
+  listJobs,
+  saveJob,
+  type Job,
+  type JobAction,
+  type WakeupScheduler,
+  type WakeupSchedulerOptions,
+} from './wakeups.js';

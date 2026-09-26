@@ -466,6 +466,53 @@
         }
       }
     },
+    "/v1/jobs": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "description": "List durable wakeup jobs (cron + idle).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "description": "Create or replace a wakeup job. Cron is 5-field, UTC.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/jobs/{id}": {
+      "delete": {
+        "tags": [
+          "jobs"
+        ],
+        "description": "Delete a wakeup job.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/v1/memory/index": {
       "get": {
         "tags": [

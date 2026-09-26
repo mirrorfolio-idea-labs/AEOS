@@ -25,6 +25,8 @@ import {
   createApiServer,
   listenApi,
   resumeIncompleteObjectives,
+  runningObjectiveCount,
+  startObjectiveRun,
   type ApiContext,
 } from '@aeos/api';
 
@@ -57,6 +59,10 @@ export interface ApiModuleHandle {
   address: string;
   close(): Promise<void>;
   resumed: string[];
+  /** Start (or resume) an objective — the wakeup scheduler's action seam (P3.M5). */
+  startObjective(workspaceId: string, agentId: string, objectiveId: string): void;
+  /** True while any objective run is in flight (idle-job input). */
+  busy(): boolean;
 }
 
 /**
@@ -259,5 +265,7 @@ export async function startApiModule(
     address,
     resumed,
     close: () => app.close(),
+    startObjective: (workspaceId, agentId, objectiveId) => startObjectiveRun(ctx, workspaceId, agentId, objectiveId),
+    busy: () => runningObjectiveCount() > 0,
   };
 }
