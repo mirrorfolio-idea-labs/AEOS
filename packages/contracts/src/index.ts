@@ -3,7 +3,13 @@ export { newEventId, ULID_REGEX } from './ids.js';
 export { EnvelopeBaseSchema, type EnvelopeBase } from './envelope.js';
 export { WorkspaceSchema, SLUG_REGEX, type Workspace } from './domain/workspace.js';
 export { CredentialProfileSchema, type CredentialProfile } from './domain/credential.js';
-export { AgentConfigSchema, FeatureTogglesSchema, type AgentConfig } from './domain/agent.js';
+export {
+  AgentConfigSchema,
+  FeatureTogglesSchema,
+  RepoBindingSchema,
+  type AgentConfig,
+  type RepoBinding,
+} from './domain/agent.js';
 export {
   SESSION_STATES, SessionStateSchema, SessionRecordSchema, assertSessionTransition,
   InvalidTransitionError, type SessionState, type SessionRecord,

@@ -208,6 +208,22 @@ aeos harness install codex@0.149.1     # fetch + integrity check + seal
 aeos harness verify codex@0.149.1      # re-hash against the seal
 ```
 
+**Repositories and worktrees.** Agents never edit your checkout. Bind a
+repository and every objective that targets it gets its own git worktree
+under the agent's directory, on branch `aeos/<agent>/<objective>`. Each task
+the agent completes becomes one commit authored by that agent. Review the
+work in the ADE's Review tab or from the CLI, and send line comments back
+to the agent as a follow-up task.
+
+```bash
+aeos repo bind app --workspace ws --agent dev --path ~/code/app
+aeos objective create feat-x --workspace ws --agent dev --repo app \
+  --title "Add export" --done "CSV export works with tests" --task "T1: implement" --task "T2: tests"
+aeos objective run feat-x --workspace ws --agent dev
+aeos objective diff feat-x --workspace ws --agent dev --scope branch
+aeos objective review feat-x --workspace ws --agent dev --comment "src/export.ts:40: handle empty rows"
+```
+
 ---
 
 ## Repository

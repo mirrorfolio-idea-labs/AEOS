@@ -9,6 +9,7 @@ import { ApiError, sendError } from './envelope.js';
 import { registerWorkspaceRoutes } from './routes/workspaces.js';
 import { registerAgentRoutes } from './routes/agents.js';
 import { registerObjectiveRoutes } from './routes/objectives.js';
+import { registerReviewRoutes } from './routes/review.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
@@ -114,6 +115,7 @@ export async function createApiServer(opts: ApiServerOptions): Promise<FastifyIn
   registerWorkspaceRoutes(app, ctx);
   registerAgentRoutes(app, ctx);
   registerObjectiveRoutes(app, ctx);
+  registerReviewRoutes(app, ctx);
   registerMemoryRoutes(app, ctx);
   registerEventRoutes(app, ctx);
   registerApprovalRoutes(app, ctx);

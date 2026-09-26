@@ -48,7 +48,12 @@ const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOK
   aeos agent create <id> --workspace <ws> --name <name> [--provider claude-code] [--credential-profile <cp>]
                    [--harness-version <pinned>] [--binary-path <byo executable>]
   aeos agent switch-credential <id> --workspace <ws> --profile <credentialProfileId>
+  aeos repo bind <id> --workspace <ws> --agent <agent> --path </abs/checkout> [--base-ref main]
+  aeos repo unbind <id> --workspace <ws> --agent <agent>
   aeos objective create <id> --workspace <ws> --agent <agent> --title <title> --task "T1: first" [--task ...]
+                        [--repo <binding>] [--done "definition of done"]
+  aeos objective diff <id> --workspace <ws> --agent <agent> [--scope branch|uncommitted|last-commit]
+  aeos objective review <id> --workspace <ws> --agent <agent> --comment "src/a.ts:12: rename this" [--comment ...]
   aeos objective run <id> --workspace <ws> --agent <agent> [--poll-ms 250] [--timeout-ms 120000]
   aeos objective status <id> --workspace <ws> --agent <agent>
   aeos events tail [--type-prefix session.] [--agent <id>] [--max <n>]
@@ -157,6 +162,44 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       io.out(`agent ${agent.id} now uses credential profile ${agent.credentialProfileId}`);
       return 0;
     }
+    if (group === 'repo' && (action === 'bind' || action === 'unbind') && id !== undefined) {
+      const workspaceId = need(parsed, 'workspace');
+      const agentId = need(parsed, 'agent');
+      if (action === 'unbind') {
+        await client.unbindRepo(workspaceId, agentId, id);
+        io.out(`repo ${id} unbound from ${agentId}`);
+        return 0;
+      }
+      const baseRef = parsed.flags.get('base-ref')?.[0];
+      await client.bindRepo(workspaceId, agentId, {
+        id,
+        path: path.resolve(need(parsed, 'path')),
+        ...(baseRef === undefined ? {} : { baseRef }),
+      });
+      io.out(`repo ${id} bound to ${agentId} — objectives with --repo ${id} run in their own worktree`);
+      return 0;
+    }
+    if (group === 'objective' && action === 'diff' && id !== undefined) {
+      const scope = (parsed.flags.get('scope')?.[0] ?? 'branch') as 'branch' | 'uncommitted' | 'last-commit';
+      const result = await client.objectiveDiff(need(parsed, 'workspace'), need(parsed, 'agent'), id, scope);
+      io.out(`# ${result.branch} (${result.scope}) — ${result.worktree}`);
+      io.out(result.diff.length > 0 ? result.diff.trimEnd() : '(no changes)');
+      return 0;
+    }
+    if (group === 'objective' && action === 'review' && id !== undefined) {
+      const comments = (parsed.flags.get('comment') ?? []).map((spec) => {
+        // "path:line: body" | "path: body" | "body"
+        const located = /^([^\s:]+):(\d+):\s*(.+)$/s.exec(spec);
+        if (located) return { file: located[1] as string, line: Number(located[2]), body: located[3] as string };
+        const filed = /^([^\s:]+\.[A-Za-z0-9]+):\s*(.+)$/s.exec(spec);
+        if (filed) return { file: filed[1] as string, body: filed[2] as string };
+        return { body: spec };
+      });
+      if (comments.length === 0) throw new Error('at least one --comment is required');
+      const result = await client.reviewObjective(need(parsed, 'workspace'), need(parsed, 'agent'), id, comments);
+      io.out(`review sent as task ${result.taskId}: ${result.title}${result.started ? ' — objective restarted' : ''}`);
+      return 0;
+    }
     if (group === 'objective' && action === 'create' && id !== undefined) {
       const tasks = (parsed.flags.get('task') ?? []).map((spec) => {
         const colon = spec.indexOf(':');
@@ -169,6 +212,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         id,
         title: need(parsed, 'title'),
         tasks,
+        ...(parsed.flags.get('repo')?.[0] === undefined ? {} : { repo: parsed.flags.get('repo')?.[0] as string }),
+        ...(parsed.flags.get('done')?.[0] === undefined
+          ? {}
+          : { definitionOfDone: parsed.flags.get('done')?.[0] as string }),
       });
       io.out(`objective ${id} created with ${tasks.length} tasks`);
       return 0;

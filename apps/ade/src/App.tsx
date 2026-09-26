@@ -19,6 +19,12 @@ export function App() {
       byWorkspace.set(workspace.id, envelope.data ?? []);
     }
     setAgents(byWorkspace);
+    // keep the open agent in sync with the registry (e.g. a newly bound repo)
+    setSelected((previous) =>
+      previous === null
+        ? null
+        : (byWorkspace.get(previous.workspaceId)?.find((a) => a.id === previous.id) ?? previous),
+    );
   }, []);
 
   useEffect(() => {

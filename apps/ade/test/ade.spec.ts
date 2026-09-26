@@ -149,3 +149,50 @@ test('T5: PTY takeover — terminal attach echoes input; release returns to head
   await page.getByTestId('pty-release').click();
   await expect(page.getByTestId('terminal-empty')).toBeVisible();
 });
+
+test('T6: review pane — bind a repo, run in a worktree, comment on a diff line, send it back', async ({
+  page,
+}) => {
+  const { execFileSync } = await import('node:child_process');
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const os = await import('node:os');
+  const repo = mkdtempSync(path.join(os.tmpdir(), 'aeos-ade-repo-'));
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: repo });
+  git('init', '--quiet', '-b', 'main');
+  writeFileSync(path.join(repo, 'README.md'), '# demo\n');
+  git('add', '-A');
+  git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--quiet', '-m', 'init');
+
+  await page.goto('/');
+  await page.getByTestId('agent-backend-dev').click();
+  await page.getByTestId('tab-review').click();
+  await page.getByTestId('repo-id').fill('app');
+  await page.getByTestId('repo-path').fill(repo);
+  await page.getByTestId('repo-bind').click();
+  await expect(page.getByTestId('repo-list')).toContainText('app');
+
+  await page.getByTestId('tab-objective').click();
+  await page.getByTestId('objective-id').fill('obj-review');
+  await page.getByTestId('objective-tasks').fill('T1: write the feature');
+  await page.getByTestId('objective-repo').selectOption('app');
+  await page.getByTestId('run-objective').click();
+
+  // default posture parks the fake's tool call — approve it
+  await page.getByTestId('tab-approvals').click();
+  await page.locator('[data-testid^="approval-approve-"]').first().click({ timeout: 15_000 });
+  await expect(page.getByTestId('approvals-empty')).toBeVisible({ timeout: 10_000 });
+
+  await page.getByTestId('tab-review').click();
+  await expect(async () => {
+    await page.getByTestId('review-refresh').click();
+    await expect(page.getByTestId('diff-file-agent-output.txt')).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+  await expect(page.getByTestId('review-branch')).toContainText('aeos/backend-dev/obj-review');
+
+  await page.getByTestId('diff-line-agent-output.txt-2').click();
+  await page.getByTestId('comment-input').fill('Make this line more specific');
+  await page.getByTestId('comment-add').click();
+  await expect(page.getByTestId('pending-comments')).toContainText('agent-output.txt:2');
+  await page.getByTestId('review-send').click();
+  await expect(page.getByTestId('review-sent')).toContainText('R1');
+});

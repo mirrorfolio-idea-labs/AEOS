@@ -31,6 +31,11 @@ export interface SpawnOptions {
   /** AEOS session ULID — stamped onto every emitted event's `sessionId`. */
   sessionId: string;
   objective: string;
+  /**
+   * Working directory for the harness process — the objective's git
+   * worktree (spec §10). Defaults to the profile root when absent.
+   */
+  workdir?: string;
   /** Provider-native resume token from a previous session (capability `resume`). */
   resumeToken?: string;
   /**
