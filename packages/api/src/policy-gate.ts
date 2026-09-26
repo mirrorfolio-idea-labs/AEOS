@@ -49,9 +49,26 @@ export function guardAdapter(
       const extra = await options.inject(agent);
       return { ...profile, env: { ...profile.env, ...extra } };
     },
-    spawn: (opts) => {
+    spawn: (opts): SessionHandle => {
       const handle = adapter.spawn(opts);
-      return { ...handle, events: guard(handle.events) };
+      const events = guard(handle.events);
+      // Delegate, never spread: adapters expose providerSessionId /
+      // resumeToken / costUsd as getters (or fields filled while the stream
+      // is consumed) — a spread snapshots them at spawn time as undefined,
+      // which silently dropped every resume token under policy.
+      return {
+        events,
+        get providerSessionId() {
+          return handle.providerSessionId;
+        },
+        get resumeToken() {
+          return handle.resumeToken;
+        },
+        get costUsd() {
+          return handle.costUsd;
+        },
+        kill: () => handle.kill(),
+      };
     },
     translate: (raw) => adapter.translate(raw),
   };
