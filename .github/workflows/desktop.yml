@@ -9,6 +9,12 @@ on:
   workflow_dispatch:
   # P5.M3.T2: release.yml builds the installers through this same workflow
   workflow_call:
+    inputs:
+      ref:
+        description: git ref to build (release.yml passes the release tag)
+        type: string
+        required: false
+        default: ''
 jobs:
   bundle:
     strategy:
@@ -22,6 +28,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.ref || github.ref }}" }
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -60,15 +67,16 @@ jobs:
             webkit2gtk-4.1 gtk3 libsoup3 hicolor-icon-theme namcap \
             xorg-server-xvfb xorg-xauth dbus xdg-utils desktop-file-utils curl procps-ng
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with: { fetch-depth: 0, ref: "${{ inputs.ref || github.ref }}" }
       - name: makepkg (unprivileged, from this commit)
         run: |
           useradd -m builder
           cp -r packaging/arch /home/builder/pkg
           chown -R builder /home/builder/pkg
           sudo -u builder git config --global --add safe.directory '*'
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cd /home/builder/pkg
-          sudo -u builder env AEOS_GIT_URL="file://$GITHUB_WORKSPACE" AEOS_REF="commit=$GITHUB_SHA" \
+          sudo -u builder env AEOS_GIT_URL="file://$GITHUB_WORKSPACE" AEOS_REF="commit=$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" \
             makepkg --noconfirm --cleanbuild
       - name: namcap (advisory)
         run: |
