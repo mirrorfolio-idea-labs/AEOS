@@ -61,6 +61,10 @@ describe('durable wakeups survive a daemon restart (P3.M5.T1)', () => {
       },
       credentialProfileId: 'cp',
     });
+    // an unattended job needs its commands allowed up front, like every other
+    // unattended e2e here: job-started runs are policy-enforced (they must
+    // never run a gated tool call without an approval)
+    await writeFile(path.join(home, 'workspaces', 'ws1', 'policy.yaml'), 'tiers:\n  execute_commands: allow\n');
     await client.createObjective({ workspaceId: 'ws1', agentId: 'dev', id: 'nightly', title: 'Nightly', tasks: [{ id: 'T1', title: 'nightly chores' }] });
     // daily at 03:00 UTC — never due during this test on its own
     await client.saveJob({ id: 'nightly', kind: 'cron', cron: '0 3 * * *', action: { type: 'start-objective', workspaceId: 'ws1', agentId: 'dev', objectiveId: 'nightly' } });

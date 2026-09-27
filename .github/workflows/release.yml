@@ -181,6 +181,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           prerelease=""; case "$RELEASE_TAG" in *-*) prerelease="--prerelease";; esac
+          # "Latest" (what install.sh and the site follow) only for the highest
+          # stable tag, so re-publishing an older tag never takes it over
+          git fetch -q --tags --force origin
+          top="$(git tag -l 'v*' --sort=-v:refname | grep -v -- '-' | head -1)"
+          latest=false; [ -z "$prerelease" ] && [ "$top" = "$RELEASE_TAG" ] && latest=true
           notes="notes/release-${RELEASE_TAG}.md"
           [ -f "$notes" ] || notes=/dev/null
           # a run that failed mid-upload leaves a draft holding partial assets:
@@ -190,9 +195,9 @@ jobs:
           done
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" --clobber dist-artifacts/*
-            gh release edit "$RELEASE_TAG" --draft=false $prerelease --title "AEOS ${RELEASE_TAG}" --notes-file "$notes"
+            gh release edit "$RELEASE_TAG" --draft=false $prerelease --latest="$latest" --title "AEOS ${RELEASE_TAG}" --notes-file "$notes"
           else
-            gh release create "$RELEASE_TAG" $prerelease --title "AEOS ${RELEASE_TAG}" --notes-file "$notes" --verify-tag dist-artifacts/*
+            gh release create "$RELEASE_TAG" $prerelease --latest="$latest" --title "AEOS ${RELEASE_TAG}" --notes-file "$notes" --verify-tag dist-artifacts/*
           fi
       - uses: actions/setup-node@v4
         if: env.PUBLISH == 'true'
