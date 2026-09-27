@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import type { ProviderId } from '@aeos/contracts';
 import { DEFAULT_PINS, createBinaryManager, dockerAvailable, type ManagedHarness } from '@aeos/provider-core';
 import { RUNNER_DOCKERFILE } from './runner-dockerfile.js';
+import { runUpdate } from './update.js';
 import { applyPlan, currentPlatform, currentUser, planInstall, planUninstall, resolveAeosd } from './service.js';
 import { PluginError, installPlugin, listInstalledPlugins, removePlugin } from '@aeos/plugins';
 
@@ -87,6 +88,7 @@ export const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_
   aeos plugin list | aeos plugin remove <package>
   aeos sandbox build [--tag aeos-runner:local]   # container-tier runtime image (P4.M1)
   aeos sandbox status
+  aeos update [--version <tag>]   # update an installer (install.sh) install to the latest or given release, verified
   aeos harness install <harness>@<version>   # fetch + integrity-check + seal (local, AEOS_HOME)
   aeos harness verify <harness>@<version>    # re-hash an install against its seal
   aeos harness list`;
@@ -144,6 +146,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     if (group === 'sandbox') return runSandboxCommand(action, parsed, io);
     if (group === 'plugin') return runPluginCommand(action, id, io);
     if (group === 'service') return runServiceCommand(action, parsed, io);
+    if (group === 'update') return runUpdate(parsed.flags.get('version')?.[0], io.err);
     if (group === 'health') {
       io.out(JSON.stringify(await client.health()));
       return 0;
