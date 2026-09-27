@@ -113,3 +113,7 @@ fs.writeFileSync(
   ['---', 'title: AEOS', 'description: Durable, resumable AI coding agents whose entire state lives as files.', 'tableOfContents: false', '---', '', readme.replace(/^\s+/, '')].join('\n'),
 );
 console.log(`sync-docs: ${String(existing.length + 2)} pages (${String(adrs.length)} ADRs) → ${path.relative(ROOT, OUT)}`);
+
+// P5.M6.T3: the one-line installer is served from the site root
+// (…/AEOS/install.sh); scripts/install/install.sh stays its only source
+fs.copyFileSync(path.join(ROOT, 'scripts', 'install', 'install.sh'), path.resolve(HERE, '..', 'public', 'install.sh'));

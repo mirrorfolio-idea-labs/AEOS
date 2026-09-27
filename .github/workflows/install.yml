@@ -1,0 +1,93 @@
+name: installer
+# P5.M6.T3: the one-line installer (scripts/install/install.sh, served as
+# https://mirrorfolio-idea-labs.github.io/AEOS/install.sh) installs the latest
+# release on clean machines, and refuses tampered downloads.
+on:
+  pull_request:
+    paths: ['scripts/install/**', '.github/workflows/install.yml']
+  release:
+    types: [published]
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sigstore/cosign-installer@v3
+      - name: install the latest release (signature required)
+        env:
+          AEOS_REQUIRE_SIGNATURE: '1'
+          AEOS_BIN_DIR: ${{ runner.temp }}/bin
+        run: sh scripts/install/install.sh
+      - name: daemon + CLI from the install
+        env:
+          PATH_PREFIX: ${{ runner.temp }}/bin
+        run: |
+          export PATH="$PATH_PREFIX:$PATH"
+          AEOS_HOME="$RUNNER_TEMP/home" AEOS_PROVIDER=fake aeosd run > "$RUNNER_TEMP/aeosd.log" 2>&1 &
+          for _ in $(seq 60); do curl -sf http://127.0.0.1:7777/healthz && break; sleep 1; done
+          aeos health
+
+  install-arch:
+    runs-on: ubuntu-latest
+    container: archlinux:base
+    steps:
+      - run: pacman -Syu --noconfirm --needed curl tar git cosign
+      - uses: actions/checkout@v4
+      - name: install the latest release (signature required)
+        env:
+          AEOS_REQUIRE_SIGNATURE: '1'
+        run: sh scripts/install/install.sh
+      - name: daemon + CLI from the install
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          AEOS_HOME=/tmp/aeos-home AEOS_PROVIDER=fake aeosd run > /tmp/aeosd.log 2>&1 &
+          for _ in $(seq 60); do curl -sf http://127.0.0.1:7777/healthz && break; sleep 1; done
+          aeos health
+
+  tamper:
+    # real release assets, served from a local mirror, then altered: the
+    # installer must refuse both a corrupted bundle and a forged SHA256SUMS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sigstore/cosign-installer@v3
+      - name: mirror the latest release
+        run: |
+          tag="$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/mirrorfolio-idea-labs/AEOS/releases/latest)"
+          tag="${tag##*/}"; v="${tag#v}"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          for case in bundle sums; do
+            d="mirror/$case/download/$tag"; mkdir -p "$d"
+            for f in SHA256SUMS SHA256SUMS.sigstore.json "aeos-$v-linux-x64.tar.gz"; do
+              curl -fsSL -o "$d/$f" "https://github.com/mirrorfolio-idea-labs/AEOS/releases/download/$tag/$f"
+            done
+            # flip one byte in the bundle
+            printf 'X' | dd of="$d/aeos-$v-linux-x64.tar.gz" bs=1 seek=4096 conv=notrunc 2>/dev/null
+          done
+          # 'sums': make SHA256SUMS agree with the altered bundle (the forgery)
+          d="mirror/sums/download/$tag"
+          sum="$(sha256sum "$d/aeos-$v-linux-x64.tar.gz" | cut -d' ' -f1)"
+          sed -i "s/^[0-9a-f]\{64\}  aeos-$v-linux-x64.tar.gz\$/$sum  aeos-$v-linux-x64.tar.gz/" "$d/SHA256SUMS"
+          (cd mirror && python3 -m http.server 8000 >/dev/null 2>&1 &)
+          sleep 1
+      - name: corrupted bundle is refused (checksum)
+        run: |
+          if AEOS_VERSION="$TAG" AEOS_RELEASES_URL=http://127.0.0.1:8000/bundle HOME="$RUNNER_TEMP/h1" \
+               sh scripts/install/install.sh > out.txt 2>&1; then cat out.txt; echo "installed a tampered bundle"; exit 1; fi
+          cat out.txt; grep -q 'checksum mismatch' out.txt
+          test ! -e "$RUNNER_TEMP/h1/.aeos/app/current"
+      - name: forged SHA256SUMS is refused (signature)
+        run: |
+          if AEOS_VERSION="$TAG" AEOS_RELEASES_URL=http://127.0.0.1:8000/sums HOME="$RUNNER_TEMP/h2" \
+               sh scripts/install/install.sh > out.txt 2>&1; then cat out.txt; echo "installed with forged checksums"; exit 1; fi
+          cat out.txt; grep -q 'signature verification FAILED' out.txt
+          test ! -e "$RUNNER_TEMP/h2/.aeos/app/current"

@@ -36,7 +36,15 @@ DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 ${extraEnv}exec "$DIR/node" "$DIR/../lib/${entry}" "$@"
 `;
 fs.writeFileSync(path.join(stage, 'bin', 'aeosd'), launcher('aeosd/dist/main.js', 'export AEOS_UI_DIR="${AEOS_UI_DIR:-$DIR/../lib/ui}"\n'), { mode: 0o755 });
-fs.writeFileSync(path.join(stage, 'bin', 'aeos'), launcher('cli/dist/main.js'), { mode: 0o755 });
+fs.writeFileSync(
+  path.join(stage, 'bin', 'aeos'),
+  // AEOS_BUNDLE_DIR lets `aeos update` find the bundled installer (P5.M6.T3)
+  launcher('cli/dist/main.js', 'export AEOS_BUNDLE_DIR="$(CDPATH= cd -- "$DIR/.." && pwd)"\n'),
+  { mode: 0o755 },
+);
+// the verified installer, so `aeos update` re-runs exactly the install path
+fs.copyFileSync(path.join(ROOT, 'scripts', 'install', 'install.sh'), path.join(stage, 'bin', 'aeos-install'));
+fs.chmodSync(path.join(stage, 'bin', 'aeos-install'), 0o755);
 fs.writeFileSync(
   path.join(stage, 'README.txt'),
   `AEOS ${version} (${platform})
