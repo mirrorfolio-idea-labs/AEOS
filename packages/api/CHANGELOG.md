@@ -1,5 +1,19 @@
 # @aeos/api
 
+## 1.0.0-rc.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @aeos/contracts@1.0.0-rc.1
+  - @aeos/kernel@1.0.0-rc.1
+  - @aeos/memory@1.0.0-rc.1
+  - @aeos/policy@1.0.0-rc.1
+  - @aeos/provider-core@1.0.0-rc.1
+  - @aeos/router@1.0.0-rc.1
+  - @aeos/runner@1.0.0-rc.1
+  - @aeos/scheduler@1.0.0-rc.1
+
 ## 0.4.0
 
 ### Patch Changes

@@ -21,6 +21,8 @@ const PAGES = [
   ['docs/deploy.md', 'guides/deploy', 1],
   ['docs/plugins.md', 'guides/plugins', 2],
   ['docs/compatibility.md', 'guides/compatibility', 3],
+  ['docs/reference/cli.md', 'reference/cli', 1],
+  ['docs/reference/api.md', 'reference/api', 2],
   ['docs/superpowers/specs/2026-07-12-aeos-architecture-design.md', 'architecture/design', 1],
   ['docs/ROADMAP.md', 'project/roadmap', 1],
   ['docs/RELEASE.md', 'project/release-process', 2],

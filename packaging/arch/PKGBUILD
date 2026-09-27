@@ -8,11 +8,13 @@
 #   cd packaging/arch && makepkg -si
 #
 # Run inside a clone, it builds that clone's checked-out commit. Copied out
-# on its own (e.g. to the AUR), it builds the v$pkgver release tag. Both can
+# on its own (e.g. to the AUR), it builds the $_tag release tag. Both can
 # be overridden:
 #   AEOS_GIT_URL=file:///path/to/checkout AEOS_REF=commit=<sha> makepkg
 pkgname=aeos
-pkgver=0.4.0
+pkgver=1.0.0rc1
+# the release tag; differs from pkgver only for pre-releases (pacman forbids '-')
+_tag=v1.0.0-rc.1
 pkgrel=1
 pkgdesc='Durable, resumable AI coding agents, local-first: desktop app, daemon and CLI'
 arch=('x86_64' 'aarch64')
@@ -33,7 +35,7 @@ if [[ -n $_checkout && -z ${AEOS_GIT_URL:-} ]]; then
   AEOS_GIT_URL="file://$_checkout"
   : "${AEOS_REF:=commit=$(git -C "$_checkout" rev-parse HEAD)}"
 fi
-source=("aeos::git+${AEOS_GIT_URL:-https://github.com/mirrorfolio-idea-labs/AEOS.git}#${AEOS_REF:-tag=v$pkgver}")
+source=("aeos::git+${AEOS_GIT_URL:-https://github.com/mirrorfolio-idea-labs/AEOS.git}#${AEOS_REF:-tag=$_tag}")
 sha256sums=('SKIP')
 # Built with the Node line the project targets (.nvmrc), not Arch's current
 # nodejs: native modules (better-sqlite3, node-pty) track Node 22's ABI, and the
