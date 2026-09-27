@@ -56,19 +56,27 @@ _use_node22() {
   [[ -x $srcdir/bin/pnpm ]] || { mkdir -p "$srcdir/bin" && corepack enable --install-directory "$srcdir/bin" pnpm; }
 }
 
+# CARGO_HOME / CARGO_TARGET_DIR from the environment win, so CI can keep them
+# in a cache across clean builds
+_use_cargo() {
+  export CARGO_HOME="${CARGO_HOME:-$srcdir/cargo-home}"
+  _target="${CARGO_TARGET_DIR:-$srcdir/aeos/apps/desktop/src-tauri/target}"
+}
+
 prepare() {
   _use_node22
+  _use_cargo
   cd aeos
-  export CARGO_HOME="$srcdir/cargo-home"
   pnpm install --frozen-lockfile
   cargo fetch --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
 }
 
 build() {
   _use_node22
+  _use_cargo
   cd aeos
-  export CARGO_HOME="$srcdir/cargo-home"
-  pnpm build
+  # only what ships: the daemon, the CLI, the web UI and their workspace deps
+  pnpm --filter '@aeos/aeosd...' --filter '@aeos/cli...' --filter '@aeos/ade...' build
   # self-contained daemon + CLI + web UI, carrying the node runtime it was built with
   node scripts/release/bundle.mjs "$srcdir/out"
   pnpm -F @aeos/desktop tauri build --no-bundle
@@ -76,12 +84,13 @@ build() {
 
 check() {
   _use_node22
+  _use_cargo
   cd aeos
-  export CARGO_HOME="$srcdir/cargo-home"
   cargo test --frozen --release --manifest-path apps/desktop/src-tauri/Cargo.toml -- --test-threads=1
 }
 
 package() {
+  _use_cargo
   cd aeos
   # bundle.mjs leaves exactly one aeos-<version>-linux-<arch>.tar.gz; refuse
   # anything else rather than unpacking the wrong thing (or nothing)
@@ -94,7 +103,7 @@ package() {
   tar -xzf "${tarballs[0]}" -C "$pkgdir/opt/aeos" --strip-components=1 --no-same-owner
   [[ -x $pkgdir/opt/aeos/bin/aeosd ]]
 
-  install -Dm755 apps/desktop/src-tauri/target/release/aeos-desktop "$pkgdir/usr/bin/aeos-desktop"
+  install -Dm755 "$_target/release/aeos-desktop" "$pkgdir/usr/bin/aeos-desktop"
   # wrappers, not symlinks: the bundle's launchers resolve lib/ from their own path
   for bin in aeosd aeos; do
     install -Dm755 /dev/stdin "$pkgdir/usr/bin/$bin" <<EOF
