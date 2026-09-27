@@ -129,3 +129,4 @@ jobs:
         env: { AEOS_SITE_RELEASE_FIXTURE: '${{ github.workspace }}/apps/site/test/release.fixture.json' }
       - run: pnpm -F @aeos/site exec playwright install --with-deps chromium
       - run: node apps/site/scripts/assemble-pages.mjs pages && pnpm -F @aeos/site verify ../../pages
+      - run: pnpm -F @aeos/site lighthouse ../../pages   # performance + accessibility >= 90

@@ -8,9 +8,9 @@
 //     base must exist, in-page anchors must exist, and with --external
 //     every outside link must answer (retrying, 429 counts as up).
 import fs from 'node:fs';
-import http from 'node:http';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
+import { fileFor as fileForIn, serve } from './serve.mjs';
 
 const args = process.argv.slice(2);
 const root = path.resolve(args.find((a) => !a.startsWith('--')) ?? 'pages');
@@ -18,20 +18,8 @@ const external = args.includes('--external');
 const BASE = (process.env.AEOS_SITE_BASE ?? '/AEOS/').replace(/\/?$/, '/');
 const release = JSON.parse(fs.readFileSync(new URL('../src/generated/release.json', import.meta.url), 'utf8'));
 
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.sh': 'text/plain' };
-const fileFor = (urlPath) => {
-  if (!urlPath.startsWith(BASE)) return undefined;
-  const p = path.join(root, decodeURIComponent(urlPath.slice(BASE.length)));
-  for (const c of [p, path.join(p, 'index.html')]) if (fs.existsSync(c) && fs.statSync(c).isFile()) return c;
-  return undefined;
-};
-const server = http.createServer((req, res) => {
-  const file = fileFor(new URL(req.url, 'http://x').pathname);
-  if (file === undefined) return void res.writeHead(404).end();
-  res.writeHead(200, { 'content-type': types[path.extname(file)] ?? 'application/octet-stream' }).end(fs.readFileSync(file));
-});
-await new Promise((r) => server.listen(0, '127.0.0.1', r));
-const origin = `http://127.0.0.1:${server.address().port}`;
+const { origin, close } = await serve(root, BASE);
+const fileFor = (urlPath) => fileForIn(root, BASE, urlPath);
 
 const visitors = {
   macos: { ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15', installer: /\.dmg$/ },
@@ -79,7 +67,7 @@ try {
   }
 } finally {
   await browser.close();
-  server.close();
+  close();
 }
 
 const outside = [];
