@@ -8,7 +8,7 @@ daemon at `AEOS_API_URL` (default `http://127.0.0.1:7777`); set
 `AEOS_API_TOKEN` when the daemon requires a token. The `harness`, `service`
 and `sandbox` commands work on this machine directly.
 
-Commands: [`health`](#aeos-health) · [`workspace`](#aeos-workspace) · [`agent`](#aeos-agent) · [`inbox`](#aeos-inbox) · [`approvals`](#aeos-approvals) · [`memory`](#aeos-memory) · [`job`](#aeos-job) · [`repo`](#aeos-repo) · [`objective`](#aeos-objective) · [`events`](#aeos-events) · [`stop`](#aeos-stop) · [`resume-ops`](#aeos-resume-ops) · [`harness`](#aeos-harness) · [`service`](#aeos-service) · [`plugin`](#aeos-plugin) · [`sandbox`](#aeos-sandbox)
+Commands: [`health`](#aeos-health) · [`workspace`](#aeos-workspace) · [`agent`](#aeos-agent) · [`inbox`](#aeos-inbox) · [`approvals`](#aeos-approvals) · [`memory`](#aeos-memory) · [`job`](#aeos-job) · [`repo`](#aeos-repo) · [`objective`](#aeos-objective) · [`events`](#aeos-events) · [`stop`](#aeos-stop) · [`resume-ops`](#aeos-resume-ops) · [`harness`](#aeos-harness) · [`service`](#aeos-service) · [`plugin`](#aeos-plugin) · [`sandbox`](#aeos-sandbox) · [`update`](#aeos-update)
 
 ## aeos health
 
@@ -130,4 +130,10 @@ aeos plugin list | aeos plugin remove <package>
 ```bash
 aeos sandbox build [--tag aeos-runner:local]   # container-tier runtime image (P4.M1)
 aeos sandbox status
+```
+
+## aeos update
+
+```bash
+aeos update [--version <tag>]   # update an installer (install.sh) install to the latest or given release, verified
 ```

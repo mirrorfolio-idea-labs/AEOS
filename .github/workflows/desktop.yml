@@ -68,32 +68,66 @@ jobs:
             xorg-server-xvfb xorg-xauth dbus xdg-utils desktop-file-utils curl procps-ng
       - uses: actions/checkout@v4
         with: { fetch-depth: 0, ref: "${{ inputs.ref || github.ref }}" }
-      - name: makepkg (unprivileged, from this commit)
+      - name: is there an Arch package at this ref?
+        # releases re-published from tags that predate packaging/arch (v0.3.0)
+        # have nothing to build here
+        id: pkg
+        run: |
+          if [ -f packaging/arch/PKGBUILD ]; then echo "present=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::no packaging/arch at this ref; skipping the Arch package"; echo "present=false" >> "$GITHUB_OUTPUT"; fi
+      # cargo registry + target dir and the pnpm store survive across runs
+      # (saved from main, readable by PRs and tags); makepkg still starts
+      # from a clean src/ every time
+      - if: steps.pkg.outputs.present == 'true'
+        uses: actions/cache@v4
+        with:
+          path: /ci-cache
+          key: arch-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'pnpm-lock.yaml') }}
+          restore-keys: arch-
+      - if: steps.pkg.outputs.present == 'true'
+        name: makepkg (unprivileged, from this commit)
         run: |
           useradd -m builder
           cp -r packaging/arch /home/builder/pkg
-          chown -R builder /home/builder/pkg
+          mkdir -p /ci-cache
+          chown -R builder /home/builder/pkg /ci-cache
           sudo -u builder git config --global --add safe.directory '*'
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cd /home/builder/pkg
+          # --nocheck: the shell's cargo tests already run in the bundle jobs;
+          # a release-profile rebuild here only for them doubled the build
           sudo -u builder env AEOS_GIT_URL="file://$GITHUB_WORKSPACE" AEOS_REF="commit=$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" \
-            makepkg --noconfirm --cleanbuild
-      - name: namcap (advisory)
+            CARGO_HOME=/ci-cache/cargo-home CARGO_TARGET_DIR=/ci-cache/target \
+            npm_config_store_dir=/ci-cache/pnpm-store \
+            makepkg --noconfirm --cleanbuild --nocheck
+      - if: steps.pkg.outputs.present == 'true'
+        name: keep the cache small
+        run: |
+          # the package is built; drop the final binaries and incremental state
+          rm -rf /ci-cache/target/release/aeos-desktop /ci-cache/target/release/incremental \
+            /ci-cache/target/release/.fingerprint/aeos-desktop-* /ci-cache/target/release/deps/aeos_desktop-*
+          du -sh /ci-cache/* || true
+      - if: steps.pkg.outputs.present == 'true'
+        name: namcap (advisory)
         run: |
           namcap /home/builder/pkg/PKGBUILD || true
           namcap /home/builder/pkg/aeos-*.pkg.tar.zst || true
-      - name: install with pacman
+      - if: steps.pkg.outputs.present == 'true'
+        name: install with pacman
         run: pacman -U --noconfirm /home/builder/pkg/aeos-*.pkg.tar.zst
-      - name: aeos:// is registered to the packaged desktop entry
+      - if: steps.pkg.outputs.present == 'true'
+        name: aeos:// is registered to the packaged desktop entry
         run: |
           desktop-file-validate /usr/share/applications/aeos.desktop
           test "$(sudo -u builder xdg-mime query default x-scheme-handler/aeos)" = aeos.desktop
-      - name: daemon + CLI from the package
+      - if: steps.pkg.outputs.present == 'true'
+        name: daemon + CLI from the package
         run: |
           sudo -u builder env AEOS_HOME=/tmp/aeos-home AEOS_PROVIDER=fake aeosd run > /tmp/aeosd.log 2>&1 &
           for _ in $(seq 60); do curl -sf http://127.0.0.1:7777/healthz && break; sleep 1; done
           sudo -u builder aeos health
-      - name: desktop shell starts and reuses the daemon (Xvfb)
+      - if: steps.pkg.outputs.present == 'true'
+        name: desktop shell starts and reuses the daemon (Xvfb)
         run: |
           # WebKitGTK's bubblewrap sandbox cannot create namespaces inside a CI
           # container; this only affects the CI smoke, not installed use

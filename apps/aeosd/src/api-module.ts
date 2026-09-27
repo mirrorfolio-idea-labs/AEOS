@@ -41,6 +41,7 @@ import {
   runningObjectiveCount,
   startObjectiveRun,
   type ApiContext,
+  type ApiServerOptions,
 } from '@aeos/api';
 
 export interface ApiModuleConfig {
@@ -275,7 +276,12 @@ export async function startApiModule(
   // daily OpenRouter refresh; AEOS_PRICING_OFFLINE=1 pins the cached/static table
   const pricing = () =>
     loadPricingIndex({ home, offline: config.env['AEOS_PRICING_OFFLINE'] === '1' || config.providerOverride === 'fake' });
-  const app = await createApiServer({
+  // ONE set of server options for the API and for every run the daemon starts
+  // itself (resume-on-boot, scheduled jobs): same policy, same approvals inbox,
+  // same secret injection. A second, hand-built context once omitted
+  // policyFor/approvals, so resumed and job-started runs executed tool calls
+  // with no policy at all.
+  const serverOptions: ApiServerOptions = {
     home,
     adapterFor,
     pricing,
@@ -311,7 +317,8 @@ export async function startApiModule(
             supervisor.attachPty(sessionId, onOutput),
         }),
     ...(config.token === undefined ? {} : { token: config.token }),
-  });
+  };
+  const app = await createApiServer(serverOptions);
 
   if (config.uiDir !== undefined && fs.existsSync(path.join(config.uiDir, 'index.html'))) {
     const fastifyStatic = (await import('@fastify/static')).default;
@@ -324,14 +331,7 @@ export async function startApiModule(
     ...(config.token === undefined ? {} : { token: config.token }),
   });
 
-  const ctx: ApiContext = {
-    home,
-    adapterFor,
-    pricing,
-    credentialFor: (agent) => credentialFor(config, agent),
-    bus,
-    db,
-  };
+  const ctx: ApiContext = { ...serverOptions, db };
   const resumed = await resumeIncompleteObjectives(ctx);
 
   return {

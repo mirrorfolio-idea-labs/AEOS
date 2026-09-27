@@ -1,5 +1,14 @@
 # @aeos/cli
 
+## 1.0.0-rc.2
+
+### Patch Changes
+
+- @aeos/contracts@1.0.0-rc.2
+  - @aeos/plugins@1.0.0-rc.2
+  - @aeos/provider-core@1.0.0-rc.2
+  - @aeos/sdk@1.0.0-rc.2
+
 ## 1.0.0-rc.1
 
 ### Patch Changes
