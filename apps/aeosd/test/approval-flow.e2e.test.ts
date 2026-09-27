@@ -162,6 +162,36 @@ describe('approval flow end-to-end (P2.M1.T4)', () => {
     expect((await client.listApprovals())).toHaveLength(0);
   }, 20_000);
 
+  // Regression: resume-on-boot (and job-started runs) used a context without
+  // policyFor/approvals, so a run resumed after a crash executed the parked
+  // tool call with NO approval. The resumed run must park again.
+  it('crash while parked: the resumed run asks again and never runs unapproved', async () => {
+    const home = await mkdtemp(path.join(os.tmpdir(), 'aeos-approval-crash-'));
+    const first = await startDaemon(home, portBase + 3);
+    await seedObjective(first.client);
+    await first.client.startObjective('ws1', 'ada', 'obj1');
+    for (let i = 0; i < 200 && (await first.client.listApprovals()).length === 0; i++) {
+      await delay(25);
+    }
+    expect(await first.client.listApprovals(), 'expected the first run to park').toHaveLength(1);
+    first.child.kill('SIGKILL');
+    await new Promise((resolve) => first.child.once('exit', resolve));
+
+    const second = await startDaemon(home, portBase + 4);
+    let pending;
+    for (let i = 0; i < 200 && (pending = (await second.client.listApprovals())[0]) === undefined; i++) {
+      await delay(25);
+    }
+    expect(pending, 'the resumed run must park on a fresh approval').toBeDefined();
+    expect(pending!.tier).toBe('execute_commands');
+    const status = await second.client.objectiveStatus('ws1', 'ada', 'obj1');
+    expect(status.tasks[0]?.status, 'nothing ran without approval').not.toBe('completed');
+
+    await second.client.resolveApproval(pending!.requestId, 'approve');
+    await waitForCompleted(second.client);
+    expect((await second.client.objectiveStatus('ws1', 'ada', 'obj1')).tasks[0]?.status).toBe('completed');
+  }, 30_000);
+
   async function waitForCompleted(client: AeosClient): Promise<void> {
     for (let i = 0; i < 300; i++) {
       const status = await client.objectiveStatus('ws1', 'ada', 'obj1');
