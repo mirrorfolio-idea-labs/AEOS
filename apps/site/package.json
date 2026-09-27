@@ -7,6 +7,7 @@
   "description": "Public landing page (P5.M6.T1): React + Vite + Tailwind, served at the GitHub Pages root with the docs under /docs/.",
   "scripts": {
     "build": "node scripts/release-data.mjs && vite build && node scripts/copy-static.mjs",
+    "release-data": "node scripts/release-data.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "assemble": "node scripts/assemble-pages.mjs",
@@ -29,5 +30,9 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "vite": "^5.4.11"
+  },
+  "exports": {
+    "./installers": "./src/installers.ts",
+    "./release": "./src/generated/release.json"
   }
 }

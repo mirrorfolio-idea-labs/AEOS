@@ -60,6 +60,23 @@ try {
         if (!found.ids.includes(url.slice(1))) failures.push(`missing anchor ${url}`);
       } else links.add(url);
     }
+    // P5.M6.T2: the docs' React island hydrates and makes the same choice
+    const docs = await (await browser.newContext({ userAgent: visitor.ua })).newPage();
+    docs.on('pageerror', (e) => errors.push(`docs: ${e.message}`));
+    await docs.goto(`${origin}${BASE}docs/getting-started/install/`, { waitUntil: 'networkidle' });
+    if ((await docs.locator('.aeos-install [role="tablist"]').count()) === 0) failures.push(`${os}: docs InstallPicker did not render`);
+    else {
+      if (expected !== undefined) {
+        const docsHref = await docs.locator('.aeos-install a.aeos-primary').first().getAttribute('href');
+        if (docsHref !== expected.url) failures.push(`${os}: docs picker offers ${docsHref}, expected ${expected.url}`);
+      }
+      await docs.getByRole('tab', { name: 'Command line' }).click();
+      const shown = (await docs.locator('.aeos-install [role="tabpanel"] code').textContent()) ?? '';
+      if (!shown.includes('install.sh')) failures.push(`${os}: docs picker did not hydrate (Command line tab shows "${shown}")`);
+      else console.log(`verify-site: ${os} docs InstallPicker hydrated`);
+    }
+    if (errors.length > 0) failures.push(`${os}: page errors: ${errors.join('; ')}`);
+
     // the install command is a link too: the installer must be served
     const command = await page.locator('#install code', { hasText: 'install.sh' }).first().textContent();
     const script = /https:\/\/[^\s]+install\.sh/.exec(command ?? '')?.[0];

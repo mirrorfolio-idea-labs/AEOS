@@ -98,6 +98,10 @@ spec.
 
 ## Quickstart
 
+**Just want to use it?** Download the desktop app or run the one-line
+installer: see [Install](docs/getting-started/install.md). The steps below
+build AEOS from source.
+
 You'll need **Node.js 22** and **pnpm** (a package manager). If you don't
 have pnpm yet, Node ships a tool called `corepack` that installs it for
 you — that's the second command below.

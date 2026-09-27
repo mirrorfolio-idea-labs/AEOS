@@ -116,6 +116,9 @@ jobs:
   # anchor resolves (the build runs scripts/check-links.mjs)
   docs-site:
     runs-on: ubuntu-latest
+    # P5.M6.T1/T2: the landing page and the docs install picker both read the
+    # release data; pin it to a fixture so the browser checks are deterministic
+    env: { AEOS_SITE_RELEASE_FIXTURE: '${{ github.workspace }}/apps/site/test/release.fixture.json' }
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -123,10 +126,9 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @aeos/docs build
-      # P5.M6.T1: the landing page, pinned to a fixture release, verified in a
-      # real browser (OS-matched download + every rendered link resolves)
+      # P5.M6.T1: the landing page, verified in a real browser (OS-matched
+      # download + every rendered link resolves)
       - run: pnpm -F @aeos/site build
-        env: { AEOS_SITE_RELEASE_FIXTURE: '${{ github.workspace }}/apps/site/test/release.fixture.json' }
       - run: pnpm -F @aeos/site exec playwright install --with-deps chromium
       - run: node apps/site/scripts/assemble-pages.mjs pages && pnpm -F @aeos/site verify ../../pages
       - run: pnpm -F @aeos/site lighthouse ../../pages   # performance + accessibility >= 90
