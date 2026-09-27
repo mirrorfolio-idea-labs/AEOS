@@ -13,7 +13,7 @@
     "typecheck": "pnpm -r typecheck",
     "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs",
     "changeset": "changeset",
-    "changeset:version": "changeset version && pnpm install --lockfile-only",
+    "changeset:version": "changeset version && node scripts/release/sync-pkgbuild.mjs && pnpm install --lockfile-only",
     "release:bundle": "node scripts/release/bundle.mjs",
     "release:upgrade-test": "node scripts/release/upgrade-test.mjs"
   },

@@ -72,7 +72,7 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 deploy targets `[~]` | 2/3 (+1 `[~]`) | `aeos service install` (systemd user unit / LaunchAgent, `KillMode=process` so runners survive restarts); `docker compose` image + quickstart CI job; token gate scoped to `/v1` (constant-time, `/healthz`, token file) + ADE sign-in; `docs/deploy.md` TLS recipes. TLS recipes verified for Caddy + nginx by `scripts/release/verify-remote-tls.sh` (19/19); reboot sign-off manual (guide) — 2026-09-26 |
 | M4 TCP + Kubernetes `[x]` | 2/2 | TLS-PSK runner transport (mutual auth, per-session 0600 key, endpoint in `runnerSocket` — contracts unchanged); re-adoption suite over unix + TCP, TLS wire fuzz; Helm chart (single-writer Deployment, PVC, kept token, hardened pod) + `helm-lint` on PRs + `nightly-k8s` kind golden path — 2026-09-26 |
 
-### P5 — v1.0 public release `[~]` — 13/23 tasks (+3 awaiting a human)
+### P5 — v1.0 public release `[~]` — 14/23 tasks (+3 awaiting a human)
 
 | Milestone | Tasks | Focus | Gate |
 |---|---|---|---|
@@ -81,15 +81,15 @@ Task counts and statuses are derived from [ROADMAP](../ROADMAP.md).
 | M3 release engineering `[x]` | 3/3 | changesets fixed group + Version-PR workflow; `release.yml` (verify → self-contained bundles w/ smoke → npm packs → Tauri → SBOM + cosign keyless → GHCR + GitHub Release + npm provenance); `docs/compatibility.md` | rc tag = Gate 3 (Kabeer) |
 | M4 public beta `[~]` | 2/3 | repo public, Issues + Discussions on, `main` protected (required `ci`), gitleaks clean over full history; triage live: `.github/labels.yml` + label-sync, SLA table in CONTRIBUTING, 11 seeded good-first issues (#134–#144); beta announcement + grooming are Kabeer's | requires P4 exit |
 | M5 GA launch `[~]` | 0/4 (+2 `[~]`) | upgrade test (older release → this build on the same `AEOS_HOME`) wired into `release.yml`, green from v0.1.0 and staging; v1.0.0 notes + launch-kit drafts in `notes/launch/`; tag, publishing and posting are Kabeer's | = v1 |
-| M6 public site + install `[~]` | 1/5 | added 2026-09-26 at Kabeer's request: React landing page (T1); proper docs on Starlight (kept) over `docs/` Markdown, React for interactive pieces (T2); Claude-Code-style one-line CLI install with verified bundles + `aeos update` (T3); Claude-Cowork-style signed desktop downloads per OS with auto-update (T4); Markdown docs sweep + generated CLI/API reference with drift tests (T5) | newcomer: landing page → running agent |
+| M6 public site + install `[~]` | 2/5 | added 2026-09-26 at Kabeer's request: React landing page (T1); proper docs on Starlight (kept) over `docs/` Markdown, React for interactive pieces (T2); Claude-Code-style one-line CLI install with verified bundles + `aeos update` (T3); Claude-Cowork-style signed desktop downloads per OS with auto-update (T4); Markdown docs sweep + generated CLI/API reference with drift tests (T5) | newcomer: landing page → running agent |
 
 **Total defined work: 119 tasks** (44 P1 + 31 P2 + 11 P3 + 10 P4 + 23 P5)
 across 35 milestones, plus 4 tracked post-v1 backlog items (scope changes:
 2026-07-19 +M4.T6 multi-account subscriptions, +P1.M10 OpenCode, P2.M6.T2
 retired; 2026-09-26 +P2.M9 repo bindings/worktrees/review, +P2.M10 herdr-derived
-agent runtime, +P5.M6 public site / docs / one-line install). Every task has an accept criterion in the ROADMAP; **108 are
+agent runtime, +P5.M6 public site / docs / one-line install). Every task has an accept criterion in the ROADMAP; **109 are
 done, 4 are `[~]` awaiting a human step** (P4.M3.T1, P5.M2.T2,
-P5.M5.T2/T3) and **7 are open** — four P5.M6 public-site/install tasks, beta grooming, the blocker burn-down at cut time and the post-launch week (P5.M6.T1–T4, P5.M4.T3, P5.M5.T1/T4).
+P5.M5.T2/T3) and **6 are open** — three P5.M6 public-site/install tasks, beta grooming, the blocker burn-down at cut time and the post-launch week (P5.M6.T1/T2/T4, P5.M4.T3, P5.M5.T1/T4).
 Open tasks keep a matching GitHub issue
 (`[AEOS-P<p>.M<m>.T<t>]` titles, phase milestones, `task` + `phase:*` + `area:*` labels).
 
