@@ -420,12 +420,12 @@ the source of truth; the site renders it — no forked content).
 - [x] **T4** Demo assets: asciinema of the golden path, UI screenshots/video. *Accept: README embeds them; assets reproducible via a script.*
 **Exit gate:** documented quickstart verified by someone who didn't write it.
 
-### M3 — Release engineering  `[~]`
+### M3 — Release engineering  `[x]`
 **Context brief:** Everything ships from CI, nothing from laptops. Changesets
 for versioning/changelogs; semver + contracts-compatibility policy documented;
 signed artifacts + SBOM.
 - [x] **T1** Changesets (or equivalent) wired: version bumps + changelog generation in CI. *Accept: dry-run release PR produced automatically from a changeset.*
-- [~] **T2** Release pipeline: tag → build npm packages + daemon binaries + Tauri installers, signed, with SBOM. *Accept: `v1.0.0-rc.1` produced entirely by CI from a tag.* *(Pipeline built, actionlint-clean, bundle proven self-contained locally; runs as a dry run on its own PRs. The rc tag is Gate 3 — guide in `guides/`.)*
+- [x] **T2** Release pipeline: tag → build npm packages + daemon binaries + Tauri installers, signed, with SBOM. *Accept: `v1.0.0-rc.1` produced entirely by CI from a tag.* *(Done 2026-09-27: `v1.0.0-rc.1` was built, signed (cosign keyless), SBOM'd, upgrade-tested from `v0.4.0` and published as a GitHub pre-release entirely by `release.yml` from the tag. The first real runs exposed publish-path bugs, fixed in #160 and follow-ups; `v0.3.0` and `v0.4.0` were re-published with them. M3 exit gate: rc.1 installed from its artifacts with the one-line installer and passed the kill -9 golden path. That run surfaced drift D23, a policy bypass on resume, fixed in #168.)*
 - [x] **T3** Versioning/compat policy doc (semver, contracts ABI stability, support window). *Accept: policy published on the docs site; contracts package documents its guarantees.*
 **Exit gate:** an RC is cut, installed from artifacts, and passes the golden path.
 
