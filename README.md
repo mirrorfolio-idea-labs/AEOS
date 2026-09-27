@@ -15,9 +15,9 @@
 </p>
 
 <p align="center">
-  <a href="./docs/ROADMAP.md"><img src="https://img.shields.io/badge/Phase-P4%20Scale%20(v0.4)-blueviolet?style=for-the-badge" alt="Phase P4"></a>
+  <a href="./docs/ROADMAP.md"><img src="https://img.shields.io/badge/Phase-P5%20v1.0%20release-blueviolet?style=for-the-badge" alt="Phase P5"></a>
   <a href="https://github.com/mirrorfolio-idea-labs/AEOS/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/mirrorfolio-idea-labs/AEOS/ci.yml?style=for-the-badge&label=CI" alt="CI status"></a>
-  <a href="./docs/pm/BOARD.md"><img src="https://img.shields.io/badge/Status-alpha-orange?style=for-the-badge" alt="Status"></a>
+  <a href="./docs/pm/BOARD.md"><img src="https://img.shields.io/github/v/release/mirrorfolio-idea-labs/AEOS?include_prereleases&style=for-the-badge&label=Release" alt="Latest release"></a>
   <a href="https://www.npmjs.com/package/pnpm"><img src="https://img.shields.io/badge/pnpm-9-f69220?style=for-the-badge&logo=pnpm&logoColor=white" alt="pnpm 9"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node-22-017ace?style=for-the-badge&logo=node.js&logoColor=white" alt="Node 22"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License MIT"></a>
@@ -288,60 +288,59 @@ other package builds on top of it instead of inventing its own.
 ```
 aeos/
 ├── packages/
-│   ├── contracts/          # Zod schemas → JSON Schemas; event envelope; protocol versions
-│   ├── kernel/              # AEOS_HOME layout, registry, event bus, SQLite derived index
-│   ├── runner/               # session-runner process + supervisor + framed protocol
-│   ├── provider-core/        # HarnessAdapter contract + conformance suite + provider-fake
-│   ├── provider-claude/      # Claude Code hermetic adapter (BYOK, multi-account slots)
-│   ├── provider-opencode/    # OpenCode hermetic adapter
-│   ├── memory/                # file memory (budgeted) + frozen snapshots + FTS5 search
-│   ├── scheduler/             # plan.md + checkpoints; the objective execution loop
-│   ├── api/                   # Fastify server, OpenAPI 3.1, SSE, kill switch
-│   └── sdk/                   # generated TS client + SSE reader from the OpenAPI spec
+│   ├── contracts/           # Zod schemas → JSON Schemas; event envelope; protocol + plugin ABI versions
+│   ├── kernel/              # AEOS_HOME layout, registry, event bus, SQLite derived index, audit
+│   ├── runner/              # session-runner process + supervisor + framed protocol (unix / TLS-PSK TCP), PTY, sandbox
+│   ├── policy/              # tiered policy, layered YAML, budgets, co-edit guard
+│   ├── secrets/             # age-encrypted secret store, policy-gated injection, redaction
+│   ├── provider-core/       # HarnessAdapter contract + conformance suite + provider-fake + managed binaries
+│   ├── provider-claude/     # Claude Code hermetic adapter (BYOK, multi-account slots)
+│   ├── provider-opencode/   # OpenCode hermetic adapter
+│   ├── provider-codex/      # Codex hermetic adapter
+│   ├── plugins/             # third-party plugin host (manifest + ABI gate, out-of-process)
+│   ├── router/              # cost-aware model router (pricing index, class routing)
+│   ├── memory/              # file memory (budgeted) + frozen snapshots + FTS5 search + curator
+│   ├── scheduler/           # plans, checkpoints, verify tasks, retrospectives, jobs, delegation
+│   ├── api/                 # Fastify server, OpenAPI 3.1, SSE, token gate, kill switch
+│   ├── sdk/                 # generated TS client + SSE reader from the OpenAPI spec
+│   └── create-aeos-plugin/  # `npx create-aeos-plugin` scaffolder
 ├── apps/
 │   ├── aeosd/               # daemon composition root (the `aeosd` binary)
-│   ├── ade/                  # web UI (React + Vite + Tailwind, shadcn conventions)
-│   └── cli/                   # `aeos` CLI (thin SDK client)
-└── docs/                     # specs, plans, ADRs, ROADMAP, PM board
+│   ├── ade/                 # web UI (React + Vite + Tailwind, shadcn conventions)
+│   ├── cli/                 # `aeos` CLI (thin SDK client)
+│   ├── desktop/             # Tauri 2 desktop shell
+│   └── docs/                # Starlight docs site, rendered from docs/
+├── deploy/helm/             # Helm chart
+├── docker/                  # daemon image, sandbox runner image, compose smoke test
+├── packaging/arch/          # Arch Linux PKGBUILD (desktop app + daemon + CLI)
+├── scripts/release/         # bundles, upgrade test, TLS verification
+└── docs/                    # specs, plans, ADRs, ROADMAP, PM board, reference
 ```
 
 ---
 
 ## Status
 
-**Short version: the crash-and-resume behavior described above is real,
-tested, and works today.** That was the whole first phase of this
-project (called "P1 — Spine"), and it's done. Everything below is the
-detailed breakdown for people tracking progress closely.
+**Short version: phases P1 to P4 are complete and released, and v1.0 is
+in release candidates.** The crash-and-resume behavior described above was
+the first phase ("P1 — Spine"). Everything since then builds on it.
 
-The Quickstart section above *is* the tested golden path: create agent →
-give objective → agent works via a hermetic harness → `kill -9` the
-daemon → restart → agent resumes at last checkpoint and completes → all
-state inspectable as files.
-
-| Milestone | Status | What it is |
+| Phase | Release | What it added |
 |---|---|---|
-| M1 contracts | `[x]` | Zod schemas, event taxonomy, JSON Schema export |
-| M2 kernel | `[x]` | AEOS_HOME layout, registry, event bus, derived SQLite index |
-| M3 runner | `[x]` | Session-runner process + supervisor + framed protocol |
-| M4 Claude provider | `[x]`¹ | Hermetic profile, translation, resume, BYOK, multi-account slots |
-| M5 memory v0 | `[x]` | Budgeted files-as-truth store, frozen snapshots, FTS5 search |
-| M6 scheduler v0 | `[x]` | plan.md + checkpoints, 3-strike backoff, crash resume |
-| M7 API + SSE + SDK | `[x]` | OpenAPI 3.1, exactly-once SSE, generated client, CLI |
-| M8 ADE web UI | `[x]` | React UI, live session console, files browser, BYOK, cost meter |
-| M9 E2E + hardening | `[x]` | Real-process golden-path E2E (10× green), kill switch, this README |
-| M10 OpenCode adapter | `[x]`¹ | Second hermetic harness, same conformance bar as Claude |
+| P1 Spine | `v0.1.0` | Durable agents as files, crash-safe runner, Claude Code + OpenCode harnesses, API, SSE, SDK, CLI, web UI |
+| P2 Safety + polish | `v0.2.0` | Tiered policy and approvals inbox, budgets, audit, secrets, PTY takeover, Codex harness, managed binaries, worktrees and review, agent runtime (status, wait, inbox, push), desktop app |
+| P3 Autonomy | `v0.3.0` | Classed planner, cost-aware model router, verification gates, retrospective learning loop, durable schedules, delegation |
+| P4 Scale + community | `v0.4.0` | Container sandbox tier, public plugin API, service/compose/Helm deploys, TLS-PSK TCP runners, Arch Linux package |
+| P5 v1.0 public release | `v1.0.0-rc.*` | OSS readiness, docs site, signed CI releases with SBOMs, public repo and triage; next: public site, one-line install, desktop downloads |
 
-¹ Code-complete and merged; gated only on a manual live-harness smoke
-test before the final checkbox flips (tracked in the project's internal
-guides — the automated suite is green either way).
+Two checks are still manual sign-offs: the live Claude Code and OpenCode
+smokes (P1.M4, P1.M10) and the service reboot test (P4.M3.T1). The
+automated suite is green either way.
 
-After P1: **P2** (safety + policy engine, budgets, secrets, v0.2), **P3**
-(autonomy — planner, model routing, self-learning, v0.3), **P4** (scale +
-plugin ecosystem, v0.4), **P5** (public v1.0 launch — OSS readiness is
-already done). See [`docs/ROADMAP.md`](docs/ROADMAP.md) for all 107
-tracked tasks, and [open issues](https://github.com/mirrorfolio-idea-labs/AEOS/issues)
-for ones ready to pick up.
+What's left before `v1.0.0` is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md)
+(the P5 section) and on the [board](docs/pm/BOARD.md). [Open
+issues](https://github.com/mirrorfolio-idea-labs/AEOS/issues) labelled
+`good first issue` are ready to pick up.
 
 ---
 
@@ -390,6 +389,7 @@ pnpm -F @aeos/ade test
 | [`docs/PROJECT-CONTEXT.md`](docs/PROJECT-CONTEXT.md) | Single-file cold-start onboarding |
 | [`docs/superpowers/specs/2026-07-12-aeos-architecture-design.md`](docs/superpowers/specs/2026-07-12-aeos-architecture-design.md) | Full architecture design |
 | [`docs/adr/`](docs/adr/) | Architecture decision records |
+| [`docs/reference/cli.md`](docs/reference/cli.md) · [`docs/reference/api.md`](docs/reference/api.md) | Every CLI command and API endpoint (generated, drift-tested) |
 
 ---
 
@@ -419,6 +419,6 @@ rationale.
 
 ---
 
-> AEOS is built by Mirrorfolio. It is alpha software with a complete,
-> tested spine — the golden path works today. Watch the
-> [BOARD](docs/pm/BOARD.md), not the hype.
+> AEOS is built by Mirrorfolio. It is in v1.0 release candidates: four
+> phases are released, and every claim above is backed by a test in CI.
+> Watch the [BOARD](docs/pm/BOARD.md), not the hype.

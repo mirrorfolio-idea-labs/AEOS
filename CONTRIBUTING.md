@@ -48,8 +48,14 @@ The CI-identical verification chain — run it before every PR:
 pnpm install --frozen-lockfile && pnpm build && pnpm typecheck && pnpm test && pnpm depcruise
 ```
 
-If you touch schemas in `@aeos/contracts`, regenerate and commit the JSON
-Schemas: `pnpm -F @aeos/contracts gen:schemas` (CI fails on drift).
+Generated files are committed, and CI fails when they drift from the code:
+
+- touched schemas in `@aeos/contracts` → `pnpm -F @aeos/contracts gen:schemas`;
+- touched API routes → `pnpm -F @aeos/api gen:openapi && pnpm -F @aeos/api gen:reference`;
+- touched the CLI's usage text → `pnpm -F @aeos/cli gen:reference`.
+
+A change to user-facing behavior updates the docs in the same PR (the PR
+template has the checkbox).
 
 ## Rules of the codebase
 

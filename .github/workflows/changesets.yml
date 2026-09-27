@@ -3,6 +3,10 @@ name: changesets
 # Packages" PR (version bumps + CHANGELOGs, all AEOS packages in lockstep).
 # One-time repo setting: Settings → Actions → General → "Allow GitHub Actions
 # to create and approve pull requests".
+#
+# Driven by the repo's own @changesets/cli (not changesets/action@v1, whose
+# bundled reader predates the CLI's pre-release layout and crashes on
+# .changeset/pre/ while an rc is in progress).
 on:
   push:
     branches: [develop]
@@ -13,6 +17,9 @@ concurrency: changesets-${{ github.ref }}
 jobs:
   version-pr:
     runs-on: ubuntu-latest
+    env:
+      BRANCH: changeset-release/${{ github.ref_name }}
+      TITLE: 'chore(release): version packages'
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -20,27 +27,35 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - uses: changesets/action@v1
-        id: changesets
-        # Opening the PR needs the repo setting above. Without it the action
-        # still versions and pushes changeset-release/<branch>, then fails on
-        # the PR call; the next step tells those two failures apart.
-        continue-on-error: true
-        with:
-          version: pnpm changeset:version
-          commit: 'chore(release): version packages'
-          title: 'chore(release): version packages'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: tolerate only a refused PR creation
-        if: steps.changesets.outcome == 'failure'
-        env:
-          BRANCH: changeset-release/${{ github.ref_name }}
+      - name: version packages
+        id: version
         run: |
-          # versioning succeeded iff the release branch was just pushed on top of this commit
-          if git fetch -q origin "$BRANCH" && [ "$(git rev-parse FETCH_HEAD^)" = "$GITHUB_SHA" ]; then
-            echo "::warning title=Version PR not opened::$BRANCH is pushed with the version bump, but GitHub Actions may not create pull requests here. Enable Settings → Actions → General → 'Allow GitHub Actions to create and approve pull requests', or open $BRANCH → ${{ github.ref_name }} by hand."
+          pnpm changeset:version
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "no pending changesets: nothing to version"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::changesets versioning failed (no $BRANCH commit on top of $GITHUB_SHA) — see the previous step"
-            exit 1
+            git status --short
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: push the version branch
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$BRANCH"
+          git add -A
+          git commit -q -m "$TITLE"
+          git push --force origin "HEAD:$BRANCH"
+      - name: open or update the Version Packages PR
+        if: steps.version.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body="Versions and changelogs from the pending changesets on \`${GITHUB_REF_NAME}\`. Merging this PR is how a release is cut (see \`.changeset/README.md\`)."
+          if [ -n "$(gh pr list --head "$BRANCH" --base "$GITHUB_REF_NAME" --state open --json number --jq '.[].number')" ]; then
+            echo "Version Packages PR already open; the force-push updated it"
+          elif ! gh pr create --head "$BRANCH" --base "$GITHUB_REF_NAME" --title "$TITLE" --body "$body"; then
+            # the one tolerated failure: the branch is pushed, only the PR call was refused
+            echo "::warning title=Version PR not opened::$BRANCH is pushed with the version bump, but GitHub Actions may not create pull requests here. Enable Settings → Actions → General → 'Allow GitHub Actions to create and approve pull requests', or open $BRANCH → $GITHUB_REF_NAME by hand."
           fi

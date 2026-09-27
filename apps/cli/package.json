@@ -1,6 +1,6 @@
 {
   "name": "@aeos/cli",
-  "version": "0.4.0",
+  "version": "1.0.0-rc.1",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -24,7 +24,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "gen:reference": "node scripts/gen-reference.mjs"
   },
   "dependencies": {
     "@aeos/contracts": "workspace:*",
