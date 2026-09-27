@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "sync": "node scripts/sync-docs.mjs",
-    "build": "node scripts/sync-docs.mjs && astro build && node scripts/check-links.mjs",
+    "build": "pnpm -F @aeos/site release-data && node scripts/sync-docs.mjs && astro build && node scripts/check-links.mjs",
     "typecheck": "node -e \"\"",
     "dev": "node scripts/sync-docs.mjs && astro dev",
     "demo:assets": "node scripts/demo-assets.mjs"
