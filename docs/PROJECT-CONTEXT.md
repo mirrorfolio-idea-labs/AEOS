@@ -143,7 +143,8 @@ apps/ade                 @aeos/ade — web UI (React+Vite+Tailwind, shadcn
 apps/cli                 @aeos/cli — `aeos` CLI, thin @aeos/sdk client.
 apps/desktop             Tauri 2 shell (Rust): starts/reuses aeosd,
                         notifications, aeos:// deep links.
-apps/docs                Starlight docs site rendered from docs/.
+apps/site                public landing page (React), GitHub Pages root.
+apps/docs                Starlight docs site rendered from docs/, under /docs/.
 packages/create-aeos-plugin  `npx create-aeos-plugin` scaffolder.
 deploy/helm, docker/     Helm chart; daemon + sandbox runner images.
 packaging/arch           Arch Linux PKGBUILD (desktop + daemon + CLI).
