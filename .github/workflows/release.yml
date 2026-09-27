@@ -5,11 +5,19 @@ name: release
 #   keyless signatures (cosign, GitHub OIDC) → GitHub Release (+ npm publish
 #   with provenance, + GHCR push).
 # workflow_dispatch and PRs touching the pipeline run the SAME steps as a
-# dry run (no publish, no push, no release).
+# dry run (no publish, no push, no release). workflow_dispatch with `tag` set
+# (re)publishes that existing tag instead: every job builds the tag's own
+# commit with THIS workflow file, so a pipeline fix can finish a release whose
+# tag predates the fix.
 on:
   push:
     tags: ['v*.*.*']
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to (re)publish, e.g. v0.4.0. Empty = dry run.'
+        required: false
+        default: ''
   pull_request:
     paths:
       - '.github/workflows/release.yml'
@@ -18,12 +26,15 @@ on:
 permissions:
   contents: read
 env:
-  PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') && 'true' || 'false' }}
+  PUBLISH: ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.tag != '') && 'true' || 'false' }}
+  # the release being built: the pushed tag, or the tag asked for by dispatch
+  RELEASE_TAG: ${{ inputs.tag != '' && inputs.tag || github.ref_name }}
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.tag || github.ref }}" }
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -33,7 +44,7 @@ jobs:
         if: env.PUBLISH == 'true'
         run: |
           v="$(node -p "require('./apps/aeosd/package.json').version")"
-          test "v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != package version v$v"; exit 1; }
+          test "v$v" = "${RELEASE_TAG}" || { echo "tag ${RELEASE_TAG} != package version v$v"; exit 1; }
 
   # P5.M5.T2: state written by earlier releases is read and resumed by this
   # one (docs/compatibility.md) — the previous tag and the staging tier
@@ -42,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with: { fetch-depth: 0, ref: "${{ inputs.tag || github.ref }}" }
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -51,7 +62,7 @@ jobs:
       - name: upgrade from the previous release and from staging
         run: |
           git fetch --tags --force origin
-          prev="$(git tag -l 'v*' --sort=-v:refname | grep -vx "${GITHUB_REF_NAME}" | head -1)"
+          prev="$(git tag -l 'v*' --sort=-v:refname | grep -vx "${RELEASE_TAG}" | head -1)"
           node scripts/release/upgrade-test.mjs ${prev:+"$prev"} origin/staging
 
   bundles:
@@ -64,6 +75,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.tag || github.ref }}" }
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -88,6 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.tag || github.ref }}" }
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -104,6 +117,7 @@ jobs:
   desktop:
     needs: verify
     uses: ./.github/workflows/desktop.yml
+    with: { ref: "${{ inputs.tag || github.ref }}" }
 
   sign-and-release:
     needs: [bundles, npm-packages, desktop, upgrade]
@@ -114,16 +128,25 @@ jobs:
       packages: write        # GHCR image
     steps:
       - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.tag || github.ref }}" }
       - uses: actions/download-artifact@v4
         with: { path: dist-artifacts, merge-multiple: true }
+      - name: flatten artifacts
+        # desktop and Arch artifacts arrive nested (deb/, appimage/, dmg/,
+        # home/builder/pkg/); everything signed and released must sit at the top
+        run: |
+          find dist-artifacts -mindepth 2 -type f \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.pkg.tar.zst' \) -exec mv -n -t dist-artifacts {} +
+          find dist-artifacts -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+          find dist-artifacts -maxdepth 1 -type f -name '*.log' -delete
+          ls -la dist-artifacts
       - uses: sigstore/cosign-installer@v3
       - uses: anchore/sbom-action/download-syft@v0
       - name: SBOMs (SPDX) for every artifact
         run: |
           cd dist-artifacts
           shopt -s nullglob
-          for f in *.tar.gz *.tgz *.deb *.AppImage *.dmg; do syft scan "file:$f" -o spdx-json="$f.spdx.json" -q || syft scan "$f" -o spdx-json="$f.spdx.json" -q; done
-          sha256sum *.tar.gz *.tgz *.deb *.AppImage *.dmg *.spdx.json > SHA256SUMS
+          for f in *.tar.gz *.tgz *.deb *.AppImage *.dmg *.pkg.tar.zst; do syft scan "file:$f" -o spdx-json="$f.spdx.json" -q || syft scan "$f" -o spdx-json="$f.spdx.json" -q; done
+          sha256sum *.tar.gz *.tgz *.deb *.AppImage *.dmg *.pkg.tar.zst *.spdx.json > SHA256SUMS
           ls -la
       - name: keyless signatures (cosign + GitHub OIDC)
         # keyless signing writes to the PUBLIC Rekor transparency log —
@@ -133,11 +156,11 @@ jobs:
           cd dist-artifacts
           cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
           shopt -s nullglob
-          for f in *.tar.gz *.deb *.AppImage *.dmg; do cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"; done
+          for f in *.tar.gz *.deb *.AppImage *.dmg *.pkg.tar.zst; do cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"; done
       - name: container image (GHCR) — signed, with SBOM attestation
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/aeosd"
-          tag="${GITHUB_REF_NAME#v}"
+          tag="${RELEASE_TAG#v}"
           [ "$PUBLISH" = true ] || tag="dryrun-${GITHUB_SHA::12}"
           docker build -f docker/aeosd/Dockerfile -t "$image:$tag" .
           syft scan "docker:$image:$tag" -o spdx-json=dist-artifacts/aeosd-image.spdx.json -q
@@ -157,10 +180,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          prerelease=""; case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease";; esac
-          notes="notes/release-${GITHUB_REF_NAME}.md"
+          prerelease=""; case "$RELEASE_TAG" in *-*) prerelease="--prerelease";; esac
+          notes="notes/release-${RELEASE_TAG}.md"
           [ -f "$notes" ] || notes=/dev/null
-          gh release create "$GITHUB_REF_NAME" $prerelease --title "AEOS ${GITHUB_REF_NAME}" --notes-file "$notes" dist-artifacts/*
+          # a run that failed mid-upload leaves a draft holding partial assets:
+          # drop it, then finish the published release or create it
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq ".[] | select(.draft and .tag_name == \"$RELEASE_TAG\") | .id"); do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+          done
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" --clobber dist-artifacts/*
+            gh release edit "$RELEASE_TAG" --draft=false $prerelease --title "AEOS ${RELEASE_TAG}" --notes-file "$notes"
+          else
+            gh release create "$RELEASE_TAG" $prerelease --title "AEOS ${RELEASE_TAG}" --notes-file "$notes" --verify-tag dist-artifacts/*
+          fi
       - uses: actions/setup-node@v4
         if: env.PUBLISH == 'true'
         with: { node-version: 22, registry-url: 'https://registry.npmjs.org' }
@@ -170,5 +203,5 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          tagflag=""; case "$GITHUB_REF_NAME" in *-*) tagflag="--tag next";; esac
+          tagflag=""; case "$RELEASE_TAG" in *-*) tagflag="--tag next";; esac
           for f in dist-artifacts/*.tgz; do npm publish "$f" --provenance --access public $tagflag; done
