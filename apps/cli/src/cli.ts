@@ -46,7 +46,7 @@ const need = (parsed: Parsed, flag: string): string => {
   return value;
 };
 
-const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOKEN)
+export const USAGE = `aeos — AEOS daemon CLI (set AEOS_API_URL, optional AEOS_API_TOKEN)
 
   aeos health
   aeos workspace create <id> --name <name>
