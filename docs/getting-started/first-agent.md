@@ -110,6 +110,11 @@ Schedule the objective, or any other, with a cron expression in UTC. Jobs
 are files, so they survive restarts, and a run missed while the machine was
 off fires once when it comes back.
 
+A scheduled run follows the agent's policy like any other, so a gated action
+still parks in the approvals inbox until you answer it. For work that should
+finish unattended, allow those actions in the agent's or workspace's
+`policy.yaml` ahead of time.
+
 <!-- tutorial:run -->
 ```bash
 aeos job add nightly-readme --cron "0 3 * * *" --workspace acme --agent dev --objective readme
