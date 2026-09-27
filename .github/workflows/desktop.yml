@@ -62,7 +62,7 @@ jobs:
           config='{"bundle":{"resources":{"daemon.tar.gz":"daemon.tar.gz"}'
           [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] && config="$config,\"createUpdaterArtifacts\":true"
           config="$config}}"
-          pnpm -F @aeos/desktop tauri build --bundles ${{ matrix.bundles }} --config "$config"
+          pnpm -F @aeos/desktop tauri build --verbose --bundles ${{ matrix.bundles }} --config "$config"
       - name: first run needs no terminal (install the .deb, no aeosd on PATH)
         if: runner.os == 'Linux'
         run: |
