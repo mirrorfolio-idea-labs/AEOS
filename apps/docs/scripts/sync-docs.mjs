@@ -16,8 +16,9 @@ const BASE = (process.env.AEOS_DOCS_BASE ?? '/AEOS/docs').replace(/\/$/, '');
 
 /** source (repo-relative) → site slug (no extension), in sidebar order. */
 const PAGES = [
-  ['docs/getting-started/quickstart.md', 'getting-started/quickstart', 1],
-  ['docs/getting-started/first-agent.md', 'getting-started/first-agent', 2],
+  ['docs/getting-started/install.md', 'getting-started/install', 1],
+  ['docs/getting-started/quickstart.md', 'getting-started/quickstart', 2],
+  ['docs/getting-started/first-agent.md', 'getting-started/first-agent', 3],
   ['docs/deploy.md', 'guides/deploy', 1],
   ['docs/plugins.md', 'guides/plugins', 2],
   ['docs/compatibility.md', 'guides/compatibility', 3],
@@ -72,6 +73,14 @@ function toPage(src, slug, order) {
   const title = (h1?.[1] ?? path.basename(slug)).replace(/`/g, '').trim();
   if (h1 !== null) body = body.replace(h1[0], '');
   body = rewriteLinks(body, src);
+  // P5.M6.T2: `<!-- aeos:component Name -->` mounts a React island from
+  // src/components/Name.tsx; such a page is emitted as MDX (so it must be
+  // MDX-safe Markdown). Every other page stays plain .md.
+  const components = [...new Set([...body.matchAll(/<!--\s*aeos:component\s+([A-Z]\w*)\s*-->/g)].map((m) => m[1]))];
+  for (const name of components) {
+    if (!fs.existsSync(path.resolve(HERE, '..', 'src', 'components', `${name}.tsx`))) throw new Error(`${src}: unknown component ${name}`);
+    body = body.replace(new RegExp(`<!--\\s*aeos:component\\s+${name}\\s*-->`, 'g'), `<${name} client:load />`);
+  }
   // `<` followed by a non-tag char and `{` are fine in .md; strip HTML comments (tutorial markers)
   body = body.replace(/<!--[\s\S]*?-->\n?/g, '');
   const frontmatter = [
@@ -81,8 +90,9 @@ function toPage(src, slug, order) {
     `sidebar: { order: ${String(order)} }`,
     '---',
     '',
+    ...components.map((name) => `import ${name} from '${path.relative(path.dirname(path.join(OUT, slug)), path.resolve(HERE, '..', 'src', 'components', name + '.tsx')).split(path.sep).join('/')}';\n\n`),
   ].join('\n');
-  const file = path.join(OUT, `${slug}.md`);
+  const file = path.join(OUT, `${slug}.${components.length > 0 ? 'mdx' : 'md'}`);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, frontmatter + body.replace(/^\s+/, ''));
   return title;
