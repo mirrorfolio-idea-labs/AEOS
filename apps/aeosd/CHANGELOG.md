@@ -1,5 +1,30 @@
 # @aeos/aeosd
 
+## 1.0.0-rc.2
+
+### Patch Changes
+
+- b71e9b0: Security: objectives resumed after a daemon crash or restart, and objectives
+  started by scheduled jobs, now go through the agent's policy and the
+  approvals inbox like every other run. Before this fix those runs used a
+  context without a policy, so a gated tool call (for example a shell command
+  parked for approval when the daemon died) ran after the restart without
+  anyone approving it.
+- @aeos/api@1.0.0-rc.2
+  - @aeos/contracts@1.0.0-rc.2
+  - @aeos/kernel@1.0.0-rc.2
+  - @aeos/memory@1.0.0-rc.2
+  - @aeos/plugins@1.0.0-rc.2
+  - @aeos/policy@1.0.0-rc.2
+  - @aeos/provider-claude@1.0.0-rc.2
+  - @aeos/provider-codex@1.0.0-rc.2
+  - @aeos/provider-core@1.0.0-rc.2
+  - @aeos/provider-opencode@1.0.0-rc.2
+  - @aeos/router@1.0.0-rc.2
+  - @aeos/runner@1.0.0-rc.2
+  - @aeos/scheduler@1.0.0-rc.2
+  - @aeos/secrets@1.0.0-rc.2
+
 ## 1.0.0-rc.1
 
 ### Patch Changes
