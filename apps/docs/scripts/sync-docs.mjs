@@ -76,10 +76,11 @@ function toPage(src, slug, order) {
   // P5.M6.T2: `<!-- aeos:component Name -->` mounts a React island from
   // src/components/Name.tsx; such a page is emitted as MDX (so it must be
   // MDX-safe Markdown). Every other page stays plain .md.
-  const components = [...new Set([...body.matchAll(/<!--\s*aeos:component\s+([A-Z]\w*)\s*-->/g)].map((m) => m[1]))];
+  // only a marker alone on its line counts (a mention in prose or `code` does not)
+  const components = [...new Set([...body.matchAll(/^<!--\s*aeos:component\s+([A-Z]\w*)\s*-->\s*$/gm)].map((m) => m[1]))];
   for (const name of components) {
     if (!fs.existsSync(path.resolve(HERE, '..', 'src', 'components', `${name}.tsx`))) throw new Error(`${src}: unknown component ${name}`);
-    body = body.replace(new RegExp(`<!--\\s*aeos:component\\s+${name}\\s*-->`, 'g'), `<${name} client:load />`);
+    body = body.replace(new RegExp(`^<!--\\s*aeos:component\\s+${name}\\s*-->\\s*$`, 'gm'), `<${name} client:load />`);
   }
   // `<` followed by a non-tag char and `{` are fine in .md; strip HTML comments (tutorial markers)
   body = body.replace(/<!--[\s\S]*?-->\n?/g, '');
