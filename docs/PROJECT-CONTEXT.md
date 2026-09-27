@@ -1,6 +1,7 @@
 # AEOS / ADE — Project Context (agent onboarding document)
 
-> **Generated view** — as of `v0.1.0` tag, **Phase P1 complete**, 2026-07-20.
+> **Generated view**. As of 2026-09-27, phases **P1–P4 are released**
+> (`v0.1.0`–`v0.4.0`) and **P5 is in v1.0 release candidates**.
 > This document is the single-file cold-start context for any AI coding agent
 > (Claude Code, Cursor, OpenCode, Codex, …) joining the project. It summarizes
 > and **links**; it never owns facts. Owned sources (trust them over this file):
@@ -104,20 +105,33 @@ packages/kernel          @aeos/kernel — AEOS_HOME layout, atomic writes,
                         lifecycle (createKernel/Module).
 packages/runner          @aeos/runner — framed protocol, session-runner
                         process, supervisor with boot-time re-adoption.
+packages/policy          @aeos/policy — tiered policy (allow/confirm/deny/
+                        sandbox), layered YAML, budget meter, co-edit guard.
+packages/secrets         @aeos/secrets — age-encrypted store, policy-gated
+                        injection, pipeline-wide redaction.
 packages/provider-core   @aeos/provider-core — HarnessAdapter contract,
                         describeAdapterConformance suite (behind the
-                        /conformance subpath — vitest-dependent), FakeAdapter.
+                        /conformance subpath — vitest-dependent), FakeAdapter,
+                        managed harness binaries (pinned, integrity-sealed).
 packages/provider-claude @aeos/provider-claude — Claude Code adapter:
                         hermetic profile, stream-json translation, resume,
                         BYOK, multi-account slots, usage-limit failover.
 packages/provider-opencode @aeos/provider-opencode — same shape, OpenCode.
+packages/provider-codex  @aeos/provider-codex — same shape, Codex.
+packages/plugins         @aeos/plugins — third-party plugin host: manifest +
+                        PLUGIN_ABI_VERSION gate, one process per plugin.
+packages/router          @aeos/router — cost-aware model router: pricing
+                        index, layered routing.yaml, route/cost records.
 packages/memory          @aeos/memory — budgeted files-as-truth store,
-                        frozen snapshot composer, propose queue, FTS5 search.
-packages/scheduler       @aeos/scheduler — plan.md parser, checkpoint store
-                        + recovery resolver, sequential execution loop
-                        with 3-strike backoff and the STOP kill switch.
+                        frozen snapshot composer, propose queue, FTS5
+                        search, curator.
+packages/scheduler       @aeos/scheduler — plan.md parser (task classes,
+                        @agent delegation), checkpoints + recovery, execution
+                        loop with 3-strike backoff, verify tasks,
+                        retrospectives, durable jobs, the STOP kill switch.
 packages/api             @aeos/api — Fastify server, OpenAPI 3.1 (committed
-                        openapi.json, drift-tested), SSE, kill-switch routes.
+                        openapi.json, drift-tested), SSE, token gate on /v1,
+                        kill-switch routes.
 packages/sdk             @aeos/sdk — generated OpenAPI types + thin fetch
                         client + dependency-free SSE reader.
 apps/aeosd               @aeos/aeosd — daemon composition root: home,
@@ -127,8 +141,15 @@ apps/aeosd               @aeos/aeosd — daemon composition root: home,
 apps/ade                 @aeos/ade — web UI (React+Vite+Tailwind, shadcn
                         conventions); Playwright suite runs in CI.
 apps/cli                 @aeos/cli — `aeos` CLI, thin @aeos/sdk client.
+apps/desktop             Tauri 2 shell (Rust): starts/reuses aeosd,
+                        notifications, aeos:// deep links.
+apps/docs                Starlight docs site rendered from docs/.
+packages/create-aeos-plugin  `npx create-aeos-plugin` scaffolder.
+deploy/helm, docker/     Helm chart; daemon + sandbox runner images.
+packaging/arch           Arch Linux PKGBUILD (desktop + daemon + CLI).
+scripts/release          bundles, upgrade test, TLS recipe verification.
 docs/                    spec, ROADMAP, milestone plans, ADRs, markdown PM
-                        system (pm/).
+                        system (pm/), generated CLI/API reference.
 guides/                  gitignored — operator steps only Kabeer can do
                         (live-harness smokes, secrets, machine setup).
 ```
@@ -139,6 +160,8 @@ guides/                  gitignored — operator steps only Kabeer can do
 pnpm install --frozen-lockfile && pnpm build && pnpm typecheck && pnpm test && pnpm depcruise
 pnpm -F @aeos/contracts gen:schemas   # regenerate JSON Schemas after touching contracts — commit output
 pnpm -F @aeos/api gen:openapi         # regenerate openapi.json after touching api routes — commit output
+pnpm -F @aeos/api gen:reference       # then docs/reference/api.md — commit output (drift-tested)
+pnpm -F @aeos/cli gen:reference       # docs/reference/cli.md after changing CLI usage — commit output
 ```
 
 CI also runs the ADE Playwright suite (chromium) and a nightly
@@ -155,14 +178,16 @@ entry, not the test suite).
 ## 4. Architecture (runtime topology, as shipped)
 
 ```
-clients: ADE web UI (served by aeosd) · aeos CLI · (Tauri wrapper — P2.M8)
+clients: ADE web UI (served by aeosd) · aeos CLI · Tauri desktop shell
    │ HTTP + SSE (OpenAPI 3.1 → @aeos/sdk)
 aeosd daemon: api module (Fastify, mounted when configured) · event bus ·
               state store (files + SQLite derived index) · supervisor
-   │ Unix socket, 4-byte-BE length-prefixed framed JSON, versioned handshake
+   │ Unix socket (or TLS-PSK TCP), 4-byte-BE length-prefixed framed JSON,
+   │ versioned handshake
 session runners (one supervised OS process per live session)
    └─ harness subprocess (claude -p --output-format stream-json /
-      opencode run --format json) in a hermetic profile
+      opencode run --format json / codex exec --json) in a hermetic
+      profile, optionally inside the container sandbox tier
 ```
 
 Autonomy loop (spec §12, as shipped in M6): `plan.md` (files) → scheduler
@@ -175,8 +200,13 @@ with incomplete, unblocked tasks (`resumeIncompleteObjectives`,
 `@aeos/api`) — this is what the golden-path E2E exercises with a real
 `SIGKILL`.
 
-Planner, policy engine, model router, and multi-agent delegation are **not
-built yet** — they are P2/P3 (see §7). Do not assume they exist.
+On top of that loop (P2–P4): the policy engine gates every action (allow,
+confirm via the approvals inbox, deny, or sandbox); budgets are enforced
+by the daemon; `autoPlan` objectives get a plan from a read-only planner
+session; the router picks provider, model and thinking per task class;
+verify tasks gate progress; a retrospective proposes lessons after each
+objective; durable jobs wake agents on a schedule; `@agent` tasks delegate
+to another agent. Third-party harnesses load as out-of-process plugins.
 
 ## 5. Domain model and on-disk layout
 
@@ -211,34 +241,29 @@ first; index upserts (session index M2, memory FTS M5) are derived and
 provably rebuildable — both have a passing scratch-vs-incremental
 equivalence test.
 
-## 6. Current progress — Phase P1 complete, `v0.1.0` tagged
+## 6. Current progress — P1–P4 released, P5 in release candidates
 
-| Milestone | Status | Evidence |
+| Phase | Status | Evidence |
 |---|---|---|
-| P1.M1 contracts | **done** | 19/19 tests |
-| P1.M2 kernel | **done** | crash-sim ×100 + reindex-equivalence green |
-| P1.M3 session runner | **done** | flagship re-adoption test green |
-| P1.M4 Claude provider (T1–T6) | **code done**, milestone `[~]` | one manual live-harness smoke owed by Kabeer (`guides/`) before the checkbox flips — automated accepts (conformance, golden translation) are green either way |
-| P1.M5 memory v0 | **done** | reindex + snapshot determinism green |
-| P1.M6 scheduler v0 | **done** | 3-strike backoff + crash-resume proven |
-| P1.M7 API+SSE+SDK | **done** | CLI golden path green |
-| P1.M8 ADE web UI | **done** | 4-spec Playwright suite green in CI |
-| P1.M9 E2E + hardening | **done** | real-process golden-path E2E, 10× green (the flake gate); STOP kill switch; `v0.1.0` tagged |
-| P1.M10 OpenCode adapter | **code done**, milestone `[~]` | same situation as M4 — one manual smoke owed |
-| P2–P5 | pending | 107 total tasks defined across the phase; 44 done, 63 remain to v1.0 |
+| P1 Spine | released `v0.1.0` | golden-path E2E with `kill -9`, 10× green |
+| P2 Safety + polish | released `v0.2.0` | `apps/aeosd/test/p2-exit.e2e.test.ts` |
+| P3 Autonomy | released `v0.3.0` | `apps/aeosd/test/p3-exit.e2e.test.ts` |
+| P4 Scale + community | released `v0.4.0` | sandbox, compose, Helm (`kind` nightly), plugin-template CI jobs |
+| P5 v1.0 public release | `v1.0.0-rc.*` | release pipeline (`release.yml`): bundles, SBOMs, cosign, upgrade test |
 
-No active sprint. [S04](pm/sprints/S04.md) closed at the `v0.1.0` tag with a
-retrospective. Blockers: none. Full roadmap mirrored to GitHub issues
-(labels: `task`, `phase:P1..P5`, `area:*`; `good first issue` seeded on
-self-contained ones). Community health-file score: 100%.
+Still manual: the live Claude Code and OpenCode smokes (P1.M4, P1.M10), the
+service reboot test (P4.M3.T1), and the blind newcomer docs test (P5.M2.T2).
+Exact counts live in the [BOARD](pm/BOARD.md); issues mirror every open task
+(labels `task`, `phase:P1..P5`, `area:*`).
 
 **Operational facts an agent must know:**
 
 - `guides/<date>-<topic>.md` (gitignored) is where any step needing
   Kabeer's manual effort gets written — check it before assuming a task
   is actually blocked; it usually just needs him to run one command.
-- Local Node is v25.x while the repo pins Node 22 (`.nvmrc`) — CI runs 22;
-  tests pass on both observed so far, but `nvm use` if anything looks odd.
+- Use Node 22 (`.nvmrc`); CI runs 22. Newer majors can break native
+  modules: `better-sqlite3@11` does not compile on Node 26, which is why the
+  Arch package builds with a pinned Node 22.
 - The ADE Playwright suite (`apps/ade`) is **excluded from the vitest
   workspace** (`vitest.workspace.ts`) — run it with
   `pnpm -F @aeos/ade test`, not `pnpm test`.
@@ -251,26 +276,19 @@ self-contained ones). Community health-file score: 100%.
 
 ## 7. Pending work and dependency chain
 
-Strict single-spine ordering (spec §17.8) applied through P1; from P2
-onward milestones may run more in parallel as noted in the ROADMAP. Next
-up:
+What remains before `v1.0.0` is all in ROADMAP P5:
 
 ```
-P2 — Safety + polish (v0.2), 24 tasks:
- M1 policy + approvals → M2 budgets + audit → M3 secrets store →
- M4 memory curator → M5 PTY attach + co-edit guard → M6 Codex adapter →
- M7 managed binaries → M8 Tauri wrapper
-P3 — Autonomy (v0.3), 11 tasks: planner classes → model router →
- verification task type → retrospective loop → wakeups/delegation
-P4 — Scale + community (v0.4), 10 tasks: Docker sandbox → plugin API →
- deploy targets → TCP transport + K8s
-P5 — v1.0 public release, 18 tasks: M1 OSS readiness DONE early; M2 docs
- site → M3 release engineering → M4 public beta → M5 GA launch
+P5.M6 public site + install: T1 React landing page · T2 Starlight docs site
+      (React islands) · T3 one-line CLI install · T4 desktop downloads +
+      auto-update · T5 Markdown docs sweep + generated reference
+P5.M4 public beta: T3 weekly grooming (repo already public)
+P5.M5 GA: T1 blocker burn-down at cut time → T2 v1.0.0 tag → T3 launch
+      comms → T4 post-launch week
 ```
 
 Post-v1 backlog B1–B4 in ROADMAP — never start silently. Milestone plans
-are still written **just-in-time** at the predecessor's exit gate — do not
-pre-author P2.M2 while P2.M1 is unstarted, for example.
+are written **just-in-time** at the predecessor's exit gate.
 
 ## 8. Conventions every agent must follow
 
@@ -338,11 +356,15 @@ context (this mirrors AEOS's own delegation design, spec §12).
 7. Approval gates are Kabeer's alone: merges to `main` (unless he's
    pre-authorized autonomous merging for a session), scope/spec changes,
    tagging a release. Everything else is self-serve.
+8. Releases climb `develop` → `staging` → `main` (`docs/RELEASE.md`). Never
+   open a `develop` → `staging` PR while `staging` is the head of an open
+   release PR: GitHub stacks them and retargets the second onto `main` when
+   the first merges (drift D22).
 
 ## 11. Open questions and assumptions
 
-Tracked, not blocking (spec §20): OQ1 human/agent co-edit policy (resolved by
-ADR in P2.M5); OQ2 direct-API native-loop providers (post-v1, B1); OQ3
+Tracked, not blocking (spec §20): OQ1 human/agent co-edit policy (resolved:
+ADR-009, P2.M5); OQ2 direct-API native-loop providers (post-v1, B1); OQ3
 multi-user RBAC (post-v1, B2); OQ4 Windows-native runner (post-v1, B3; WSL2
 documented meanwhile). Assumptions: Linux/macOS targets for v0.x; the
 `apps/ade` Playwright suite requires chromium installed
