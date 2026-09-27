@@ -2,6 +2,9 @@ name: ci
 on:
   push: { branches: [main] }
   pull_request:
+  # changesets.yml dispatches this on the Version Packages branch: its
+  # GITHUB_TOKEN push would not start pull_request workflows by itself
+  workflow_dispatch:
 jobs:
   ci:
     runs-on: ubuntu-latest
