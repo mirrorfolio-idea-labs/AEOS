@@ -13,6 +13,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write     # dispatch CI on the version branch (below)
 concurrency: changesets-${{ github.ref }}
 jobs:
   version-pr:
@@ -59,3 +60,14 @@ jobs:
             # the one tolerated failure: the branch is pushed, only the PR call was refused
             echo "::warning title=Version PR not opened::$BRANCH is pushed with the version bump, but GitHub Actions may not create pull requests here. Enable Settings → Actions → General → 'Allow GitHub Actions to create and approve pull requests', or open $BRANCH → $GITHUB_REF_NAME by hand."
           fi
+      - name: run CI on the version branch
+        # a push made with GITHUB_TOKEN starts no workflows, so the version PR
+        # would otherwise sit with no checks on its head; workflow_dispatch is
+        # the one event that token may start, and its checks land on the same
+        # commit the PR shows
+        if: steps.version.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run ci.yml --ref "$BRANCH"
+          gh workflow run desktop.yml --ref "$BRANCH"
