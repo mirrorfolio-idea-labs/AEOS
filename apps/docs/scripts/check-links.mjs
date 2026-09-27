@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
-const BASE = (process.env.AEOS_DOCS_BASE ?? '/AEOS').replace(/\/$/, '');
+const BASE = (process.env.AEOS_DOCS_BASE ?? '/AEOS/docs').replace(/\/$/, '');
 const pages = [];
 (function walk(dir) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

@@ -30,3 +30,4 @@ apps/desktop/src-tauri/gen/schemas/
 
 # release bundles (scripts/release)
 release-out/
+pages/

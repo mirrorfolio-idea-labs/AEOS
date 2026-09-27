@@ -123,3 +123,9 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @aeos/docs build
+      # P5.M6.T1: the landing page, pinned to a fixture release, verified in a
+      # real browser (OS-matched download + every rendered link resolves)
+      - run: pnpm -F @aeos/site build
+        env: { AEOS_SITE_RELEASE_FIXTURE: '${{ github.workspace }}/apps/site/test/release.fixture.json' }
+      - run: pnpm -F @aeos/site exec playwright install --with-deps chromium
+      - run: node apps/site/scripts/assemble-pages.mjs pages && pnpm -F @aeos/site verify ../../pages

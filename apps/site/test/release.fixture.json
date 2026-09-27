@@ -1,0 +1,12 @@
+{
+  "tag": "v1.0.0",
+  "url": "https://github.com/mirrorfolio-idea-labs/AEOS/releases/tag/v1.0.0",
+  "prerelease": false,
+  "assets": [
+    { "name": "aeos-1.0.0-linux-x64.tar.gz", "url": "https://github.com/mirrorfolio-idea-labs/AEOS/releases/download/v1.0.0/aeos-1.0.0-linux-x64.tar.gz", "size": 85000000 },
+    { "name": "AEOS_1.0.0_aarch64.dmg", "url": "https://github.com/mirrorfolio-idea-labs/AEOS/releases/download/v1.0.0/AEOS_1.0.0_aarch64.dmg", "size": 9000000 },
+    { "name": "AEOS_1.0.0_amd64.AppImage", "url": "https://github.com/mirrorfolio-idea-labs/AEOS/releases/download/v1.0.0/AEOS_1.0.0_amd64.AppImage", "size": 80000000 },
+    { "name": "AEOS_1.0.0_amd64.deb", "url": "https://github.com/mirrorfolio-idea-labs/AEOS/releases/download/v1.0.0/AEOS_1.0.0_amd64.deb", "size": 7000000 },
+    { "name": "aeos-1.0.0-1-x86_64.pkg.tar.zst", "url": "https://github.com/mirrorfolio-idea-labs/AEOS/releases/download/v1.0.0/aeos-1.0.0-1-x86_64.pkg.tar.zst", "size": 90000000 }
+  ]
+}

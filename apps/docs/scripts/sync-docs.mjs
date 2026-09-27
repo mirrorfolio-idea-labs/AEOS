@@ -12,7 +12,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..', '..');
 const OUT = path.resolve(HERE, '..', 'src', 'content', 'docs');
 const REPO = 'https://github.com/mirrorfolio-idea-labs/AEOS';
-const BASE = (process.env.AEOS_DOCS_BASE ?? '/AEOS').replace(/\/$/, '');
+const BASE = (process.env.AEOS_DOCS_BASE ?? '/AEOS/docs').replace(/\/$/, '');
 
 /** source (repo-relative) → site slug (no extension), in sidebar order. */
 const PAGES = [

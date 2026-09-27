@@ -1,10 +1,13 @@
 name: docs-pages
-# P5.M2.T1: publish the docs site (built from docs/) to GitHub Pages on every
-# push to main. One-time setup (maintainer): Settings → Pages → Source:
+# P5.M2.T1 + P5.M6.T1: publish the landing page (apps/site, at the root) and
+# the docs site (built from docs/, under /docs/) to GitHub Pages on every push
+# to main, and after every published release so the downloads stay current. One-time setup (maintainer): Settings → Pages → Source:
 # "GitHub Actions".
 on:
   push:
     branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,8 +26,15 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @aeos/docs build
+      # P5.M6.T1: landing page at the root (real latest-release downloads),
+      # docs under /docs/; every link, external ones included, must resolve
+      - run: pnpm -F @aeos/site build
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+      - run: node apps/site/scripts/assemble-pages.mjs pages
+      - run: pnpm -F @aeos/site exec playwright install --with-deps chromium
+      - run: pnpm -F @aeos/site verify ../../pages --external
       - uses: actions/upload-pages-artifact@v3
-        with: { path: apps/docs/dist }
+        with: { path: pages }
   deploy:
     needs: build
     runs-on: ubuntu-latest
