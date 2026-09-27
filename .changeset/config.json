@@ -15,7 +15,8 @@
   "ignore": [
     "@aeos/ade",
     "@aeos/desktop",
-    "@aeos/docs"
+    "@aeos/docs",
+    "@aeos/site"
   ],
   "privatePackages": {
     "version": true,

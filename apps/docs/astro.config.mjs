@@ -4,7 +4,7 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 const site = process.env.AEOS_DOCS_SITE ?? 'https://mirrorfolio-idea-labs.github.io';
-const base = process.env.AEOS_DOCS_BASE ?? '/AEOS';
+const base = process.env.AEOS_DOCS_BASE ?? '/AEOS/docs';
 
 export default defineConfig({
   site,
