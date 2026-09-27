@@ -12,9 +12,9 @@
 # be overridden:
 #   AEOS_GIT_URL=file:///path/to/checkout AEOS_REF=commit=<sha> makepkg
 pkgname=aeos
-pkgver=1.0.0rc1
+pkgver=1.0.0rc2
 # the release tag; differs from pkgver only for pre-releases (pacman forbids '-')
-_tag=v1.0.0-rc.1
+_tag=v1.0.0-rc.2
 pkgrel=1
 pkgdesc='Durable, resumable AI coding agents, local-first: desktop app, daemon and CLI'
 arch=('x86_64' 'aarch64')
