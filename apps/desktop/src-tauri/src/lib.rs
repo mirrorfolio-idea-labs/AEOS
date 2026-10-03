@@ -7,6 +7,7 @@
 pub mod daemon;
 pub mod links;
 pub mod platform;
+pub mod update;
 
 use std::io::{BufRead, BufReader};
 use std::sync::Mutex;
@@ -96,20 +97,36 @@ fn notify(app: &tauri::AppHandle, base: &str, alert: links::Alert) {
 pub fn run() {
     platform::apply_webview_workarounds();
     let base = daemon::base_url();
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         // a second launch (e.g. an `aeos://` link) forwards to the running app
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             open_deep_links(app, argv.into_iter().filter(|a| a.starts_with("aeos://")));
         }))
-        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_deep_link::init());
+    // P5.M6.T4: only release builds with a compiled-in updater key register it
+    let builder = if update::enabled() {
+        builder.plugin(tauri_plugin_updater::Builder::new().pubkey(update::PUBKEY.unwrap_or_default()).build())
+    } else {
+        builder
+    };
+    let app = builder
         .manage(Shell { base: base.clone(), owned: Mutex::new(None) })
         .setup(move |app| {
+            // P5.M6.T4: installers ship the daemon as one resource
+            if let Ok(resources) = app.path().resource_dir() {
+                daemon::set_bundled_daemon(
+                    resources.join("daemon.tar.gz"),
+                    app.package_info().version.to_string(),
+                );
+            }
             #[cfg(any(target_os = "linux", windows))]
             let _ = app.deep_link().register_all();
             let handle = app.handle().clone();
             app.deep_link().on_open_url(move |event| {
                 open_deep_links(&handle, event.urls().into_iter().map(|u| u.to_string()));
             });
+
+            update::check_in_background(app.handle().clone());
 
             let handle = app.handle().clone();
             let base = base.clone();
@@ -131,7 +148,7 @@ pub fn run() {
                         if let Some(window) = &window {
                             let message = serde_json::to_string(&error.to_string()).unwrap_or_default();
                             let _ = window.eval(&format!(
-                                "document.body.innerHTML = '<p style=\"max-width:520px\">' + {message} + '<br><br>Set AEOS_DAEMON_CMD (e.g. <code>node /path/to/aeosd/dist/main.js</code>) or put <code>aeosd</code> on PATH, then relaunch.</p>'"
+                                "document.body.innerHTML = '<p style=\"max-width:520px\">' + {message} + '<br><br>Reinstall the app, set AEOS_DAEMON_CMD (e.g. <code>node /path/to/aeosd/dist/main.js</code>), or put <code>aeosd</code> on PATH, then relaunch.</p>'"
                             ));
                         }
                     }

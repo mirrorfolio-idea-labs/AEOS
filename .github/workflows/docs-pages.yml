@@ -31,6 +31,8 @@ jobs:
       - run: pnpm -F @aeos/site build
         env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
       - run: node apps/site/scripts/assemble-pages.mjs pages
+      - run: node apps/site/scripts/update-manifests.mjs pages   # desktop update channels (P5.M6.T4)
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
       - run: pnpm -F @aeos/site exec playwright install --with-deps chromium
       - run: pnpm -F @aeos/site verify ../../pages --external
       - uses: actions/upload-pages-artifact@v3

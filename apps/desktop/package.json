@@ -1,9 +1,9 @@
 {
   "name": "@aeos/desktop",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.2",
   "license": "MIT",
   "private": true,
-  "description": "Thin Tauri 2 shell around the daemon-served ADE (spec §14, D4). Built with Rust — not part of `pnpm build`.",
+  "description": "Thin Tauri 2 shell around the daemon-served ADE (spec \u00a714, D4). Built with Rust \u2014 not part of `pnpm build`.",
   "scripts": {
     "tauri": "tauri",
     "desktop:dev": "tauri dev",

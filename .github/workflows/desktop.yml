@@ -22,10 +22,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            bundles: deb,appimage
+            bundles: deb,appimage,rpm
           - os: macos-14
             bundles: app,dmg
     runs-on: ${{ matrix.os }}
+    env:
+      # P5.M6.T4 in-app updates: the public key (a repo variable) turns the
+      # updater on; the private key (a secret) signs the update artifacts.
+      # Without them the app builds with the updater dormant.
+      AEOS_UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: "${{ inputs.ref || github.ref }}" }
@@ -39,19 +46,47 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xvfb dbus-x11
       - run: pnpm install --frozen-lockfile
       - name: shell unit + lifecycle tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml -- --test-threads=1
+      - name: daemon to ship inside the installer (P5.M6.T4)
+        # the same self-contained bundle the CLI installer uses; the app
+        # unpacks it into ~/.aeos/app/versions/<version> on first run
+        run: |
+          pnpm build
+          node scripts/release/bundle.mjs "$RUNNER_TEMP/daemon"
+          cp "$RUNNER_TEMP"/daemon/aeos-*.tar.gz apps/desktop/src-tauri/daemon.tar.gz
       - name: bundle
-        run: pnpm -F @aeos/desktop tauri build --bundles ${{ matrix.bundles }}
+        run: |
+          config='{"bundle":{"resources":{"daemon.tar.gz":"daemon.tar.gz"}'
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] && config="$config,\"createUpdaterArtifacts\":true"
+          config="$config}}"
+          pnpm -F @aeos/desktop tauri build --verbose --bundles ${{ matrix.bundles }} --config "$config"
+      - name: first run needs no terminal (install the .deb, no aeosd on PATH)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y ./apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+          ! command -v aeosd
+          home="$RUNNER_TEMP/fresh-home"; mkdir -p "$home"
+          HOME="$home" AEOS_PROVIDER=fake WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 \
+            dbus-run-session -- xvfb-run -a aeos-desktop > "$RUNNER_TEMP/desktop.log" 2>&1 &
+          for _ in $(seq 90); do curl -sf http://127.0.0.1:7777/healthz && break; sleep 1; done
+          cat "$RUNNER_TEMP/desktop.log"
+          curl -sf http://127.0.0.1:7777/healthz
+          ls "$home"/.aeos/app/versions/*/bin/aeosd
+          curl -sf -o /dev/null http://127.0.0.1:7777/     # the ADE the window shows
       - uses: actions/upload-artifact@v4
         with:
           name: aeos-desktop-${{ runner.os }}
           path: |
             apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+            apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
             apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.sig
             apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/macos/*.app.tar.gz
+            apps/desktop/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
           if-no-files-found: error
 
   # Arch Linux: rolling WebKitGTK, so the desktop app is built from source by

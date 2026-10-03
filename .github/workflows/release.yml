@@ -118,6 +118,7 @@ jobs:
     needs: verify
     uses: ./.github/workflows/desktop.yml
     with: { ref: "${{ inputs.tag || github.ref }}" }
+    secrets: inherit   # updater signing key, when configured
 
   sign-and-release:
     needs: [bundles, npm-packages, desktop, upgrade]
@@ -135,18 +136,20 @@ jobs:
         # desktop and Arch artifacts arrive nested (deb/, appimage/, dmg/,
         # home/builder/pkg/); everything signed and released must sit at the top
         run: |
-          find dist-artifacts -mindepth 2 -type f \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.pkg.tar.zst' \) -exec mv -n -t dist-artifacts {} +
+          find dist-artifacts -mindepth 2 -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.pkg.tar.zst' -o -name '*.app.tar.gz' -o -name '*.sig' \) -exec mv -n -t dist-artifacts {} +
           find dist-artifacts -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
           find dist-artifacts -maxdepth 1 -type f -name '*.log' -delete
           ls -la dist-artifacts
+      - name: updater manifest (P5.M6.T4), when update artifacts were signed
+        run: node scripts/release/updater-manifest.mjs dist-artifacts "$RELEASE_TAG"
       - uses: sigstore/cosign-installer@v3
       - uses: anchore/sbom-action/download-syft@v0
       - name: SBOMs (SPDX) for every artifact
         run: |
           cd dist-artifacts
           shopt -s nullglob
-          for f in *.tar.gz *.tgz *.deb *.AppImage *.dmg *.pkg.tar.zst; do syft scan "file:$f" -o spdx-json="$f.spdx.json" -q || syft scan "$f" -o spdx-json="$f.spdx.json" -q; done
-          sha256sum *.tar.gz *.tgz *.deb *.AppImage *.dmg *.pkg.tar.zst *.spdx.json > SHA256SUMS
+          for f in *.tar.gz *.tgz *.deb *.rpm *.AppImage *.dmg *.pkg.tar.zst; do syft scan "file:$f" -o spdx-json="$f.spdx.json" -q || syft scan "$f" -o spdx-json="$f.spdx.json" -q; done
+          sha256sum *.tar.gz *.tgz *.deb *.rpm *.AppImage *.dmg *.pkg.tar.zst *.spdx.json > SHA256SUMS
           ls -la
       - name: keyless signatures (cosign + GitHub OIDC)
         # keyless signing writes to the PUBLIC Rekor transparency log —
@@ -156,7 +159,7 @@ jobs:
           cd dist-artifacts
           cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
           shopt -s nullglob
-          for f in *.tar.gz *.deb *.AppImage *.dmg *.pkg.tar.zst; do cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"; done
+          for f in *.tar.gz *.deb *.rpm *.AppImage *.dmg *.pkg.tar.zst; do cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"; done
       - name: container image (GHCR) — signed, with SBOM attestation
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/aeosd"
